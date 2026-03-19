@@ -1,0 +1,14 @@
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.csproj.AssemblyReference.cache
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.Properties.Resources.resources
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.csproj.GenerateResource.cache
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.csproj.CoreCompileInputs.cache
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\bin\Debug\ГПО.exe.config
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\bin\Debug\ГПО.exe
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\bin\Debug\ГПО.pdb
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.exe
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.pdb
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\bin\Debug\ГПО.exe.manifest
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\bin\Debug\ГПО.application
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.exe.manifest
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.application
+C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\MathApp.Form1.resources
