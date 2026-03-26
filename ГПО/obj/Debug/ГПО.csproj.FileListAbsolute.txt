@@ -12,3 +12,17 @@ C:\Users\Дмитрий\Desktop\ГПО\ГПО\bin\Debug\ГПО.application
 C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.exe.manifest
 C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\ГПО.application
 C:\Users\Дмитрий\Desktop\ГПО\ГПО\obj\Debug\MathApp.Form1.resources
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\bin\Debug\ГПО.exe.config
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\bin\Debug\ГПО.exe.manifest
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\bin\Debug\ГПО.application
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\bin\Debug\ГПО.exe
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\bin\Debug\ГПО.pdb
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.csproj.AssemblyReference.cache
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\MathApp.Form1.resources
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.Properties.Resources.resources
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.csproj.GenerateResource.cache
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.csproj.CoreCompileInputs.cache
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.exe.manifest
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.application
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.exe
+C:\Users\NEWUSER\OneDrive\Documenti\GitHub\GPO\ГПО\obj\Debug\ГПО.pdb

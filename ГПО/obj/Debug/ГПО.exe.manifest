@@ -49,17 +49,17 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>lg31cn03DVxTXRqEXIJwROydLLFu0w/iH9jdUhSLAeM=</dsig:DigestValue>
+        <dsig:DigestValue>ELYon1mfyMpSuxVI+s7UD9/4+nGy1rCjNP+8uul2t10=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
-  <file name="ГПО.exe.config" size="186">
+  <file name="ГПО.exe.config" size="184">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>n6TUw04p4c6SsUZT2xW7HjhA8QtxWrm4h81AELmlks0=</dsig:DigestValue>
+      <dsig:DigestValue>nxJ/Lo79mxoPYSZ8U/K6/s0rkBEHk+cM7lxPpMRjp2M=</dsig:DigestValue>
     </hash>
   </file>
 </asmv1:assembly>
