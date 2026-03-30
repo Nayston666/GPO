@@ -9,7 +9,6 @@ namespace MathApp.UI
     public class ToolboxControl : UserControl
     {
         private ListBox _listBox;
-
         public event MouseEventHandler ItemMouseDown;
 
         public ToolboxControl()
@@ -19,7 +18,7 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 200);
+            this.Size = new Size(260, 220);
             this.BackColor = Color.Transparent;
 
             var titleLabel = new Label
@@ -35,7 +34,7 @@ namespace MathApp.UI
             _listBox = new ListBox
             {
                 Location = new Point(0, 40),
-                Size = new Size(260, 150),
+                Size = new Size(260, 180),
                 BackColor = Color.FromArgb(45, 45, 50),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10),
@@ -49,20 +48,20 @@ namespace MathApp.UI
 
             _listBox.Items.AddRange(new object[]
             {
-                "➕ Сложение",
-                "➖ Вычитание",
-                "✖️ Умножение",
-                "➗ Деление",
-                "📊 График",
-                "📈 Синусоида"
+            "➕ Сложение",
+            "➖ Вычитание",
+            "✖️ Умножение",
+            "➗ Деление",
+            "∫ Интегратор (трапеции)",
+            "d/dt Дифференциатор",
+            "f(x) Интерполятор",
+            "[ ] График",
+            "~ Синусоида"
             });
 
             this.Controls.AddRange(new Control[] { titleLabel, _listBox });
         }
 
-        /// <summary>
-        /// Возвращает выбранный элемент
-        /// </summary>
         public string GetSelectedItem()
         {
             return _listBox.SelectedItem?.ToString();
@@ -71,9 +70,7 @@ namespace MathApp.UI
         private void ListBox_DrawItem(object sender, DrawItemEventArgs e)
         {
             if (e.Index < 0) return;
-
             e.DrawBackground();
-
             var rect = e.Bounds;
             rect.Inflate(-2, -2);
 
@@ -82,29 +79,18 @@ namespace MathApp.UI
                 if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
                 {
                     using (var brush = new SolidBrush(Color.FromArgb(0, 120, 212)))
-                    {
                         e.Graphics.FillPath(brush, path);
-                    }
                 }
                 else if ((e.State & DrawItemState.HotLight) == DrawItemState.HotLight)
                 {
                     using (var brush = new SolidBrush(Color.FromArgb(60, 60, 65)))
-                    {
                         e.Graphics.FillPath(brush, path);
-                    }
                 }
 
                 var text = _listBox.Items[e.Index].ToString();
-                using (var sf = new StringFormat
-                {
-                    Alignment = StringAlignment.Near,
-                    LineAlignment = StringAlignment.Center
-                })
-                {
+                using (var sf = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center })
                     e.Graphics.DrawString(text, e.Font, Brushes.White, rect, sf);
-                }
             }
-
             e.DrawFocusRectangle();
         }
     }

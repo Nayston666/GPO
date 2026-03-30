@@ -1,14 +1,15 @@
-﻿using System;
+﻿using MathApp.Core;
+using MathApp.Helpers;
+using MathApp.Models;
+using MathApp.Rendering;
+using MathApp.UI;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using MathApp.Models;
-using MathApp.Core;
-using MathApp.Rendering;
-using MathApp.UI;
-using MathApp.Helpers;
+
 
 namespace MathApp
 {
@@ -41,10 +42,8 @@ namespace MathApp
         private ConnectionPoint? sourceConnectionPoint = null;
         private Point tempConnectionEnd;
 
-        private Timer realTimeTimer;
         private Timer renderTimer;
         private bool needsRedraw = true;
-        private double time = 0;
 
         // Цветовая схема
         private Color primaryColor = Color.FromArgb(0, 120, 212);
@@ -56,33 +55,12 @@ namespace MathApp
         // Словарь для окон графиков
         private Dictionary<Guid, GraphForm> graphWindows = new Dictionary<Guid, GraphForm>();
 
+        // Окно результата
+        private ResultForm _resultForm;
+
         public Form1()
         {
-            InitializeComponent();
-
-            connectionManager = new ConnectionManager(connections);
-
-            // Таймер для рендеринга (60 FPS)
-            renderTimer = new Timer();
-            renderTimer.Interval = 16;
-            renderTimer.Tick += (s, e) =>
-            {
-                if (needsRedraw)
-                {
-                    whiteboardPanel.Invalidate();
-                    needsRedraw = false;
-                }
-            };
-            renderTimer.Start();
-
-            // Таймер для реального времени
-            realTimeTimer = new Timer();
-            realTimeTimer.Interval = 16;
-            realTimeTimer.Tick += RealTimeTimerTick;
-        }
-
-        private void InitializeComponent()
-        {
+            // Настройка формы
             this.Text = "Математический конструктор";
             this.Size = new Size(1400, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -94,12 +72,31 @@ namespace MathApp
                          ControlStyles.OptimizedDoubleBuffer |
                          ControlStyles.ResizeRedraw, true);
 
+            InitializeComponent();
+
+            connectionManager = new ConnectionManager(connections);
+
+            // Создаем окно результата
+            _resultForm = new ResultForm();
+
+            // Таймер для рендеринга (60 FPS)
+            renderTimer = new Timer();
+            renderTimer.Interval = 16; // 60 FPS
+            renderTimer.Tick += (s, e) =>
+            {
+                needsRedraw = true;
+                whiteboardPanel.Invalidate();
+            };
+            renderTimer.Start();
+        }
+
+        private void InitializeComponent()
+        {
             // ============ БОКОВАЯ ПАНЕЛЬ ============
             sidePanel = new Panel
             {
                 Width = 300,
-                Height = this.ClientSize.Height,
-                Location = new Point(0, 0),
+                Dock = DockStyle.Left,
                 BackColor = panelColor,
                 BorderStyle = BorderStyle.None
             };
@@ -124,127 +121,157 @@ namespace MathApp
                 Height = 800,
                 Location = new Point(10, 0),
                 BackColor = Color.Transparent,
-                AutoScroll = true
+                AutoScroll = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom
             };
 
             // ============ ПАНЕЛЬ ИНСТРУМЕНТОВ ============
             toolboxControl = new ToolboxControl
             {
-                Location = new Point(0, 10)
+                Location = new Point(0, 10),
+                Width = 280
             };
             toolboxControl.ItemMouseDown += ToolboxControl_ItemMouseDown;
-
-            // ============ ПАНЕЛЬ РЕАЛЬНОГО ВРЕМЕНИ ============
-            var realTimePanel = CreateSimplePanel("⚡ РЕЖИМ РЕАЛЬНОГО ВРЕМЕНИ", new Point(0, 230));
-
-            var chkRealTime = new CheckBox
-            {
-                Text = "Включить",
-                Location = new Point(15, 35),
-                Size = new Size(100, 25),
-                ForeColor = textColor,
-                Checked = false,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat
-            };
-
-            var btnStart = CreateSimpleButton("▶ Старт", new Point(120, 35), primaryColor);
-            var btnStop = CreateSimpleButton("⏹ Стоп", new Point(200, 35), Color.FromArgb(200, 70, 70));
-
-            btnStart.Enabled = false;
-            btnStop.Enabled = false;
-
-            chkRealTime.CheckedChanged += (s, e) =>
-            {
-                btnStart.Enabled = chkRealTime.Checked;
-                btnStop.Enabled = false;
-            };
-
-            btnStart.Click += (s, e) =>
-            {
-                realTimeTimer.Start();
-                btnStart.Enabled = false;
-                btnStop.Enabled = true;
-            };
-
-            btnStop.Click += (s, e) =>
-            {
-                realTimeTimer.Stop();
-                btnStart.Enabled = true;
-                btnStop.Enabled = false;
-            };
-
-            realTimePanel.Controls.AddRange(new Control[] { chkRealTime, btnStart, btnStop });
 
             // ============ ПАНЕЛЬ СВОЙСТВ ============
             propertyPanel = new PropertyPanel
             {
-                Location = new Point(0, 320)
+                Location = new Point(0, 200),
+                Width = 280
             };
             propertyPanel.ApplyClicked += PropertyPanel_ApplyClicked;
 
             // ============ ПАНЕЛЬ ИНФОРМАЦИИ ============
-            var infoPanel = CreateSimplePanel("ℹ️ ИНФОРМАЦИЯ", new Point(0, 660));
+            var infoPanel = new Panel
+            {
+                Location = new Point(0, 500),
+                Size = new Size(260, 120),
+                BackColor = Color.FromArgb(45, 45, 50)
+            };
+
+            // Закругленные углы для информационной панели
+            infoPanel.Paint += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, infoPanel.Width - 1, infoPanel.Height - 1);
+                using (var path = GraphicsExtensions.CreateRoundedRectangle(rect, 8))
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(45, 45, 50)))
+                        e.Graphics.FillPath(brush, path);
+                    using (var pen = new Pen(Color.FromArgb(60, 60, 65), 1))
+                        e.Graphics.DrawPath(pen, path);
+                }
+            };
+
+            var infoTitle = new Label
+            {
+                Text = "ℹ️ ИНФОРМАЦИЯ",
+                Location = new Point(10, 5),
+                Size = new Size(240, 20),
+                ForeColor = accentColor,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                BackColor = Color.Transparent
+            };
 
             var infoLabel = new Label
             {
-                Text = "• Клик на блок - редактирование\r\n• Оранж. точка - выход\r\n• Зел. точка - вход\r\n• Для соединения: выход → вход\r\n• ПКМ на блоке - удалить",
-                Location = new Point(15, 35),
-                Size = new Size(250, 100),
+                Text = "• Клик на блок - редактирование\r\n• Оранж. точка - выход\r\n• Зел. точка - вход\r\n• Для соединения: выход → вход\r\n• ПКМ на блоке - удалить\r\n• Кнопка 'Вычислить' - расчет",
+                Location = new Point(10, 30),
+                Size = new Size(240, 85),
                 ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 8),
                 BackColor = Color.Transparent
             };
-            infoPanel.Controls.Add(infoLabel);
+
+            infoPanel.Controls.AddRange(new Control[] { infoTitle, infoLabel });
 
             // ============ ПАНЕЛЬ РЕЗУЛЬТАТА ============
             var resultPanel = new Panel
             {
-                Location = new Point(10, 770),
-                Size = new Size(260, 70),
+                Location = new Point(0, 630),
+                Size = new Size(260, 100),
                 BackColor = Color.FromArgb(45, 45, 50)
+            };
+
+            // Закругленные углы для панели результата
+            resultPanel.Paint += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, resultPanel.Width - 1, resultPanel.Height - 1);
+                using (var path = GraphicsExtensions.CreateRoundedRectangle(rect, 8))
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(45, 45, 50)))
+                        e.Graphics.FillPath(brush, path);
+                    using (var pen = new Pen(Color.FromArgb(60, 60, 65), 1))
+                        e.Graphics.DrawPath(pen, path);
+                }
+            };
+
+            var resultTitle = new Label
+            {
+                Text = "ТЕКУЩИЙ РЕЗУЛЬТАТ",
+                Location = new Point(10, 5),
+                Size = new Size(240, 20),
+                ForeColor = accentColor,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                BackColor = Color.Transparent
             };
 
             resultLabel = new Label
             {
                 Text = "0.00",
-                Location = new Point(10, 25),
-                Size = new Size(240, 40),
+                Location = new Point(10, 28),
+                Size = new Size(240, 35),
                 ForeColor = Color.FromArgb(0, 255, 128),
-                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                Font = new Font("Segoe UI", 24, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleRight,
                 BackColor = Color.Transparent
             };
 
-            var resultTitle = new Label
+            // Кнопка вычисления
+            var btnCalculate = new Button
             {
-                Text = "РЕЗУЛЬТАТ",
-                Location = new Point(10, 5),
-                Size = new Size(100, 20),
-                ForeColor = accentColor,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold),
-                BackColor = Color.Transparent
+                Text = "🧮 ВЫЧИСЛИТЬ",
+                Location = new Point(10, 68),
+                Size = new Size(150, 28),
+                BackColor = primaryColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnCalculate.Click += BtnCalculate_Click;
 
-            resultPanel.Controls.AddRange(new Control[] { resultTitle, resultLabel });
+            // Кнопка для показа отдельного окна результата
+            var btnShowResult = new Button
+            {
+                Text = "📊 ОКНО",
+                Location = new Point(165, 68),
+                Size = new Size(85, 28),
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnShowResult.Click += (s, e) => ShowResultWindow();
+
+            resultPanel.Controls.AddRange(new Control[] {
+                resultTitle, resultLabel, btnCalculate, btnShowResult
+            });
 
             // Добавляем все на боковую панель
             contentPanel.Controls.AddRange(new Control[] {
-                toolboxControl, realTimePanel, propertyPanel, infoPanel
+                toolboxControl, propertyPanel, infoPanel, resultPanel
             });
 
             sidePanel.Controls.Add(contentPanel);
-            sidePanel.Controls.Add(resultPanel);
 
             // ============ РАБОЧАЯ ОБЛАСТЬ ============
             whiteboardPanel = new DoubleBufferedPanel
             {
-                Location = new Point(310, 10),
-                Size = new Size(this.ClientSize.Width - 320, this.ClientSize.Height - 20),
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(30, 30, 35),
                 BorderStyle = BorderStyle.None,
-                AllowDrop = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+                AllowDrop = true
             };
 
             // Подписка на события
@@ -271,58 +298,6 @@ namespace MathApp
         }
 
         // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
-
-        private Panel CreateSimplePanel(string title, Point location)
-        {
-            var panel = new Panel
-            {
-                Location = location,
-                Size = new Size(260, 80),
-                BackColor = Color.Transparent
-            };
-
-            var titleLabel = new Label
-            {
-                Text = title,
-                Location = new Point(5, 0),
-                Size = new Size(250, 20),
-                ForeColor = accentColor,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                BackColor = Color.Transparent
-            };
-
-            panel.Controls.Add(titleLabel);
-
-            panel.Paint += (s, e) =>
-            {
-                var rect = new Rectangle(0, 20, panel.Width, panel.Height - 21);
-                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 50)))
-                using (var path = GraphicsExtensions.CreateRoundedRectangle(rect, 8))
-                {
-                    e.Graphics.FillPath(brush, path);
-                }
-            };
-
-            return panel;
-        }
-
-        private Button CreateSimpleButton(string text, Point location, Color color)
-        {
-            var btn = new Button
-            {
-                Text = text,
-                Location = location,
-                Size = new Size(70, 25),
-                BackColor = color,
-                ForeColor = textColor,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold)
-            };
-            btn.FlatAppearance.BorderSize = 0;
-            return btn;
-        }
-
-        // ============ ОБРАБОТЧИКИ СОБЫТИЙ ============
 
         private void ToolboxControl_ItemMouseDown(object sender, MouseEventArgs e)
         {
@@ -352,10 +327,6 @@ namespace MathApp
                 tool.Type = ToolType.Chart;
                 tool.Size = new Size(160, 80);
                 tool.Name = $"График {whiteboardTools.Count + 1}";
-
-                var graph = new GraphForm(tool.Name);
-                graph.Show();
-                graphWindows[tool.Id] = graph;
             }
             else if (type.Contains("Синусоида"))
             {
@@ -365,6 +336,39 @@ namespace MathApp
                 tool.Frequency = 1.0;
                 tool.Amplitude = 1.0;
                 tool.Phase = 0;
+            }
+            else if (type.Contains("Интегратор"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.Integrator;
+                tool.Size = new Size(140, 100);
+                tool.Name = "Интегратор";
+                tool.IntegralValue = 0;
+                tool.PreviousInput = 0;
+                tool.StepSize = 0.01;
+            }
+            else if (type.Contains("Дифференциатор"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.Differentiator;
+                tool.Size = new Size(140, 100);
+                tool.Name = "Дифференциатор";
+                tool.PreviousTime = 0;
+                tool.PreviousOutput = 0;
+            }
+            else if (type.Contains("Интерполятор"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.Interpolator;
+                tool.Size = new Size(140, 100);
+                tool.Name = "Интерполятор";
+                tool.InterpolationPoints = new List<PointF>();
+                for (int i = 0; i <= 10; i++)
+                {
+                    float x = i / 2f;
+                    float y = (float)Math.Sin(x);
+                    tool.InterpolationPoints.Add(new PointF(x, y));
+                }
             }
             else
             {
@@ -435,7 +439,7 @@ namespace MathApp
                 if (tool.Type == ToolType.Chart)
                     blockRenderer.DrawChartTool(g, tool, selectedTool);
                 else if (tool.Type == ToolType.SineGenerator)
-                    blockRenderer.DrawSineTool(g, tool, selectedTool, time);
+                    blockRenderer.DrawSineTool(g, tool, selectedTool, 0);
                 else
                     blockRenderer.DrawMathTool(g, tool, selectedTool);
 
@@ -534,7 +538,6 @@ namespace MathApp
 
             foreach (var tool in whiteboardTools)
             {
-                // Проверяем выходную точку
                 if (tool.Type != ToolType.Chart)
                 {
                     var output = GetOutputPoint(tool);
@@ -548,7 +551,6 @@ namespace MathApp
                     }
                 }
 
-                // Проверяем входные точки
                 if (tool.Type == ToolType.Operation)
                 {
                     var inputA = GetInputPoint(tool, InputType.A);
@@ -648,35 +650,92 @@ namespace MathApp
             needsRedraw = true;
         }
 
-        private void RealTimeTimerTick(object sender, EventArgs e)
+        private void BtnCalculate_Click(object sender, EventArgs e)
         {
-            time += 0.05;
+            try
+            {
+                var results = calculator.CalculateAll(whiteboardTools, connections);
 
-            var results = calculator.CalculateAll(whiteboardTools, connections);
+                var lastTool = whiteboardTools
+                    .Where(t => t.Type == ToolType.Operation)
+                    .OrderByDescending(t => t.Position.X)
+                    .FirstOrDefault();
 
-            // Обновляем графики
+                if (lastTool != null && lastTool.LastResult.HasValue)
+                {
+                    double value = lastTool.LastResult.Value;
+                    resultLabel.Text = value.ToString("F2");
+
+                    if (_resultForm != null && _resultForm.Visible)
+                    {
+                        _resultForm.SetValueImmediate(value);
+                    }
+                }
+
+                UpdateGraphsBatch();
+                needsRedraw = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при вычислении: {ex.Message}", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateGraphsBatch()
+        {
             foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
             {
                 var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
-                if (conn != null && graphWindows.ContainsKey(chart.Id) &&
-                    !graphWindows[chart.Id].IsDisposed)
+                if (conn == null) continue;
+
+                var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                if (source == null) continue;
+
+                double start = 0, end = 10;
+                int points = 300;
+
+                if (source.Type == ToolType.SineGenerator)
                 {
-                    if (results.ContainsKey(conn.SourceToolId))
-                    {
-                        graphWindows[chart.Id].AddValue(results[conn.SourceToolId]);
-                    }
-                    else
-                    {
-                        var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                        if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
-                        {
-                            graphWindows[chart.Id].AddValue(source.LastResult.Value);
-                        }
-                    }
+                    double period = 2 * Math.PI / source.Frequency;
+                    end = 3 * period;
                 }
+
+                Func<double, double> calcFunc = (x) =>
+                {
+                    if (source.Type == ToolType.SineGenerator)
+                    {
+                        return source.Amplitude * Math.Sin(2 * Math.PI * source.Frequency * x + source.Phase * Math.PI / 180.0);
+                    }
+                    return source.LastResult ?? 0;
+                };
+
+                GraphForm graphForm;
+                if (graphWindows.ContainsKey(chart.Id) && !graphWindows[chart.Id].IsDisposed)
+                {
+                    graphForm = graphWindows[chart.Id];
+                }
+                else
+                {
+                    graphForm = new GraphForm(chart.Name);
+                    graphWindows[chart.Id] = graphForm;
+                }
+
+                graphForm.SetCalculationFunction(calcFunc, start, end, points);
+                graphForm.Show();
+            }
+        }
+
+        private void ShowResultWindow()
+        {
+            if (_resultForm == null || _resultForm.IsDisposed)
+            {
+                _resultForm = new ResultForm();
             }
 
-            // Обновляем результат на главной форме
+            _resultForm.Show();
+            _resultForm.Focus();
+
             var lastTool = whiteboardTools
                 .Where(t => t.Type == ToolType.Operation)
                 .OrderByDescending(t => t.Position.X)
@@ -684,10 +743,8 @@ namespace MathApp
 
             if (lastTool != null && lastTool.LastResult.HasValue)
             {
-                resultLabel.Text = lastTool.LastResult.Value.ToString("F2");
+                _resultForm.SetValueImmediate(lastTool.LastResult.Value);
             }
-
-            needsRedraw = true;
         }
 
         private void DeleteTool_Click(object sender, EventArgs e)
@@ -704,9 +761,7 @@ namespace MathApp
                 if (tool.Type == ToolType.Chart && graphWindows.ContainsKey(tool.Id))
                 {
                     if (!graphWindows[tool.Id].IsDisposed)
-                    {
                         graphWindows[tool.Id].Close();
-                    }
                     graphWindows.Remove(tool.Id);
                 }
 
@@ -733,8 +788,7 @@ namespace MathApp
         {
             foreach (var graph in graphWindows.Values)
             {
-                if (!graph.IsDisposed)
-                    graph.Close();
+                if (!graph.IsDisposed) graph.Close();
             }
             graphWindows.Clear();
 
@@ -743,19 +797,6 @@ namespace MathApp
             SelectTool(null);
             resultLabel.Text = "0.00";
             needsRedraw = true;
-        }
-
-        protected override void OnResize(EventArgs e)
-        {
-            base.OnResize(e);
-            if (whiteboardPanel != null)
-            {
-                whiteboardPanel.Size = new Size(
-                    this.ClientSize.Width - 320,
-                    this.ClientSize.Height - 20
-                );
-                needsRedraw = true;
-            }
         }
 
         protected override void Dispose(bool disposing)
@@ -767,16 +808,16 @@ namespace MathApp
                     renderTimer.Stop();
                     renderTimer.Dispose();
                 }
-                if (realTimeTimer != null)
-                {
-                    realTimeTimer.Stop();
-                    realTimeTimer.Dispose();
-                }
 
                 foreach (var graph in graphWindows.Values)
                 {
-                    if (!graph.IsDisposed)
-                        graph.Close();
+                    if (!graph.IsDisposed) graph.Close();
+                }
+
+                if (_resultForm != null && !_resultForm.IsDisposed)
+                {
+                    _resultForm.Close();
+                    _resultForm.Dispose();
                 }
             }
             base.Dispose(disposing);
