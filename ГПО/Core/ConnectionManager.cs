@@ -18,9 +18,7 @@ namespace MathApp.Core
         {
             if (source.ToolId == target.ToolId) return false;
 
-            _connections.RemoveAll(c =>
-                c.TargetToolId == target.ToolId && c.TargetInput == target.InputType);
-
+            _connections.RemoveAll(c => c.TargetToolId == target.ToolId && c.TargetInput == target.InputType);
             _connections.Add(new Connection
             {
                 Id = Guid.NewGuid(),
@@ -28,7 +26,6 @@ namespace MathApp.Core
                 TargetToolId = target.ToolId,
                 TargetInput = target.InputType.Value
             });
-
             return true;
         }
 

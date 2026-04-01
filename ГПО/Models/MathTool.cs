@@ -17,24 +17,26 @@ namespace MathApp.Models
         public double CustomValueB { get; set; }
 
         public List<double> ValueHistory { get; set; } = new List<double>();
-        public int MaxHistorySize { get; set; } = 200;
+        public int MaxHistorySize { get; set; } = 5000; // Увеличено до 5000
 
-        // Для генератора синусоиды
         public double Frequency { get; set; } = 1.0;
         public double Amplitude { get; set; } = 1.0;
         public int Phase { get; set; }
 
-        // Для интегратора
         public double IntegralValue { get; set; } = 0;
         public double PreviousInput { get; set; } = 0;
         public double StepSize { get; set; } = 0.01;
 
-        // Для дифференциатора
         public double PreviousTime { get; set; } = 0;
         public double PreviousOutput { get; set; } = 0;
 
-        // Для интерполятора
         public List<PointF> InterpolationPoints { get; set; } = new List<PointF>();
+
+        public string InputFilePath { get; set; } = "";
+        public string OutputFilePath { get; set; } = "";
+        public List<double> FileData { get; set; } = new List<double>();
+        public int CurrentFileIndex { get; set; } = 0;
+        public bool IsReading { get; set; } = true;
 
         public double? LastResult { get; set; }
 

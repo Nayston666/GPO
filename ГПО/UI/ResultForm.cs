@@ -9,64 +9,61 @@ namespace MathApp.UI
     public class ResultForm : Form
     {
         private Label _valueLabel;
-        private Label _titleLabel;
         private Label _timestampLabel;
         private Panel _colorPanel;
         private Timer _animationTimer;
-        private double _currentValue = 0;
-        private double _targetValue = 0;
-        private double _animationSpeed = 0.1;
+        private double _currentValue = 0, _targetValue = 0;
 
         public ResultForm()
         {
             InitializeComponent();
-
-            _animationTimer = new Timer();
-            _animationTimer.Interval = 16;
-            _animationTimer.Tick += AnimationTimer_Tick;
+            _animationTimer = new Timer { Interval = 16 };
+            _animationTimer.Tick += (s, e) =>
+            {
+                if (Math.Abs(_currentValue - _targetValue) > 0.01)
+                {
+                    _currentValue += (_targetValue - _currentValue) * 0.1;
+                    _valueLabel.Text = _currentValue.ToString("F2");
+                    UpdateColor();
+                }
+            };
             _animationTimer.Start();
         }
 
         private void InitializeComponent()
         {
-            this.Text = "Результат вычислений";
-            this.Size = new Size(400, 320);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(28, 28, 30);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            Text = "Результат вычислений";
+            Size = new Size(400, 320);
+            StartPosition = FormStartPosition.CenterScreen;
+            BackColor = Color.FromArgb(28, 28, 30);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
 
-            _titleLabel = new Label
+            var titleLabel = new Label
             {
                 Text = "РЕЗУЛЬТАТ ВЫЧИСЛЕНИЙ",
                 Location = new Point(0, 20),
                 Size = new Size(400, 30),
                 ForeColor = Color.FromArgb(0, 200, 255),
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Transparent
+                TextAlign = ContentAlignment.MiddleCenter
             };
 
             _colorPanel = new Panel
             {
                 Location = new Point(50, 70),
                 Size = new Size(300, 150),
-                BackColor = Color.FromArgb(0, 120, 212),
-                BorderStyle = BorderStyle.None
+                BackColor = Color.FromArgb(0, 120, 212)
             };
-
             _colorPanel.Paint += (s, e) =>
             {
                 var g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var path = GraphicsExtensions.CreateRoundedRectangle(
-                    new Rectangle(0, 0, _colorPanel.Width - 1, _colorPanel.Height - 1), 15))
+                using (var path = GraphicsExtensions.CreateRoundedRectangle(new Rectangle(0, 0, _colorPanel.Width - 1, _colorPanel.Height - 1), 15))
+                using (var brush = new SolidBrush(_colorPanel.BackColor))
+                using (var pen = new Pen(Color.FromArgb(60, 60, 65), 2))
                 {
-                    using (var brush = new SolidBrush(_colorPanel.BackColor))
-                        g.FillPath(brush, path);
-                    using (var pen = new Pen(Color.FromArgb(60, 60, 65), 2))
-                        g.DrawPath(pen, path);
+                    g.FillPath(brush, path);
+                    g.DrawPath(pen, path);
                 }
             };
 
@@ -77,8 +74,7 @@ namespace MathApp.UI
                 Size = new Size(400, 100),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 48, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Transparent
+                TextAlign = ContentAlignment.MiddleCenter
             };
 
             _timestampLabel = new Label
@@ -88,8 +84,7 @@ namespace MathApp.UI
                 Size = new Size(400, 20),
                 ForeColor = Color.Gray,
                 Font = new Font("Segoe UI", 9),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Transparent
+                TextAlign = ContentAlignment.MiddleCenter
             };
 
             var chkTopMost = new CheckBox
@@ -99,10 +94,9 @@ namespace MathApp.UI
                 Size = new Size(150, 25),
                 ForeColor = Color.LightGray,
                 Checked = true,
-                BackColor = Color.Transparent,
                 FlatStyle = FlatStyle.Flat
             };
-            chkTopMost.CheckedChanged += (s, e) => this.TopMost = chkTopMost.Checked;
+            chkTopMost.CheckedChanged += (s, e) => TopMost = chkTopMost.Checked;
 
             var btnReset = new Button
             {
@@ -124,67 +118,33 @@ namespace MathApp.UI
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
-            btnClose.Click += (s, e) => this.Hide();
+            btnClose.Click += (s, e) => Hide();
 
-            this.Controls.AddRange(new Control[] { _titleLabel, _colorPanel, _valueLabel, _timestampLabel, chkTopMost, btnReset, btnClose });
+            Controls.AddRange(new Control[] { titleLabel, _colorPanel, _valueLabel, _timestampLabel, chkTopMost, btnReset, btnClose });
         }
 
-        private void AnimationTimer_Tick(object sender, EventArgs e)
+        private void UpdateColor()
         {
-            if (Math.Abs(_currentValue - _targetValue) > 0.01)
-            {
-                _currentValue += (_targetValue - _currentValue) * _animationSpeed;
-                _valueLabel.Text = _currentValue.ToString("F2");
-                UpdateColor();
-            }
-        }
-
-        public void UpdateValue(double value)
-        {
-            _targetValue = value;
-            _timestampLabel.Text = $"Обновлено: {DateTime.Now:HH:mm:ss}";
+            if (_targetValue > 0) _colorPanel.BackColor = Color.FromArgb(0, Math.Min(255, 120 + (int)Math.Abs(_targetValue) * 10), 100);
+            else if (_targetValue < 0) _colorPanel.BackColor = Color.FromArgb(Math.Min(255, 150 + (int)Math.Abs(_targetValue) * 10), 50, 50);
+            else _colorPanel.BackColor = Color.FromArgb(0, 120, 212);
+            _colorPanel.Invalidate();
         }
 
         public void SetValueImmediate(double value)
         {
-            _targetValue = value;
-            _currentValue = value;
+            _targetValue = _currentValue = value;
             _valueLabel.Text = value.ToString("F2");
             _timestampLabel.Text = $"Обновлено: {DateTime.Now:HH:mm:ss}";
             UpdateColor();
         }
 
-        private void UpdateColor()
-        {
-            if (_targetValue > 0)
-            {
-                int green = (int)Math.Min(255, 120 + Math.Abs(_targetValue) * 10);
-                _colorPanel.BackColor = Color.FromArgb(0, green, 100);
-            }
-            else if (_targetValue < 0)
-            {
-                int red = (int)Math.Min(255, 150 + Math.Abs(_targetValue) * 10);
-                _colorPanel.BackColor = Color.FromArgb(red, 50, 50);
-            }
-            else
-                _colorPanel.BackColor = Color.FromArgb(0, 120, 212);
-            _colorPanel.Invalidate();
-        }
-
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing)
-            {
-                e.Cancel = true;
-                this.Hide();
-            }
+            if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); }
             base.OnFormClosing(e);
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing) _animationTimer?.Dispose();
-            base.Dispose(disposing);
-        }
+        protected override void Dispose(bool disposing) { if (disposing) _animationTimer?.Dispose(); base.Dispose(disposing); }
     }
 }

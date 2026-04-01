@@ -10,14 +10,16 @@ namespace MathApp.Models
         Division,
         Integrator,
         Differentiator,
-        Interpolator
+        Interpolator,
+        FileIO
     }
 
     public enum ToolType
     {
         Operation,
         Chart,
-        SineGenerator
+        SineGenerator,
+        FileIO
     }
 
     public enum InputType

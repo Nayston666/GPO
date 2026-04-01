@@ -7,25 +7,22 @@ namespace MathApp.UI
     {
         public DoubleBufferedPanel()
         {
-            this.DoubleBuffered = true;
-            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
-                         ControlStyles.UserPaint |
-                         ControlStyles.OptimizedDoubleBuffer |
-                         ControlStyles.ResizeRedraw, true);
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.UserPaint |
+                     ControlStyles.OptimizedDoubleBuffer |
+                     ControlStyles.ResizeRedraw, true);
 
-            this.AutoScroll = true;
-            this.AutoScrollMinSize = new Size(2000, 2000);
-            this.BackColor = Color.FromArgb(30, 30, 35);
+            AutoScroll = true;
+            AutoScrollMinSize = new Size(2000, 2000);
+            BackColor = Color.FromArgb(30, 30, 35);
         }
 
         protected override void OnPaintBackground(PaintEventArgs e) { }
 
         public Point GetRealMouseLocation(Point mouseLocation)
         {
-            return new Point(
-                mouseLocation.X - this.AutoScrollPosition.X,
-                mouseLocation.Y - this.AutoScrollPosition.Y
-            );
+            return new Point(mouseLocation.X - AutoScrollPosition.X, mouseLocation.Y - AutoScrollPosition.Y);
         }
     }
 }

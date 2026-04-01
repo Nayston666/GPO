@@ -20,20 +20,14 @@ namespace MathApp.Core
             if (conn != null)
             {
                 var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-
                 if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
                     return source.LastResult.Value;
-
                 if (calculatedValues.ContainsKey(conn.SourceToolId))
                     return calculatedValues[conn.SourceToolId];
-
                 return double.NaN;
             }
 
-            if (input == InputType.A)
-                return tool.CustomValueA;
-            else
-                return tool.CustomValueB;
+            return input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
         }
 
         public double Calculate(MathOperation op, double a, double b, MathTool tool)
@@ -44,14 +38,12 @@ namespace MathApp.Core
                 case MathOperation.Subtraction: return a - b;
                 case MathOperation.Multiplication: return a * b;
                 case MathOperation.Division: return b != 0 ? a / b : 0;
-
                 case MathOperation.Integrator:
                     double step = tool.StepSize;
                     double newIntegral = tool.IntegralValue + (tool.PreviousInput + a) / 2 * step;
                     tool.IntegralValue = newIntegral;
                     tool.PreviousInput = a;
                     return newIntegral;
-
                 case MathOperation.Differentiator:
                     double dt = _currentTime - tool.PreviousTime;
                     if (dt < 0.0001) dt = 0.001;
@@ -59,10 +51,24 @@ namespace MathApp.Core
                     tool.PreviousOutput = a;
                     tool.PreviousTime = _currentTime;
                     return derivative;
-
                 case MathOperation.Interpolator:
                     return Interpolate(a, tool.InterpolationPoints);
-
+                case MathOperation.FileIO:
+                    if (tool.IsReading)
+                    {
+                        if (tool.FileData.Count > 0 && tool.CurrentFileIndex < tool.FileData.Count)
+                        {
+                            double value = tool.FileData[tool.CurrentFileIndex];
+                            tool.CurrentFileIndex++;
+                            return value;
+                        }
+                        return 0;
+                    }
+                    else
+                    {
+                        tool.FileData.Add(a);
+                        return a;
+                    }
                 default: return 0;
             }
         }
@@ -73,7 +79,6 @@ namespace MathApp.Core
             if (points.Count == 1) return points[0].Y;
 
             var sorted = points.OrderBy(p => p.X).ToList();
-
             if (x <= sorted[0].X) return sorted[0].Y;
             if (x >= sorted[sorted.Count - 1].X) return sorted[sorted.Count - 1].Y;
 
@@ -134,6 +139,10 @@ namespace MathApp.Core
                 {
                     tool.PreviousTime = 0;
                     tool.PreviousOutput = 0;
+                }
+                else if (tool.Operation == MathOperation.FileIO && tool.IsReading)
+                {
+                    tool.CurrentFileIndex = 0;
                 }
             }
         }

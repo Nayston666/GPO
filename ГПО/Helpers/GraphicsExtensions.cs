@@ -9,7 +9,6 @@ namespace MathApp.Helpers
         {
             var path = new GraphicsPath();
             if (radius <= 0) { path.AddRectangle(rect); return path; }
-
             path.AddArc(rect.X, rect.Y, radius * 2, radius * 2, 180, 90);
             path.AddArc(rect.Right - radius * 2, rect.Y, radius * 2, radius * 2, 270, 90);
             path.AddArc(rect.Right - radius * 2, rect.Bottom - radius * 2, radius * 2, radius * 2, 0, 90);

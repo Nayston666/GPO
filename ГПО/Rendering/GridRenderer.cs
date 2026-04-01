@@ -1,7 +1,6 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
 using MathApp.Helpers;
-using G = System.Drawing.Graphics;
 
 namespace MathApp.Rendering
 {
@@ -12,14 +11,14 @@ namespace MathApp.Rendering
         private const int GridSize = 30;
         private const int BoldGridSize = 150;
 
-        public static void Draw(G g, Panel panel)
+        public static void Draw(Graphics g, Panel panel)
         {
             Point scrollOffset = panel.AutoScrollPosition;
             DrawThinGrid(g, panel, scrollOffset);
             DrawBoldGrid(g, panel, scrollOffset);
         }
 
-        private static void DrawThinGrid(G g, Panel panel, Point scrollOffset)
+        private static void DrawThinGrid(Graphics g, Panel panel, Point scrollOffset)
         {
             int offsetX = scrollOffset.X % GridSize;
             int offsetY = scrollOffset.Y % GridSize;
@@ -32,7 +31,7 @@ namespace MathApp.Rendering
                 g.DrawLine(_thinPen, 0, y, panel.Width, y);
         }
 
-        private static void DrawBoldGrid(G g, Panel panel, Point scrollOffset)
+        private static void DrawBoldGrid(Graphics g, Panel panel, Point scrollOffset)
         {
             int boldOffsetX = scrollOffset.X % BoldGridSize;
             int boldOffsetY = scrollOffset.Y % BoldGridSize;

@@ -60,16 +60,13 @@ namespace MathApp.Rendering
             g.DrawString(valueText, _valueFont, Brushes.Yellow, mid.X - textSize.Width / 2, mid.Y);
         }
 
-        private static Point GetOutputPoint(MathTool tool) =>
-            new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+        private static Point GetOutputPoint(MathTool tool) => new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
 
         private static Point GetInputPoint(MathTool tool, InputType input)
         {
-            if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
-                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-            return input == InputType.A
-                ? new Point(tool.Position.X - 5, tool.Position.Y + 20)
-                : new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+            if (tool.Type == ToolType.SineGenerator) return Point.Empty;
+            if (tool.Type == ToolType.Chart) return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+            return input == InputType.A ? new Point(tool.Position.X - 5, tool.Position.Y + 20) : new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
         }
     }
 }

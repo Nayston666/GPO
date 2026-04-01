@@ -1,13 +1,12 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 
 namespace MathApp.Helpers
 {
     public static class PointExtensions
     {
-        public static double DistanceTo(this Point p1, Point p2)
-        {
-            return System.Math.Sqrt(System.Math.Pow(p1.X - p2.X, 2) + System.Math.Pow(p1.Y - p2.Y, 2));
-        }
+        public static double DistanceTo(this Point p1, Point p2) =>
+            Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
 
         public static Point Clamp(this Point p, Rectangle bounds)
         {
