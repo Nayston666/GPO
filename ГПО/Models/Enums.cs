@@ -20,7 +20,8 @@ namespace MathApp.Models
     {
         Operation,      // Математическая операция
         Chart,          // График
-        SineGenerator   // Генератор синусоиды
+        SineGenerator,   // Генератор синусоиды
+        SubSystem       // Подсистема
     }
 
     /// <summary>

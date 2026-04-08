@@ -51,6 +51,9 @@ namespace MathApp.Models
         /// <summary>Последний вычисленный результат</summary>
         public double? LastResult { get; set; }
 
+        // Свойство подсистемы
+        public SubSystemData SubSystemData { get; set; }
+
         /// <summary>
         /// Добавляет значение в историю (для графика)
         /// </summary>

@@ -54,7 +54,8 @@ namespace MathApp.UI
                 "✖️ Умножение",
                 "➗ Деление",
                 "📊 График",
-                "📈 Синусоида"
+                "📈 Синусоида",
+                "🧩 Подсистема"
             });
 
             this.Controls.AddRange(new Control[] { titleLabel, _listBox });

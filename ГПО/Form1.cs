@@ -56,14 +56,6 @@ namespace MathApp
         // Словарь для окон графиков
         private Dictionary<Guid, GraphForm> graphWindows = new Dictionary<Guid, GraphForm>();
 
-        // Кнопка подсистемы
-        private void BtnCreateSubScheme_Click(object sender, EventArgs e)
-        {
-            // Создаем и показываем окно подсхемы
-            var subSystemForm = new SubSystemForm();
-            subSystemForm.ShowDialog();
-        }
-
         public Form1()
         {
             InitializeComponent();
@@ -87,6 +79,9 @@ namespace MathApp
             realTimeTimer = new Timer();
             realTimeTimer.Interval = 16;
             realTimeTimer.Tick += RealTimeTimerTick;
+
+            // Двойной клик для открытия подсистемы
+            whiteboardPanel.DoubleClick += WhiteboardPanel_DoubleClick;
         }
 
         private void InitializeComponent()
@@ -142,23 +137,6 @@ namespace MathApp
             };
             toolboxControl.ItemMouseDown += ToolboxControl_ItemMouseDown;
 
-            // ============ КНОПКА СОЗДАНИЯ ПОДСХЕМЫ ============
-            var btnCreateSubScheme = new Button
-            {
-                Text = "🧩 СОЗДАТЬ ПОДСХЕМУ",
-                Location = new Point(15, 320),      
-                Size = new Size(230, 40),          
-                BackColor = Color.FromArgb(80, 60, 120), 
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnCreateSubScheme.FlatAppearance.BorderSize = 0;
-            btnCreateSubScheme.FlatAppearance.MouseOverBackColor = Color.FromArgb(100, 80, 140);
-            btnCreateSubScheme.FlatAppearance.MouseDownBackColor = Color.FromArgb(60, 40, 100);
-            btnCreateSubScheme.Click += BtnCreateSubScheme_Click;
-
             // ============ ПАНЕЛЬ РЕАЛЬНОГО ВРЕМЕНИ ============
             var realTimePanel = CreateSimplePanel("⚡ РЕЖИМ РЕАЛЬНОГО ВРЕМЕНИ", new Point(0, 230));
 
@@ -213,9 +191,9 @@ namespace MathApp
 
             var infoLabel = new Label
             {
-                Text = "• Клик на блок - редактирование\r\n• Оранж. точка - выход\r\n• Зел. точка - вход\r\n• Для соединения: выход → вход\r\n• ПКМ на блоке - удалить",
+                Text = "• Клик на блок - редактирование\r\n• Оранж. точка - выход\r\n• Зел. точка - вход\r\n• Для соединения: выход → вход\r\n• ПКМ на блоке - удалить\r\n• Двойной клик по подсистеме - открыть",
                 Location = new Point(15, 35),
-                Size = new Size(250, 100),
+                Size = new Size(250, 120),
                 ForeColor = Color.LightGray,
                 Font = new Font("Segoe UI", 9),
                 BackColor = Color.Transparent
@@ -255,7 +233,7 @@ namespace MathApp
 
             // Добавляем все на боковую панель
             contentPanel.Controls.AddRange(new Control[] {
-                toolboxControl, btnCreateSubScheme, realTimePanel, propertyPanel, infoPanel
+                toolboxControl, realTimePanel, propertyPanel, infoPanel
             });
 
             sidePanel.Controls.Add(contentPanel);
@@ -391,7 +369,23 @@ namespace MathApp
                 tool.Amplitude = 1.0;
                 tool.Phase = 0;
             }
-            else
+            else if (type.Contains("Подсистема"))
+            {
+                tool.Type = ToolType.SubSystem;
+                tool.Size = new Size(180, 120);
+                tool.Name = $"Подсистема {whiteboardTools.Count + 1}";
+
+                // Создаем пустые данные для подсхемы
+                tool.SubSystemData = new SubSystemData
+                {
+                    Name = tool.Name,
+                    InternalTools = new List<MathTool>(),
+                    InternalConnections = new List<Connection>(),
+                    InputPorts = new List<SubSystemPort>(),
+                    OutputPorts = new List<SubSystemPort>()
+                };
+            }
+            else  // Математические операции
             {
                 tool.Type = ToolType.Operation;
                 tool.Size = new Size(140, 80);
@@ -461,6 +455,8 @@ namespace MathApp
                     blockRenderer.DrawChartTool(g, tool, selectedTool);
                 else if (tool.Type == ToolType.SineGenerator)
                     blockRenderer.DrawSineTool(g, tool, selectedTool, time);
+                else if (tool.Type == ToolType.SubSystem)
+                    blockRenderer.DrawSubSystemTool(g, tool, selectedTool);
                 else
                     blockRenderer.DrawMathTool(g, tool, selectedTool);
 
@@ -553,6 +549,37 @@ namespace MathApp
             }
         }
 
+        private void WhiteboardPanel_DoubleClick(object sender, EventArgs e)
+        {
+            var mousePos = whiteboardPanel.PointToClient(MousePosition);
+            var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
+            var tool = GetToolAtPosition(realPos);
+
+            if (tool != null && tool.Type == ToolType.SubSystem)
+            {
+                // Если у подсистемы нет данных, создаём пустые
+                if (tool.SubSystemData == null)
+                {
+                    tool.SubSystemData = new SubSystemData
+                    {
+                        Name = tool.Name,
+                        InternalTools = new List<MathTool>(),
+                        InternalConnections = new List<Connection>(),
+                        InputPorts = new List<SubSystemPort>(),
+                        OutputPorts = new List<SubSystemPort>()
+                    };
+                }
+
+                var form = new SubSystemForm(tool.SubSystemData);
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    tool.SubSystemData = form.GetResult();
+                    tool.Name = tool.SubSystemData.Name;
+                    needsRedraw = true;
+                }
+            }
+        }
+
         private ConnectionPoint? HitTestConnectionPoint(Point mousePos)
         {
             var realPoint = whiteboardPanel.GetRealMouseLocation(mousePos);
@@ -600,6 +627,20 @@ namespace MathApp
                 }
                 else if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
                 {
+                    var input = GetInputPoint(tool, InputType.A);
+                    if (Distance(realPoint, input) < 10)
+                    {
+                        return new ConnectionPoint
+                        {
+                            ToolId = tool.Id,
+                            Type = ConnectionPointType.Input,
+                            InputType = InputType.A
+                        };
+                    }
+                }
+                else if (tool.Type == ToolType.SubSystem)
+                {
+                    // Для подсистемы проверяем входные точки (порты)
                     var input = GetInputPoint(tool, InputType.A);
                     if (Distance(realPoint, input) < 10)
                     {

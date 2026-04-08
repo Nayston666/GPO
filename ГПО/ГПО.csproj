@@ -89,6 +89,8 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\SubSystemData.cs" />
+    <Compile Include="Models\SubSystemModels.cs" />
     <Compile Include="Rendering\BlockRenderer.cs" />
     <Compile Include="Rendering\ConnectionRenderer.cs" />
     <Compile Include="Rendering\GridRenderer.cs" />

@@ -3,12 +3,40 @@
   "WorkspaceRootPath": "C:\\Users\\User\\Documents\\GitHub\\GPO\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\subsystemform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\subsystemform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\models\\subsystemmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\subsystemmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\rendering\\blockrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\rendering\\blockrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\models\\subsystemdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\subsystemdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\ui\\subsystemform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\subsystemform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\ui\\toolboxcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\toolboxcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\ui\\graphform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\graphform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\models\\mathtool.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\mathtool.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\models\\enums.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\enums.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,7 +46,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 9,
           "Children": [
             {
               "$type": "Bookmark",
@@ -26,26 +54,117 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
+              "Title": "SubSystemModels.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T05:05:55.624Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "GraphForm.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "ViewState": "AgIAAFsBAAAAAAAAAADwv2wBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T04:01:37.831Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "BlockRenderer.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "ViewState": "AgIAAHcBAAAAAAAAAAAYwJgBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T03:57:42.267Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "MathTool.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAmwDYAAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T03:56:32.574Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ToolboxControl.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\ToolboxControl.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\ToolboxControl.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\ToolboxControl.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\ToolboxControl.cs",
+              "ViewState": "AgIAAFcAAAAAAAAAAAAYwGUAAAA6AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T03:51:17.082Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "SubSystemData.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemData.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\SubSystemData.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemData.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\SubSystemData.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T03:50:12.746Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "Enums.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\Enums.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\Enums.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\Enums.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\Enums.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAiwBcAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-08T03:45:56.12Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "Form1.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Form1.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Form1.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Form1.cs",
               "RelativeToolTip": "\u0413\u041F\u041E\\Form1.cs",
-              "ViewState": "AgIAAP8CAAAAAAAAAAAmwBsDAAARAAAAAAAAAA==",
+              "ViewState": "AgIAADwDAAAAAAAAAAAkwFIDAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-08T03:24:40.336Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "SubSystemForm.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
               "RelativeToolTip": "\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
-              "ViewState": "AgIAANkAAAAAAAAAAAAAwAQBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAF4AAAAAAAAAAAAAwGsAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-08T03:23:39.587Z",
               "EditorCaption": ""

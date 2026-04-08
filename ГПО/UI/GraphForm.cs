@@ -21,7 +21,7 @@ namespace MathApp.UI
 
         private Bitmap _backBuffer;
         private Graphics _backGraphics;
-        private bool _needsRedraw = true;
+        private bool needsRedraw = true;
         private Color _lineColor = Color.Cyan;
 
         public GraphForm(string source)
@@ -31,18 +31,18 @@ namespace MathApp.UI
 
             _refreshTimer = new Timer();
             _refreshTimer.Interval = 50;
-            _refreshTimer.Tick += (s, e) => _needsRedraw = true;
+            _refreshTimer.Tick += (s, e) => needsRedraw = true;
             _refreshTimer.Start();
 
             var renderTimer = new Timer();
             renderTimer.Interval = 16;
             renderTimer.Tick += (s, e) =>
             {
-                if (_needsRedraw)
+                if (needsRedraw)
                 {
                     DrawToBuffer();
                     this.Invalidate();
-                    _needsRedraw = false;
+                    needsRedraw = false;
                 }
             };
             renderTimer.Start();
@@ -74,7 +74,7 @@ namespace MathApp.UI
                 Checked = true,
                 BackColor = Color.Transparent
             };
-            _chkAutoScroll.CheckedChanged += (s, e) => _needsRedraw = true;
+            _chkAutoScroll.CheckedChanged += (s, e) => needsRedraw = true;
 
             _chkShowGrid = new CheckBox
             {
@@ -85,7 +85,7 @@ namespace MathApp.UI
                 Checked = true,
                 BackColor = Color.Transparent
             };
-            _chkShowGrid.CheckedChanged += (s, e) => _needsRedraw = true;
+            _chkShowGrid.CheckedChanged += (s, e) => needsRedraw = true;
 
             _cmbLineColor = new ComboBox
             {
@@ -108,7 +108,7 @@ namespace MathApp.UI
                 else if (index == 3) _lineColor = Color.Yellow;
                 else _lineColor = Color.White;
 
-                _needsRedraw = true;
+                needsRedraw = true;
             };
 
             var btnClear = new Button
@@ -120,7 +120,7 @@ namespace MathApp.UI
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
-            btnClear.Click += (s, e) => { _values.Clear(); _needsRedraw = true; };
+            btnClear.Click += (s, e) => { _values.Clear(); needsRedraw = true; };
 
             var btnSave = new Button
             {
@@ -145,7 +145,7 @@ namespace MathApp.UI
             _values.Add(value);
             if (_values.Count > _maxPoints * 2)
                 _values.RemoveRange(0, _values.Count - _maxPoints);
-            _needsRedraw = true;
+            needsRedraw = true;
         }
 
         private void CreateBackBuffer()
@@ -338,7 +338,7 @@ namespace MathApp.UI
         {
             base.OnResize(e);
             CreateBackBuffer();
-            _needsRedraw = true;
+            needsRedraw = true;
         }
 
         protected override void Dispose(bool disposing)

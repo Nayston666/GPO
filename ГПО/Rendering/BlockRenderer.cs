@@ -110,9 +110,128 @@ namespace MathApp.Rendering
             }
         }
 
+        /// <summary>
+        /// Рисует блок подсистемы
+        /// </summary>
+        public void DrawSubSystemTool(Graphics g, MathTool tool, MathTool selectedTool)
+        {
+            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+
+            DrawShadow(g, rect);
+
+            using (var brush = new LinearGradientBrush(rect,
+                Color.FromArgb(100, 100, 200),
+                Color.FromArgb(60, 60, 140), 45))
+            {
+                GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 10);
+            }
+
+            using (var pen = new Pen(selectedTool == tool ? Color.Yellow : Color.FromArgb(150, 150, 255), 2))
+            {
+                GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 10);
+            }
+
+            // Иконка подсистемы
+            g.DrawString("🧩", new Font("Segoe UI", 24), Brushes.White,
+                rect.X + rect.Width / 2 - 20, rect.Y + 15);
+
+            // Имя подсистемы
+            g.DrawString(tool.Name, new Font("Segoe UI", 8, FontStyle.Bold), Brushes.LightGray,
+                rect.X + 10, rect.Y + rect.Height - 20);
+
+            // Показываем количество портов
+            if (tool.SubSystemData != null)
+            {
+                int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
+                int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
+
+                string portsInfo = $"Вх:{inputCount} Вых:{outputCount}";
+                using (var font = new Font("Segoe UI", 8, FontStyle.Bold))
+                {
+                    g.DrawString(portsInfo, font, Brushes.Cyan,
+                        rect.X + rect.Width - 70, rect.Y + 10);
+                }
+
+                // Рисуем мини-порты на блоке для визуализации
+                for (int i = 0; i < Math.Min(inputCount, 3); i++)
+                {
+                    Point inputPoint = new Point(rect.X - 3, rect.Y + 20 + i * 25);
+                    using (var brush = new SolidBrush(Color.LightGreen))
+                    {
+                        g.FillEllipse(brush, inputPoint.X - 4, inputPoint.Y - 4, 8, 8);
+                    }
+                    using (var penBorder = new Pen(Color.White, 1))
+                    {
+                        g.DrawEllipse(penBorder, inputPoint.X - 4, inputPoint.Y - 4, 8, 8);
+                    }
+                }
+
+                for (int i = 0; i < Math.Min(outputCount, 3); i++)
+                {
+                    Point outputPoint = new Point(rect.X + rect.Width + 3, rect.Y + 20 + i * 25);
+                    using (var brush = new SolidBrush(Color.Orange))
+                    {
+                        g.FillEllipse(brush, outputPoint.X - 4, outputPoint.Y - 4, 8, 8);
+                    }
+                    using (var penBorder = new Pen(Color.White, 1))
+                    {
+                        g.DrawEllipse(penBorder, outputPoint.X - 4, outputPoint.Y - 4, 8, 8);
+                    }
+                }
+
+                if (inputCount > 3 || outputCount > 3)
+                {
+                    using (var font = new Font("Segoe UI", 7))
+                    {
+                        g.DrawString("...", font, Brushes.Gray,
+                            rect.X + rect.Width - 25, rect.Y + rect.Height - 25);
+                    }
+                }
+            }
+            else
+            {
+                using (var font = new Font("Segoe UI", 7))
+                {
+                    g.DrawString("(пусто)", font, Brushes.Yellow,
+                        rect.X + 10, rect.Y + 10);
+                }
+            }
+        }
+
         public void DrawConnectionPoints(Graphics g, MathTool tool,
                                          IEnumerable<Connection> connections)
         {
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                // Для подсистемы рисуем точки для каждого порта
+                int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
+                int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
+
+                // Входные порты (слева)
+                for (int i = 0; i < inputCount; i++)
+                {
+                    Point inputPoint = new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + 20 + i * 25
+                    );
+                    bool hasConn = connections.Any(c =>
+                        c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
+                    DrawConnectionPoint(g, inputPoint, $"IN{i + 1}", Color.LightGreen, hasConn);
+                }
+
+                // Выходные порты (справа)
+                for (int i = 0; i < outputCount; i++)
+                {
+                    Point outputPoint = new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + 20 + i * 25
+                    );
+                    bool hasConn = connections.Any(c => c.SourceToolId == tool.Id);
+                    DrawConnectionPoint(g, outputPoint, $"OUT{i + 1}", Color.Orange, hasConn);
+                }
+                return;
+            }
+
             if (tool.Type != ToolType.Chart)
             {
                 Point output = GetOutputPoint(tool);
@@ -163,7 +282,10 @@ namespace MathApp.Rendering
                 g.DrawEllipse(pen, point.X - size / 2, point.Y - size / 2, size, size);
             }
 
-            g.DrawString(label, _smallFont, Brushes.Black, point.X - 4, point.Y - 12);
+            using (var font = new Font("Segoe UI", 6, FontStyle.Bold))
+            {
+                g.DrawString(label, font, Brushes.Black, point.X - 10, point.Y - 14);
+            }
         }
 
         private void DrawCenteredText(Graphics g, string text, Font font,
