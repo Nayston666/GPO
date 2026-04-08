@@ -56,6 +56,14 @@ namespace MathApp
         // Словарь для окон графиков
         private Dictionary<Guid, GraphForm> graphWindows = new Dictionary<Guid, GraphForm>();
 
+        // Кнопка подсистемы
+        private void BtnCreateSubScheme_Click(object sender, EventArgs e)
+        {
+            // Создаем и показываем окно подсхемы
+            var subSystemForm = new SubSystemForm();
+            subSystemForm.ShowDialog();
+        }
+
         public Form1()
         {
             InitializeComponent();
@@ -133,6 +141,23 @@ namespace MathApp
                 Location = new Point(0, 10)
             };
             toolboxControl.ItemMouseDown += ToolboxControl_ItemMouseDown;
+
+            // ============ КНОПКА СОЗДАНИЯ ПОДСХЕМЫ ============
+            var btnCreateSubScheme = new Button
+            {
+                Text = "🧩 СОЗДАТЬ ПОДСХЕМУ",
+                Location = new Point(15, 320),      
+                Size = new Size(230, 40),          
+                BackColor = Color.FromArgb(80, 60, 120), 
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCreateSubScheme.FlatAppearance.BorderSize = 0;
+            btnCreateSubScheme.FlatAppearance.MouseOverBackColor = Color.FromArgb(100, 80, 140);
+            btnCreateSubScheme.FlatAppearance.MouseDownBackColor = Color.FromArgb(60, 40, 100);
+            btnCreateSubScheme.Click += BtnCreateSubScheme_Click;
 
             // ============ ПАНЕЛЬ РЕАЛЬНОГО ВРЕМЕНИ ============
             var realTimePanel = CreateSimplePanel("⚡ РЕЖИМ РЕАЛЬНОГО ВРЕМЕНИ", new Point(0, 230));
@@ -230,7 +255,7 @@ namespace MathApp
 
             // Добавляем все на боковую панель
             contentPanel.Controls.AddRange(new Control[] {
-                toolboxControl, realTimePanel, propertyPanel, infoPanel
+                toolboxControl, btnCreateSubScheme, realTimePanel, propertyPanel, infoPanel
             });
 
             sidePanel.Controls.Add(contentPanel);
