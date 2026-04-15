@@ -115,6 +115,12 @@ namespace MathApp.Rendering
         /// </summary>
         public void DrawSubSystemTool(Graphics g, MathTool tool, MathTool selectedTool)
         {
+            // Автоматически обновляем размер блока
+            if (tool.SubSystemData != null)
+            {
+                tool.Size = CalculateSubSystemSize(tool.SubSystemData);
+            }
+
             Rectangle rect = new Rectangle(tool.Position, tool.Size);
 
             DrawShadow(g, rect);
@@ -139,7 +145,6 @@ namespace MathApp.Rendering
             g.DrawString(tool.Name, new Font("Segoe UI", 8, FontStyle.Bold), Brushes.LightGray,
                 rect.X + 10, rect.Y + rect.Height - 20);
 
-            // Показываем количество портов
             if (tool.SubSystemData != null)
             {
                 int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
@@ -153,9 +158,11 @@ namespace MathApp.Rendering
                 }
 
                 // Рисуем мини-порты на блоке для визуализации
-                for (int i = 0; i < Math.Min(inputCount, 3); i++)
+                // Входные порты (слева, зелёные) - сюда ПРИХОДИТ сигнал
+                for (int i = 0; i < Math.Min(inputCount, 8); i++)
                 {
-                    Point inputPoint = new Point(rect.X - 3, rect.Y + 20 + i * 25);
+                    int yOffset = 35 + i * 20;
+                    Point inputPoint = new Point(rect.X - 3, rect.Y + yOffset);
                     using (var brush = new SolidBrush(Color.LightGreen))
                     {
                         g.FillEllipse(brush, inputPoint.X - 4, inputPoint.Y - 4, 8, 8);
@@ -166,9 +173,11 @@ namespace MathApp.Rendering
                     }
                 }
 
-                for (int i = 0; i < Math.Min(outputCount, 3); i++)
+                // Выходные порты (справа, оранжевые) - отсюда УХОДИТ сигнал
+                for (int i = 0; i < Math.Min(outputCount, 8); i++)
                 {
-                    Point outputPoint = new Point(rect.X + rect.Width + 3, rect.Y + 20 + i * 25);
+                    int yOffset = 35 + i * 20;
+                    Point outputPoint = new Point(rect.X + rect.Width + 3, rect.Y + yOffset);
                     using (var brush = new SolidBrush(Color.Orange))
                     {
                         g.FillEllipse(brush, outputPoint.X - 4, outputPoint.Y - 4, 8, 8);
@@ -179,7 +188,7 @@ namespace MathApp.Rendering
                     }
                 }
 
-                if (inputCount > 3 || outputCount > 3)
+                if (inputCount > 8 || outputCount > 8)
                 {
                     using (var font = new Font("Segoe UI", 7))
                     {
@@ -199,62 +208,67 @@ namespace MathApp.Rendering
         }
 
         public void DrawConnectionPoints(Graphics g, MathTool tool,
-                                         IEnumerable<Connection> connections)
+                                 IEnumerable<Connection> connections)
         {
+            // Сначала обрабатываем подсистему
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
-                // Для подсистемы рисуем точки для каждого порта
                 int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                 int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
 
-                // Входные порты (слева)
+                // Входные порты
                 for (int i = 0; i < inputCount; i++)
                 {
+                    int yOffset = 35 + i * 20;
                     Point inputPoint = new Point(
                         tool.Position.X - 5,
-                        tool.Position.Y + 20 + i * 25
+                        tool.Position.Y + yOffset
                     );
                     bool hasConn = connections.Any(c =>
                         c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
                     DrawConnectionPoint(g, inputPoint, $"IN{i + 1}", Color.LightGreen, hasConn);
                 }
 
-                // Выходные порты (справа)
+                // Выходные порты 
                 for (int i = 0; i < outputCount; i++)
                 {
+                    int yOffset = 35 + i * 20;
                     Point outputPoint = new Point(
                         tool.Position.X + tool.Size.Width + 5,
-                        tool.Position.Y + 20 + i * 25
+                        tool.Position.Y + yOffset
                     );
                     bool hasConn = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawConnectionPoint(g, outputPoint, $"OUT{i + 1}", Color.Orange, hasConn);
                 }
                 return;
             }
-
+                        
+            // Выходная точка (справа) для всех блоков, кроме Chart
             if (tool.Type != ToolType.Chart)
             {
-                Point output = GetOutputPoint(tool);
-                bool hasConnections = connections.Any(c => c.SourceToolId == tool.Id);
-                DrawConnectionPoint(g, output, "out", Color.Orange, hasConnections);
+                Point output = new Point(tool.Position.X + tool.Size.Width + 5,
+                                         tool.Position.Y + tool.Size.Height / 2);
+                bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
+                DrawConnectionPoint(g, output, "out", Color.Orange, hasOutput);
             }
 
+            // Входные точки для разных типов блоков
             if (tool.Type == ToolType.Operation)
             {
-                Point inputA = GetInputPoint(tool, InputType.A);
-                Point inputB = GetInputPoint(tool, InputType.B);
+                // Для математических операций - два входа A и B
+                Point inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
+                Point inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
 
-                bool hasA = connections.Any(c =>
-                    c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
-                bool hasB = connections.Any(c =>
-                    c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
+                bool hasA = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
+                bool hasB = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
 
                 DrawConnectionPoint(g, inputA, "A", Color.LightGreen, hasA);
                 DrawConnectionPoint(g, inputB, "B", Color.LightGreen, hasB);
             }
             else if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
-                Point input = GetInputPoint(tool, InputType.A);
+                // Для графика и генератора
+                Point input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
                 bool hasConn = connections.Any(c => c.TargetToolId == tool.Id);
                 DrawConnectionPoint(g, input, "in", Color.LightGreen, hasConn);
             }
@@ -370,18 +384,29 @@ namespace MathApp.Rendering
             }
         }
 
-        private Point GetOutputPoint(MathTool tool)
-        {
-            return new Point(tool.Position.X + tool.Size.Width + 5,
-                            tool.Position.Y + tool.Size.Height / 2);
-        }
-
         private Point GetInputPoint(MathTool tool, InputType input)
         {
+            // Для подсистемы возвращаем позицию входного порта
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
+                if (inputCount > 0)
+                {
+                    // Возвращаем позицию первого входного порта 
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + 35  // Отступ для первого порта
+                    );
+                }
+                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+            }
+
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
-                return new Point(tool.Position.X - 5,
-                                tool.Position.Y + tool.Size.Height / 2);
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
             }
 
             if (input == InputType.A)
@@ -394,6 +419,31 @@ namespace MathApp.Rendering
             }
         }
 
+        private Point GetOutputPoint(MathTool tool)
+        {
+            // Для подсистемы возвращаем позицию выходного порта
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
+                if (outputCount > 0)
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + 35
+                    );
+                }
+                return new Point(
+                    tool.Position.X + tool.Size.Width + 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
+
+            return new Point(
+                tool.Position.X + tool.Size.Width + 5,
+                tool.Position.Y + tool.Size.Height / 2
+            );
+        }
+
         private string GetOperationIcon(MathOperation op)
         {
             switch (op)
@@ -404,6 +454,24 @@ namespace MathApp.Rendering
                 case MathOperation.Division: return "÷";
                 default: return "?";
             }
+        }
+
+        /// <summary>
+        /// Вычисляет размер блока подсистемы на основе количества портов
+        /// </summary>
+        public Size CalculateSubSystemSize(SubSystemData data)
+        {
+            if (data == null) return new Size(180, 120);
+
+            int inputCount = data.InputPorts?.Count ?? 0;
+            int outputCount = data.OutputPorts?.Count ?? 0;
+            int maxPorts = Math.Max(inputCount, outputCount);
+
+            // Базовая высота
+            int height = 55 + maxPorts * 20;
+            int width = 200;
+
+            return new Size(width, Math.Max(120, height));
         }
     }
 }

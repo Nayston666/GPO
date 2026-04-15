@@ -23,6 +23,7 @@ namespace MathApp.UI
         private Graphics _backGraphics;
         private bool needsRedraw = true;
         private Color _lineColor = Color.Cyan;
+        private bool _isDisposing = false;
 
         public GraphForm(string source)
         {
@@ -38,7 +39,7 @@ namespace MathApp.UI
             renderTimer.Interval = 16;
             renderTimer.Tick += (s, e) =>
             {
-                if (needsRedraw)
+                if (needsRedraw && !_isDisposing && !this.IsDisposed)
                 {
                     DrawToBuffer();
                     this.Invalidate();
@@ -47,7 +48,21 @@ namespace MathApp.UI
             };
             renderTimer.Start();
 
-            CreateBackBuffer();
+            this.FormClosing += GraphForm_FormClosing;
+
+            // Создаём буфер после того, как форма отобразилась
+            this.Shown += (s, e) => CreateBackBuffer();
+        }
+
+        private void GraphForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _isDisposing = true;
+            if (_refreshTimer != null)
+            {
+                _refreshTimer.Stop();
+                _refreshTimer.Dispose();
+                _refreshTimer = null;
+            }
         }
 
         private void InitializeComponent()
@@ -142,6 +157,8 @@ namespace MathApp.UI
 
         public void AddValue(double value)
         {
+            if (_isDisposing || this.IsDisposed) return;
+
             _values.Add(value);
             if (_values.Count > _maxPoints * 2)
                 _values.RemoveRange(0, _values.Count - _maxPoints);
@@ -150,60 +167,88 @@ namespace MathApp.UI
 
         private void CreateBackBuffer()
         {
-            if (this.Width <= 0 || this.Height <= 40) return;
+            if (_isDisposing || this.IsDisposed) return;
 
-            if (_backBuffer != null)
+            int width = this.ClientSize.Width;
+            int height = this.ClientSize.Height;
+
+            // Проверяем, что размеры допустимы
+            if (width <= 0 || height <= 40)
+                return;
+
+            try
             {
-                _backGraphics?.Dispose();
-                _backBuffer.Dispose();
-            }
+                if (_backBuffer != null)
+                {
+                    _backGraphics?.Dispose();
+                    _backBuffer.Dispose();
+                }
 
-            _backBuffer = new Bitmap(this.Width, this.Height);
-            _backGraphics = Graphics.FromImage(_backBuffer);
-            _backGraphics.SmoothingMode = SmoothingMode.AntiAlias;
-            _backGraphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                _backBuffer = new Bitmap(width, height);
+                _backGraphics = Graphics.FromImage(_backBuffer);
+                _backGraphics.SmoothingMode = SmoothingMode.AntiAlias;
+                _backGraphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+            }
+            catch (Exception ex)
+            {
+                // Игнорируем ошибки при создании буфера
+                System.Diagnostics.Debug.WriteLine($"CreateBackBuffer error: {ex.Message}");
+            }
         }
 
         private void DrawToBuffer()
         {
+            if (_isDisposing || this.IsDisposed) return;
             if (_backGraphics == null) return;
-            _backGraphics.Clear(this.BackColor);
 
-            int topOffset = 50;
-
-            if (_chkShowGrid.Checked)
+            try
             {
-                DrawGrid(_backGraphics, topOffset);
+                _backGraphics.Clear(this.BackColor);
+
+                int topOffset = 50;
+
+                // Проверяем, что размеры клиентской области допустимы
+                if (this.ClientSize.Width <= 100 || this.ClientSize.Height <= 100)
+                    return;
+
+                if (_chkShowGrid.Checked)
+                {
+                    DrawGrid(_backGraphics, topOffset);
+                }
+
+                DrawAxes(_backGraphics, topOffset);
+
+                if (_values.Count > 1)
+                {
+                    DrawGraph(_backGraphics, topOffset);
+                }
+                else
+                {
+                    DrawNoDataMessage(_backGraphics, topOffset);
+                }
+
+                if (_values.Count > 0)
+                {
+                    DrawStats(_backGraphics);
+                }
+
+                DrawSourceInfo(_backGraphics, topOffset);
             }
-
-            DrawAxes(_backGraphics, topOffset);
-
-            if (_values.Count > 1)
+            catch (Exception ex)
             {
-                DrawGraph(_backGraphics, topOffset);
+                System.Diagnostics.Debug.WriteLine($"DrawToBuffer error: {ex.Message}");
             }
-            else
-            {
-                DrawNoDataMessage(_backGraphics, topOffset);
-            }
-
-            if (_values.Count > 0)
-            {
-                DrawStats(_backGraphics);
-            }
-
-            DrawSourceInfo(_backGraphics, topOffset);
         }
 
         private void DrawGrid(Graphics g, int topOffset)
         {
             using (var pen = new Pen(Color.FromArgb(60, 60, 65), 1))
             {
-                for (int x = 50; x < this.Width - 50; x += 50)
-                    g.DrawLine(pen, x, topOffset, x, this.Height - 50);
+                for (int x = 50; x < this.ClientSize.Width - 50; x += 50)
+                    g.DrawLine(pen, x, topOffset, x, this.ClientSize.Height - 50);
 
-                for (int y = topOffset; y < this.Height - 50; y += 50)
-                    g.DrawLine(pen, 50, y, this.Width - 50, y);
+                for (int y = topOffset; y < this.ClientSize.Height - 50; y += 50)
+                    g.DrawLine(pen, 50, y, this.ClientSize.Width - 50, y);
             }
         }
 
@@ -211,19 +256,21 @@ namespace MathApp.UI
         {
             using (var pen = new Pen(Color.White, 2))
             {
-                g.DrawLine(pen, 50, this.Height - 50, this.Width - 50, this.Height - 50);
-                g.DrawLine(pen, 50, topOffset, 50, this.Height - 50);
+                g.DrawLine(pen, 50, this.ClientSize.Height - 50, this.ClientSize.Width - 50, this.ClientSize.Height - 50);
+                g.DrawLine(pen, 50, topOffset, 50, this.ClientSize.Height - 50);
             }
         }
 
         private void DrawGraph(Graphics g, int topOffset)
         {
             int graphLeft = 60;
-            int graphRight = this.Width - 60;
+            int graphRight = this.ClientSize.Width - 60;
             int graphTop = topOffset;
-            int graphBottom = this.Height - 70;
+            int graphBottom = this.ClientSize.Height - 70;
             int graphWidth = graphRight - graphLeft;
             int graphHeight = graphBottom - graphTop;
+
+            if (graphWidth <= 0 || graphHeight <= 0) return;
 
             double minValue = _values.Min();
             double maxValue = _values.Max();
@@ -277,7 +324,7 @@ namespace MathApp.UI
                 g.DrawString("Ожидание данных...",
                     new Font("Segoe UI", 14, FontStyle.Bold),
                     Brushes.Gray,
-                    new Rectangle(0, topOffset, this.Width, this.Height - topOffset),
+                    new Rectangle(0, topOffset, this.ClientSize.Width, this.ClientSize.Height - topOffset),
                     sf);
             }
         }
@@ -291,7 +338,7 @@ namespace MathApp.UI
                           $"Текущее: {_values.Last():F2}";
 
             g.DrawString(stats, new Font("Segoe UI", 9),
-                Brushes.LightGreen, 60, this.Height - 30);
+                Brushes.LightGreen, 60, this.ClientSize.Height - 30);
         }
 
         private void DrawSourceInfo(Graphics g, int topOffset)
@@ -330,33 +377,43 @@ namespace MathApp.UI
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            if (_backBuffer != null)
+            if (_backBuffer != null && !_isDisposing && !this.IsDisposed)
                 e.Graphics.DrawImage(_backBuffer, 0, 0);
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            CreateBackBuffer();
-            needsRedraw = true;
+            if (!_isDisposing && !this.IsDisposed && this.ClientSize.Width > 0 && this.ClientSize.Height > 40)
+            {
+                CreateBackBuffer();
+                needsRedraw = true;
+            }
         }
 
         protected override void Dispose(bool disposing)
         {
+            _isDisposing = true;
+
             if (disposing)
             {
                 if (_refreshTimer != null)
                 {
                     _refreshTimer.Stop();
                     _refreshTimer.Dispose();
+                    _refreshTimer = null;
                 }
+
                 if (_backGraphics != null)
                 {
                     _backGraphics.Dispose();
+                    _backGraphics = null;
                 }
+
                 if (_backBuffer != null)
                 {
                     _backBuffer.Dispose();
+                    _backBuffer = null;
                 }
             }
             base.Dispose(disposing);

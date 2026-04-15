@@ -18,10 +18,11 @@ namespace MathApp.Models
     /// </summary>
     public enum ToolType
     {
-        Operation,      // Математическая операция
-        Chart,          // График
+        Operation,       // Математическая операция
+        Chart,           // График
         SineGenerator,   // Генератор синусоиды
-        SubSystem       // Подсистема
+        SubSystem,       // Подсистема
+        Port             // Порт внутри подсистемы
     }
 
     /// <summary>

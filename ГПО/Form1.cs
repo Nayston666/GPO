@@ -356,6 +356,7 @@ namespace MathApp
                 tool.Size = new Size(160, 80);
                 tool.Name = $"График {whiteboardTools.Count + 1}";
 
+                // Создаём и показываем окно графика
                 var graph = new GraphForm(tool.Name);
                 graph.Show();
                 graphWindows[tool.Id] = graph;
@@ -555,27 +556,47 @@ namespace MathApp
             var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
             var tool = GetToolAtPosition(realPos);
 
-            if (tool != null && tool.Type == ToolType.SubSystem)
+            if (tool != null)
             {
-                // Если у подсистемы нет данных, создаём пустые
-                if (tool.SubSystemData == null)
+                if (tool.Type == ToolType.SubSystem)
                 {
-                    tool.SubSystemData = new SubSystemData
+                    // Если у подсистемы нет данных, создаём пустые
+                    if (tool.SubSystemData == null)
                     {
-                        Name = tool.Name,
-                        InternalTools = new List<MathTool>(),
-                        InternalConnections = new List<Connection>(),
-                        InputPorts = new List<SubSystemPort>(),
-                        OutputPorts = new List<SubSystemPort>()
-                    };
-                }
+                        tool.SubSystemData = new SubSystemData
+                        {
+                            Name = tool.Name,
+                            InternalTools = new List<MathTool>(),
+                            InternalConnections = new List<Connection>(),
+                            InputPorts = new List<SubSystemPort>(),
+                            OutputPorts = new List<SubSystemPort>()
+                        };
+                    }
 
-                var form = new SubSystemForm(tool.SubSystemData);
-                if (form.ShowDialog() == DialogResult.OK)
+                    var form = new SubSystemForm(tool.SubSystemData);
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+                        tool.SubSystemData = form.GetResult();
+                        tool.Name = tool.SubSystemData.Name;
+                        // Обновляем размер блока подсистемы
+                        tool.Size = blockRenderer.CalculateSubSystemSize(tool.SubSystemData);
+                        needsRedraw = true;
+                    }
+                }
+                else if (tool.Type == ToolType.Chart)
                 {
-                    tool.SubSystemData = form.GetResult();
-                    tool.Name = tool.SubSystemData.Name;
-                    needsRedraw = true;
+                    // Открываем окно графика
+                    if (!graphWindows.ContainsKey(tool.Id) || graphWindows[tool.Id].IsDisposed)
+                    {
+                        var graph = new GraphForm(tool.Name);
+                        graph.Show();
+                        graphWindows[tool.Id] = graph;
+                    }
+                    else
+                    {
+                        // Если уже открыто, просто активируем
+                        graphWindows[tool.Id].Activate();
+                    }
                 }
             }
         }
@@ -586,11 +607,55 @@ namespace MathApp
 
             foreach (var tool in whiteboardTools)
             {
-                // Проверяем выходную точку
-                if (tool.Type != ToolType.Chart)
+                // Для подсистемы - проверяем все порты
+                if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+                {
+                    int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
+                    int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
+
+                    // Проверяем входные порты подсистемы
+                    for (int i = 0; i < inputCount; i++)
+                    {
+                        int yOffset = 35 + i * 20;
+                        Point inputPoint = new Point(
+                            tool.Position.X - 5,
+                            tool.Position.Y + yOffset
+                        );
+                        if (Distance(realPoint, inputPoint) < 12)
+                        {
+                            return new ConnectionPoint
+                            {
+                                ToolId = tool.Id,
+                                Type = ConnectionPointType.Input,
+                                InputType = InputType.A
+                            };
+                        }
+                    }
+
+                    // Проверяем выходные порты подсистемы 
+                    for (int i = 0; i < outputCount; i++)
+                    {
+                        int yOffset = 35 + i * 20;
+                        Point outputPoint = new Point(
+                            tool.Position.X + tool.Size.Width + 5,
+                            tool.Position.Y + yOffset
+                        );
+                        if (Distance(realPoint, outputPoint) < 12)
+                        {
+                            return new ConnectionPoint
+                            {
+                                ToolId = tool.Id,
+                                Type = ConnectionPointType.Output
+                            };
+                        }
+                    }
+                }
+
+                // Проверяем выходную точку обычного блока
+                if (tool.Type != ToolType.Chart && tool.Type != ToolType.SubSystem)
                 {
                     var output = GetOutputPoint(tool);
-                    if (Distance(realPoint, output) < 10)
+                    if (Distance(realPoint, output) < 12)
                     {
                         return new ConnectionPoint
                         {
@@ -600,11 +665,11 @@ namespace MathApp
                     }
                 }
 
-                // Проверяем входные точки
+                // Проверяем входные точки обычных блоков
                 if (tool.Type == ToolType.Operation)
                 {
                     var inputA = GetInputPoint(tool, InputType.A);
-                    if (Distance(realPoint, inputA) < 10)
+                    if (Distance(realPoint, inputA) < 12)
                     {
                         return new ConnectionPoint
                         {
@@ -615,7 +680,7 @@ namespace MathApp
                     }
 
                     var inputB = GetInputPoint(tool, InputType.B);
-                    if (Distance(realPoint, inputB) < 10)
+                    if (Distance(realPoint, inputB) < 12)
                     {
                         return new ConnectionPoint
                         {
@@ -628,21 +693,7 @@ namespace MathApp
                 else if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
                 {
                     var input = GetInputPoint(tool, InputType.A);
-                    if (Distance(realPoint, input) < 10)
-                    {
-                        return new ConnectionPoint
-                        {
-                            ToolId = tool.Id,
-                            Type = ConnectionPointType.Input,
-                            InputType = InputType.A
-                        };
-                    }
-                }
-                else if (tool.Type == ToolType.SubSystem)
-                {
-                    // Для подсистемы проверяем входные точки (порты)
-                    var input = GetInputPoint(tool, InputType.A);
-                    if (Distance(realPoint, input) < 10)
+                    if (Distance(realPoint, input) < 12)
                     {
                         return new ConnectionPoint
                         {
@@ -664,6 +715,15 @@ namespace MathApp
 
         private Point GetOutputPoint(MathTool tool)
         {
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                // Для подсистемы возвращаем позицию первого выходного порта
+                 return new Point(
+                    tool.Position.X + tool.Size.Width + 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
+
             return new Point(
                 tool.Position.X + tool.Size.Width + 5,
                 tool.Position.Y + tool.Size.Height / 2
@@ -672,6 +732,15 @@ namespace MathApp
 
         private Point GetInputPoint(MathTool tool, InputType input)
         {
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                // Для подсистемы возвращаем позицию первого входного порта
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
+
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
                 return new Point(
@@ -738,13 +807,18 @@ namespace MathApp
                         {
                             graphWindows[chart.Id].AddValue(source.LastResult.Value);
                         }
+                        // Добавляем поддержку подсистемы
+                        else if (source != null && source.Type == ToolType.SubSystem && source.LastResult.HasValue)
+                        {
+                            graphWindows[chart.Id].AddValue(source.LastResult.Value);
+                        }
                     }
                 }
             }
 
-            // Обновляем результат на главной форме
+            // Обновляем результат на главной форме 
             var lastTool = whiteboardTools
-                .Where(t => t.Type == ToolType.Operation)
+                .Where(t => t.Type == ToolType.Operation || t.Type == ToolType.SubSystem)
                 .OrderByDescending(t => t.Position.X)
                 .FirstOrDefault();
 

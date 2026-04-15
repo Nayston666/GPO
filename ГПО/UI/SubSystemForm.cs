@@ -16,12 +16,11 @@ namespace MathApp.UI
         private SubSystemData _subSystemData;
         private List<MathTool> _tools;
         private List<Connection> _connections;
-        private List<PortTool> _inputPorts;
-        private List<PortTool> _outputPorts;
+        private List<PortTool> _inputPorts;   // Входные порты 
+        private List<PortTool> _outputPorts;  // Выходные порты 
 
         private DoubleBufferedPanel workspace;
         private ListBox toolboxList;
-        private Panel portToolbox;
 
         private MathTool _selectedTool;
         private MathTool _draggedTool;
@@ -39,6 +38,18 @@ namespace MathApp.UI
         private bool _needsRedraw = true;
         private Timer _renderTimer;
         private bool _isDirty = false;
+
+        private TextBox nameBox;
+        private Label lblInputs;
+        private Label lblOutputs;
+        private Button btnSave;
+        private Button btnCancel;
+
+        // Константы для отрисовки портов
+        private const int PORT_WIDTH = 100;
+        private const int PORT_HEIGHT = 40;
+        private const int PORT_SPACING = 55;
+        private const int PORT_START_Y = 80;
 
         public SubSystemForm(SubSystemData data = null)
         {
@@ -70,12 +81,12 @@ namespace MathApp.UI
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Type = ToolType.Operation,
+                    Type = ToolType.Port,
                     PortType = PortType.Input,
                     PortIndex = i,
                     PortName = p.Name,
-                    Position = new Point(30, 100 + i * 60),
-                    Size = new Size(100, 40)
+                    Position = new Point(30, PORT_START_Y + i * PORT_SPACING),
+                    Size = new Size(PORT_WIDTH, PORT_HEIGHT)
                 });
             }
 
@@ -87,12 +98,12 @@ namespace MathApp.UI
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Type = ToolType.Operation,
+                    Type = ToolType.Port,
                     PortType = PortType.Output,
                     PortIndex = i,
                     PortName = p.Name,
-                    Position = new Point(800, 100 + i * 60),
-                    Size = new Size(100, 40)
+                    Position = new Point(workspace != null ? workspace.Width - 130 : 800, PORT_START_Y + i * PORT_SPACING),
+                    Size = new Size(PORT_WIDTH, PORT_HEIGHT)
                 });
             }
 
@@ -104,14 +115,13 @@ namespace MathApp.UI
             SetupWorkspace();
             StartRenderTimer();
 
-            // Добавляем порты в рабочую область как обычные блоки
+            // Добавляем порты в рабочую область
             foreach (var port in _inputPorts)
                 _tools.Add(port);
             foreach (var port in _outputPorts)
                 _tools.Add(port);
         }
 
-        // Обработчик Microsoft.VisualBasic
         private string ShowInputDialog(string text, string caption, string defaultValue = "")
         {
             Form prompt = new Form()
@@ -169,9 +179,6 @@ namespace MathApp.UI
                 FlatStyle = FlatStyle.Flat
             };
 
-            confirmation.Click += (sender, e) => { prompt.Close(); };
-            cancel.Click += (sender, e) => { prompt.Close(); };
-
             prompt.Controls.Add(textLabel);
             prompt.Controls.Add(textBox);
             prompt.Controls.Add(confirmation);
@@ -204,6 +211,12 @@ namespace MathApp.UI
             return _subSystemData;
         }
 
+        private void SaveAndClose()
+        {
+            this.DialogResult = DialogResult.OK;
+            Close();
+        }
+
         private void InitializeComponent()
         {
             this.Text = _subSystemData.Name;
@@ -229,7 +242,7 @@ namespace MathApp.UI
                 Font = new Font("Segoe UI", 10)
             };
 
-            var nameBox = new TextBox
+            nameBox = new TextBox
             {
                 Text = _subSystemData.Name,
                 Location = new Point(120, 18),
@@ -273,10 +286,9 @@ namespace MathApp.UI
             btnAddOutput.Click += (s, e) => AddOutputPort();
 
             // Кнопка Сохранить
-            var btnSave = new Button
+            btnSave = new Button
             {
-                Text = "✓ СОХРАНИТЬ",
-                Location = new Point(this.Width - 190, 16),
+                Text = "СОХРАНИТЬ",
                 Size = new Size(90, 40),
                 BackColor = Color.FromArgb(0, 120, 212),
                 ForeColor = Color.White,
@@ -284,13 +296,12 @@ namespace MathApp.UI
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            btnSave.Click += (s, e) => this.DialogResult = DialogResult.OK;
+            btnSave.Click += (s, e) => SaveAndClose();
 
             // Кнопка Отмена
-            var btnCancel = new Button
+            btnCancel = new Button
             {
-                Text = "✗ ОТМЕНА",
-                Location = new Point(this.Width - 95, 16),
+                Text = "ОТМЕНА",
                 Size = new Size(85, 40),
                 BackColor = Color.FromArgb(70, 70, 75),
                 ForeColor = Color.White,
@@ -336,7 +347,8 @@ namespace MathApp.UI
                 "➕ Сложение",
                 "➖ Вычитание",
                 "✖️ Умножение",
-                "➗ Деление"
+                "➗ Деление",
+                "📈 Синусоида"
             });
 
             toolboxList.MouseDown += ToolboxList_MouseDown;
@@ -351,7 +363,7 @@ namespace MathApp.UI
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
 
-            var lblInputs = new Label
+            lblInputs = new Label
             {
                 Text = $"Входов: {_inputPorts.Count}",
                 Location = new Point(10, 30),
@@ -360,7 +372,7 @@ namespace MathApp.UI
                 Font = new Font("Segoe UI", 9)
             };
 
-            var lblOutputs = new Label
+            lblOutputs = new Label
             {
                 Text = $"Выходов: {_outputPorts.Count}",
                 Location = new Point(10, 60),
@@ -371,24 +383,14 @@ namespace MathApp.UI
 
             var lblHint = new Label
             {
-                Text = "Совет: Перетащите\nпорты для изменения\nпозиции.\nПКМ на порте -\nпереименовать",
+                Text = "Входной порт (зелёный):\n  • Точка СПРАВА (выход)\n  • В него НЕЛЬЗЯ зайти\nВыходной порт (оранжевый):\n  • Точка СЛЕВА (вход)\n  • Из него НЕЛЬЗЯ выйти",
                 Location = new Point(10, 95),
-                Size = new Size(180, 65),
+                Size = new Size(180, 80),
                 ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 8)
+                Font = new Font("Segoe UI", 7)
             };
 
             portsInfo.Controls.AddRange(new Control[] { lblInputs, lblOutputs, lblHint });
-
-            // Обновляем информацию при изменении портов
-            Action updatePortsInfo = () =>
-            {
-                lblInputs.Text = $"Входов: {_inputPorts.Count}";
-                lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
-            };
-
-            btnAddInput.Click += (s, e) => updatePortsInfo();
-            btnAddOutput.Click += (s, e) => updatePortsInfo();
 
             leftPanel.Controls.AddRange(new Control[] { toolsTitle, toolboxList, portsInfo });
 
@@ -410,7 +412,21 @@ namespace MathApp.UI
             this.Controls.Add(leftPanel);
             this.Controls.Add(topPanel);
 
-            this.Resize += (s, e) => _needsRedraw = true;
+            this.Resize += (s, e) =>
+            {
+                _needsRedraw = true;
+                UpdateButtonPositions();
+            };
+            this.Shown += (s, e) => UpdateButtonPositions();
+        }
+
+        private void UpdateButtonPositions()
+        {
+            if (btnSave != null && btnCancel != null)
+            {
+                btnSave.Location = new Point(this.ClientSize.Width - 190, 16);
+                btnCancel.Location = new Point(this.ClientSize.Width - 95, 16);
+            }
         }
 
         private void AddInputPort()
@@ -420,16 +436,21 @@ namespace MathApp.UI
             {
                 Id = Guid.NewGuid(),
                 Name = $"Вход{newIndex + 1}",
-                Type = ToolType.Operation,
+                Type = ToolType.Port,
                 PortType = PortType.Input,
                 PortIndex = newIndex,
                 PortName = $"Вход{newIndex + 1}",
-                Position = new Point(30, 100 + newIndex * 60),
-                Size = new Size(100, 40)
+                Position = new Point(30, PORT_START_Y + newIndex * PORT_SPACING),
+                Size = new Size(PORT_WIDTH, PORT_HEIGHT)
             };
             _inputPorts.Add(newPort);
             _tools.Add(newPort);
+
+            if (lblInputs != null)
+                lblInputs.Text = $"Входов: {_inputPorts.Count}";
+
             _needsRedraw = true;
+            _isDirty = true;
         }
 
         private void AddOutputPort()
@@ -439,16 +460,21 @@ namespace MathApp.UI
             {
                 Id = Guid.NewGuid(),
                 Name = $"Выход{newIndex + 1}",
-                Type = ToolType.Operation,
+                Type = ToolType.Port,
                 PortType = PortType.Output,
                 PortIndex = newIndex,
                 PortName = $"Выход{newIndex + 1}",
-                Position = new Point(workspace.Width - 130, 100 + newIndex * 60),
-                Size = new Size(100, 40)
+                Position = new Point(workspace.Width - 130, PORT_START_Y + newIndex * PORT_SPACING),
+                Size = new Size(PORT_WIDTH, PORT_HEIGHT)
             };
             _outputPorts.Add(newPort);
             _tools.Add(newPort);
+
+            if (lblOutputs != null)
+                lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
+
             _needsRedraw = true;
+            _isDirty = true;
         }
 
         private void SetupWorkspace()
@@ -493,33 +519,82 @@ namespace MathApp.UI
             var realPos = GetRealLocation(mousePos);
             var type = e.Data.GetData("MathTool") as string;
 
-            var tool = new MathTool { Position = realPos };
-            tool.Type = ToolType.Operation;
-            tool.Size = new Size(140, 80);
+            MathTool tool = null;
 
             if (type.Contains("Сложение"))
             {
-                tool.Operation = MathOperation.Addition;
-                tool.Name = "Сложение";
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 80),
+                    Operation = MathOperation.Addition,
+                    Name = "Сложение"
+                };
             }
             else if (type.Contains("Вычитание"))
             {
-                tool.Operation = MathOperation.Subtraction;
-                tool.Name = "Вычитание";
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 80),
+                    Operation = MathOperation.Subtraction,
+                    Name = "Вычитание"
+                };
             }
             else if (type.Contains("Умножение"))
             {
-                tool.Operation = MathOperation.Multiplication;
-                tool.Name = "Умножение";
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 80),
+                    Operation = MathOperation.Multiplication,
+                    Name = "Умножение"
+                };
             }
             else if (type.Contains("Деление"))
             {
-                tool.Operation = MathOperation.Division;
-                tool.Name = "Деление";
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 80),
+                    Operation = MathOperation.Division,
+                    Name = "Деление"
+                };
+            }
+            else if (type.Contains("График"))
+            {
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Chart,
+                    Size = new Size(160, 80),
+                    Name = "График"
+                };
+            }
+            else if (type.Contains("Синусоида"))
+            {
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.SineGenerator,
+                    Size = new Size(160, 100),
+                    Name = "Синусоида",
+                    Frequency = 1.0,
+                    Amplitude = 1.0,
+                    Phase = 0
+                };
             }
 
-            _tools.Add(tool);
-            _needsRedraw = true;
+            if (tool != null)
+            {
+                _tools.Add(tool);
+                _needsRedraw = true;
+                _isDirty = true;
+            }
         }
 
         private void Workspace_Paint(object sender, PaintEventArgs e)
@@ -556,12 +631,13 @@ namespace MathApp.UI
                 if (tool is PortTool port)
                 {
                     DrawPortBlock(g, port);
+                    DrawPortConnectionPoints(g, port);
                 }
                 else
                 {
                     _blockRenderer.DrawMathTool(g, tool, _selectedTool);
+                    DrawStandardConnectionPoints(g, tool);
                 }
-                DrawConnectionPoints(g, tool);
             }
         }
 
@@ -569,9 +645,20 @@ namespace MathApp.UI
         {
             Rectangle rect = new Rectangle(port.Position, port.Size);
 
-            // Рисуем фон
-            Color startColor = port.PortType == PortType.Input ? Color.FromArgb(60, 100, 80) : Color.FromArgb(100, 80, 60);
-            Color endColor = port.PortType == PortType.Input ? Color.FromArgb(40, 70, 55) : Color.FromArgb(80, 60, 40);
+            // Цвета для портов
+            Color startColor, endColor;
+            if (port.PortType == PortType.Input)
+            {
+                // Входной порт — зелёный
+                startColor = Color.FromArgb(60, 100, 80);
+                endColor = Color.FromArgb(40, 70, 55);
+            }
+            else
+            {
+                // Выходной порт — оранжевый
+                startColor = Color.FromArgb(100, 80, 60);
+                endColor = Color.FromArgb(80, 60, 40);
+            }
 
             using (var brush = new LinearGradientBrush(rect, startColor, endColor, 45))
             {
@@ -592,45 +679,46 @@ namespace MathApp.UI
                 g.DrawString(displayName, font, Brushes.White, rect, sf);
             }
 
-            // Рисуем иконку
-            string icon = port.PortType == PortType.Input ? "⬅️" : "➡️";
-            using (var font = new Font("Segoe UI", 12))
+            // Поясняющая иконка
+            string icon = port.PortType == PortType.Input ? "⬅️ ВХОД" : "ВЫХОД ➡️";
+            using (var font = new Font("Segoe UI", 7, FontStyle.Bold))
             {
-                g.DrawString(icon, font, Brushes.White, rect.X + 5, rect.Y + 10);
+                g.DrawString(icon, font, Brushes.LightYellow, rect.X + 5, rect.Y + 5);
             }
         }
 
-        private void DrawConnectionPoints(Graphics g, MathTool tool)
+        private void DrawPortConnectionPoints(Graphics g, PortTool port)
         {
-            if (tool is PortTool port)
+            Point point;
+            if (port.PortType == PortType.Input)
             {
-                Point point;
-                if (port.PortType == PortType.Input)
-                {
-                    point = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                }
-                else
-                {
-                    point = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                }
-
-                bool hasConnection = _connections.Any(c =>
-                    (port.PortType == PortType.Input && c.TargetToolId == tool.Id) ||
-                    (port.PortType == PortType.Output && c.SourceToolId == tool.Id));
-
-                DrawPoint(g, point, port.PortType == PortType.Input ? "in" : "out",
-                    port.PortType == PortType.Input ? Color.LightGreen : Color.Orange, hasConnection);
-                return;
+                // Входной порт: точка соединения СПРАВА (выходная точка, отдаёт сигнал внутрь)
+                point = new Point(port.Position.X + port.Size.Width + 5, port.Position.Y + port.Size.Height / 2);
+            }
+            else
+            {
+                // Выходной порт: точка соединения СЛЕВА (входная точка, принимает сигнал изнутри)
+                point = new Point(port.Position.X - 5, port.Position.Y + port.Size.Height / 2);
             }
 
-            // Стандартные точки для обычных блоков
-            if (tool.Type != ToolType.Chart)
-            {
-                Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                bool hasOutput = _connections.Any(c => c.SourceToolId == tool.Id);
-                DrawPoint(g, output, "out", Color.Orange, hasOutput);
-            }
+            bool hasConnection = _connections.Any(c =>
+                (port.PortType == PortType.Input && c.SourceToolId == port.Id) ||  // Входной порт - источник
+                (port.PortType == PortType.Output && c.TargetToolId == port.Id));   // Выходной порт - цель
 
+            string label = port.PortType == PortType.Input ? "out" : "in";
+            Color color = port.PortType == PortType.Input ? Color.Orange : Color.LightGreen;
+
+            DrawPoint(g, point, label, color, hasConnection);
+        }
+
+        private void DrawStandardConnectionPoints(Graphics g, MathTool tool)
+        {
+            // Выходная точка (справа)
+            Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+            bool hasOutput = _connections.Any(c => c.SourceToolId == tool.Id);
+            DrawPoint(g, output, "out", Color.Orange, hasOutput);
+
+            // Входные точки (слева)
             Point inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
             Point inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
 
@@ -683,6 +771,7 @@ namespace MathApp.UI
                         _isConnecting = false;
                         _sourceConnectionPoint = null;
                         _needsRedraw = true;
+                        _isDirty = true;
                     }
                 }
                 else
@@ -710,35 +799,51 @@ namespace MathApp.UI
                     var menu = new ContextMenuStrip();
                     menu.Items.Add("🗑️ Удалить блок", null, (s, ev) =>
                     {
-                        // Если удаляем порт, удаляем его из соответствующих списков
                         if (tool is PortTool port)
                         {
                             if (port.PortType == PortType.Input)
+                            {
                                 _inputPorts.Remove(port);
+                                if (lblInputs != null)
+                                    lblInputs.Text = $"Входов: {_inputPorts.Count}";
+                            }
                             else
+                            {
                                 _outputPorts.Remove(port);
+                                if (lblOutputs != null)
+                                    lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
+                            }
                         }
                         _connectionManager.RemoveConnectionsForTool(tool.Id);
                         _tools.Remove(tool);
                         _needsRedraw = true;
+                        _isDirty = true;
                     });
 
                     if (tool is PortTool portTool)
                     {
                         menu.Items.Add("✏️ Переименовать", null, (s, ev) =>
                         {
-                            // Создаем простую форму для ввода имени
                             string newName = ShowInputDialog("Введите имя порта:", "Переименование",
                                 portTool.PortName ?? (portTool.PortType == PortType.Input ? "Вход" : "Выход"));
                             if (!string.IsNullOrEmpty(newName))
                             {
                                 portTool.PortName = newName;
+                                portTool.Name = newName;
                                 _needsRedraw = true;
+                                _isDirty = true;
                             }
                         });
                     }
 
                     menu.Show(workspace, e.Location);
+                }
+                else
+                {
+                    // Сброс соединения при ПКМ
+                    _isConnecting = false;
+                    _sourceConnectionPoint = null;
+                    _needsRedraw = true;
                 }
             }
         }
@@ -777,28 +882,36 @@ namespace MathApp.UI
                 {
                     Point portPoint;
                     if (port.PortType == PortType.Input)
-                        portPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                    else
+                    {
+                        // Входной порт
                         portPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    }
+                    else
+                    {
+                        // Выходной порт
+                        portPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    }
 
                     if (Distance(point, portPoint) < 12)
                     {
                         return new ConnectionPoint
                         {
                             ToolId = tool.Id,
-                            Type = port.PortType == PortType.Input ? ConnectionPointType.Input : ConnectionPointType.Output,
-                            InputType = port.PortType == PortType.Input ? InputType.A : (InputType?)null
+                            Type = port.PortType == PortType.Input ? ConnectionPointType.Output : ConnectionPointType.Input,
+                            InputType = port.PortType == PortType.Output ? InputType.A : (InputType?)null
                         };
                     }
                 }
                 else
                 {
+                    // Выходная точка обычного блока 
                     Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
                     if (Distance(point, output) < 12)
                     {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };
                     }
 
+                    // Входные точки обычного блока 
                     Point inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
                     if (Distance(point, inputA) < 12)
                     {
@@ -837,6 +950,26 @@ namespace MathApp.UI
         private double Distance(Point p1, Point p2)
         {
             return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (this.DialogResult != DialogResult.Cancel && _isDirty)
+            {
+                var result = MessageBox.Show("Сохранить изменения?", "Подсистема",
+                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    this.DialogResult = DialogResult.OK;
+                }
+                else if (result == DialogResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+            base.OnFormClosing(e);
         }
 
         protected override void Dispose(bool disposing)
