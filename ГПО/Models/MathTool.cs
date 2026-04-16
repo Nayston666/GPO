@@ -51,6 +51,9 @@ namespace MathApp.Models
         /// <summary>Последний вычисленный результат</summary>
         public double? LastResult { get; set; }
 
+        /// <summary>Результаты для каждого выходного порта подсистемы</summary>
+        public Dictionary<int, double> OutputPortResults { get; set; } = new Dictionary<int, double>();
+
         // Свойство подсистемы
         public SubSystemData SubSystemData { get; set; }
 

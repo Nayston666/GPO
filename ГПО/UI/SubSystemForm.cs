@@ -692,13 +692,15 @@ namespace MathApp.UI
             Point point;
             if (port.PortType == PortType.Input)
             {
-                // Входной порт: точка соединения СПРАВА (выходная точка, отдаёт сигнал внутрь)
-                point = new Point(port.Position.X + port.Size.Width + 5, port.Position.Y + port.Size.Height / 2);
+                // Входной порт
+                point = new Point(port.Position.X + port.Size.Width + 5,
+                                  port.Position.Y + port.Size.Height / 2);
             }
             else
             {
-                // Выходной порт: точка соединения СЛЕВА (входная точка, принимает сигнал изнутри)
-                point = new Point(port.Position.X - 5, port.Position.Y + port.Size.Height / 2);
+                // Выходной порт
+                point = new Point(port.Position.X - 5,
+                                  port.Position.Y + port.Size.Height / 2);
             }
 
             bool hasConnection = _connections.Any(c =>
@@ -884,28 +886,34 @@ namespace MathApp.UI
                     if (port.PortType == PortType.Input)
                     {
                         // Входной порт
-                        portPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                        portPoint = new Point(tool.Position.X + tool.Size.Width + 5,
+                                              tool.Position.Y + tool.Size.Height / 2);
                     }
                     else
                     {
                         // Выходной порт
-                        portPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                        portPoint = new Point(tool.Position.X - 5,
+                                              tool.Position.Y + tool.Size.Height / 2);
                     }
 
                     if (Distance(point, portPoint) < 12)
                     {
+                        System.Diagnostics.Debug.WriteLine($"Hit port {port.PortName} at {portPoint}, Type={port.PortType}");
+
                         return new ConnectionPoint
                         {
                             ToolId = tool.Id,
                             Type = port.PortType == PortType.Input ? ConnectionPointType.Output : ConnectionPointType.Input,
-                            InputType = port.PortType == PortType.Output ? InputType.A : (InputType?)null
+                            InputType = port.PortType == PortType.Output ? InputType.A : (InputType?)null,
+                            PortIndex = port.PortIndex  
                         };
                     }
                 }
                 else
                 {
                     // Выходная точка обычного блока 
-                    Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point output = new Point(tool.Position.X + tool.Size.Width + 5,
+                                             tool.Position.Y + tool.Size.Height / 2);
                     if (Distance(point, output) < 12)
                     {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };

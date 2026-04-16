@@ -607,13 +607,13 @@ namespace MathApp
 
             foreach (var tool in whiteboardTools)
             {
-                // Для подсистемы - проверяем все порты
+                // Для подсистемы - проверяем все порты с ИНДЕКСАМИ
                 if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
                 {
                     int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                     int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
 
-                    // Проверяем входные порты подсистемы
+                    // Проверяем входные порты подсистемы (слева, зелёные) - это INPUT точки
                     for (int i = 0; i < inputCount; i++)
                     {
                         int yOffset = 35 + i * 20;
@@ -623,16 +623,18 @@ namespace MathApp
                         );
                         if (Distance(realPoint, inputPoint) < 12)
                         {
+                            Console.WriteLine($"Hit INPUT port {i} at {inputPoint}");
                             return new ConnectionPoint
                             {
                                 ToolId = tool.Id,
                                 Type = ConnectionPointType.Input,
-                                InputType = InputType.A
+                                InputType = InputType.A,
+                                PortIndex = i  // ВАЖНО: сохраняем индекс порта
                             };
                         }
                     }
 
-                    // Проверяем выходные порты подсистемы 
+                    // Проверяем выходные порты подсистемы (справа, оранжевые) - это OUTPUT точки
                     for (int i = 0; i < outputCount; i++)
                     {
                         int yOffset = 35 + i * 20;
@@ -642,10 +644,12 @@ namespace MathApp
                         );
                         if (Distance(realPoint, outputPoint) < 12)
                         {
+                            Console.WriteLine($"Hit OUTPUT port {i} at {outputPoint}");
                             return new ConnectionPoint
                             {
                                 ToolId = tool.Id,
-                                Type = ConnectionPointType.Output
+                                Type = ConnectionPointType.Output,
+                                PortIndex = i  // ВАЖНО: сохраняем индекс порта
                             };
                         }
                     }
@@ -732,13 +736,18 @@ namespace MathApp
 
         private Point GetInputPoint(MathTool tool, InputType input)
         {
+            // Для подсистемы нужно возвращать позицию  порта
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
-                // Для подсистемы возвращаем позицию первого входного порта
-                return new Point(
-                    tool.Position.X - 5,
-                    tool.Position.Y + tool.Size.Height / 2
-                );
+                int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
+                if (inputCount > 0)
+                {
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + 35  // Первый порт
+                    );
+                }
+                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
@@ -796,22 +805,28 @@ namespace MathApp
                 if (conn != null && graphWindows.ContainsKey(chart.Id) &&
                     !graphWindows[chart.Id].IsDisposed)
                 {
-                    if (results.ContainsKey(conn.SourceToolId))
+                    var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+
+                    if (source != null && source.Type == ToolType.SubSystem)
+                    {
+                        // Берём значение из конкретного выходного порта
+                        int portIndex = conn.SourcePortIndex;
+                        if (source.OutputPortResults.ContainsKey(portIndex))
+                        {
+                            graphWindows[chart.Id].AddValue(source.OutputPortResults[portIndex]);
+                        }
+                        else if (source.LastResult.HasValue)
+                        {
+                            graphWindows[chart.Id].AddValue(source.LastResult.Value);
+                        }
+                    }
+                    else if (results.ContainsKey(conn.SourceToolId))
                     {
                         graphWindows[chart.Id].AddValue(results[conn.SourceToolId]);
                     }
-                    else
+                    else if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
                     {
-                        var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                        if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
-                        {
-                            graphWindows[chart.Id].AddValue(source.LastResult.Value);
-                        }
-                        // Добавляем поддержку подсистемы
-                        else if (source != null && source.Type == ToolType.SubSystem && source.LastResult.HasValue)
-                        {
-                            graphWindows[chart.Id].AddValue(source.LastResult.Value);
-                        }
+                        graphWindows[chart.Id].AddValue(source.LastResult.Value);
                     }
                 }
             }

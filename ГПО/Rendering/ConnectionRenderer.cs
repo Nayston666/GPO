@@ -21,8 +21,8 @@ namespace MathApp.Rendering
         {
             if (source == null || target == null) return;
 
-            Point start = GetOutputPoint(source);
-            Point end = GetInputPoint(target, conn.TargetInput);
+            Point start = GetOutputPoint(source, conn);
+            Point end = GetInputPoint(target, conn);
 
             // Тень
             Point shadowStart = new Point(start.X + 2, start.Y + 2);
@@ -51,8 +51,7 @@ namespace MathApp.Rendering
         {
             if (source == null) return;
 
-            Point start = GetOutputPoint(source);
-
+            Point start = GetOutputPoint(source, null);
             _tempConnectionPen.DashStyle = DashStyle.Dash;
             _tempConnectionPen.StartCap = LineCap.Round;
             _tempConnectionPen.EndCap = LineCap.Round;
@@ -64,7 +63,7 @@ namespace MathApp.Rendering
         /// Рисует все соединения для списка блоков
         /// </summary>
         public static void DrawAll(Graphics g, IEnumerable<Connection> connections,
-                                   IEnumerable<MathTool> tools)
+                           IEnumerable<MathTool> tools)
         {
             foreach (var conn in connections)
             {
@@ -108,14 +107,20 @@ namespace MathApp.Rendering
                         mid.X - textSize.Width / 2, mid.Y);
         }
 
-        private static Point GetOutputPoint(MathTool tool)
+        private static Point GetInputPoint(MathTool tool, Connection conn)
         {
-            return new Point(tool.Position.X + tool.Size.Width + 5,
-                            tool.Position.Y + tool.Size.Height / 2);
-        }
+            // Для подсистемы используем индекс порта
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                int portIndex = conn.TargetPortIndex;
+                int yOffset = 35 + portIndex * 20;
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + yOffset
+                );
+            }
 
-        private static Point GetInputPoint(MathTool tool, InputType input)
-        {
+            // Для остальных блоков
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
                 return new Point(tool.Position.X - 5,
@@ -123,8 +128,33 @@ namespace MathApp.Rendering
             }
 
             return new Point(tool.Position.X - 5,
-                input == InputType.A ? tool.Position.Y + 20 :
+                conn.TargetInput == InputType.A ? tool.Position.Y + 20 :
                 tool.Position.Y + tool.Size.Height - 20);
+        }
+
+        private static Point GetOutputPoint(MathTool tool, Connection conn = null)
+        {
+            // Для подсистемы используем индекс выходного порта из соединения
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
+                if (outputCount > 0 && conn != null)
+                {
+                    int portIndex = conn.SourcePortIndex;
+                    int yOffset = 35 + portIndex * 20;
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + yOffset
+                    );
+                }
+                return new Point(
+                    tool.Position.X + tool.Size.Width + 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
+
+            return new Point(tool.Position.X + tool.Size.Width + 5,
+                            tool.Position.Y + tool.Size.Height / 2);
         }
     }
 }

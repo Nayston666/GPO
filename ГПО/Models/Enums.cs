@@ -51,5 +51,6 @@ namespace MathApp.Models
         public Guid ToolId { get; set; }
         public ConnectionPointType Type { get; set; }
         public InputType? InputType { get; set; }
+        public int PortIndex { get; set; }
     }
 }

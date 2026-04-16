@@ -23,19 +23,26 @@ namespace MathApp.Core
             if (source.ToolId == target.ToolId)
                 return false;
 
-            // Удаляем старое соединение для этого входа
+            // Для подсистемы: удаляем старое соединение для КОНКРЕТНОГО порта
             _connections.RemoveAll(c =>
                 c.TargetToolId == target.ToolId &&
-                c.TargetInput == target.InputType);
+                c.TargetInput == target.InputType &&
+                c.TargetPortIndex == target.PortIndex);  // Учитываем индекс порта
 
             // Создаем новое
-            _connections.Add(new Connection
+            var newConn = new Connection
             {
                 Id = Guid.NewGuid(),
                 SourceToolId = source.ToolId,
                 TargetToolId = target.ToolId,
-                TargetInput = target.InputType.Value
-            });
+                TargetInput = target.InputType ?? InputType.A,
+                TargetPortIndex = target.PortIndex, // Сохраняем индекс порта входа
+                SourcePortIndex = source.PortIndex  // Сохраняем индекс порта выхода
+            };
+
+            _connections.Add(newConn);
+
+            System.Diagnostics.Debug.WriteLine($"Created connection: Source={source.ToolId}, Target={target.ToolId}, PortIndex={target.PortIndex}");
 
             return true;
         }

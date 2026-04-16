@@ -19,6 +19,10 @@ namespace MathApp.Models
         /// <summary>Какой вход приемника используется (A или B)</summary>
         public InputType TargetInput { get; set; }
 
+        /// <summary>Индекс порта для подсистемы</summary>
+        public int TargetPortIndex { get; set; } = 0;       // КТО ТРОНЕТ ЭТО  - ПЕРЕСТАНЕТ РАБОТАТЬ
+        public int SourcePortIndex { get; set; } = 0;       // И ЭТО ТОЖЕ
+
         /// <summary>Текущее значение, передаваемое по соединению</summary>
         public double? CurrentValue { get; set; }
 

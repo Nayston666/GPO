@@ -11,7 +11,6 @@ namespace MathApp.Core
     public class CalculationEngine
     {
         private double _time = 0;
-        private Dictionary<Guid, double> _subSystemResults = new Dictionary<Guid, double>();
 
         /// <summary>
         /// Обновляет значения генераторов синусоиды
@@ -32,8 +31,8 @@ namespace MathApp.Core
         /// Вычисляет значение для входа блока
         /// </summary>
         public double GetInputValue(MathTool tool, InputType input,
-                                    List<MathTool> tools, List<Connection> connections,
-                                    Dictionary<Guid, double> calculatedValues)
+                            List<MathTool> tools, List<Connection> connections,
+                            Dictionary<Guid, double> calculatedValues)
         {
             var conn = connections.FirstOrDefault(c =>
                 c.TargetToolId == tool.Id && c.TargetInput == input);
@@ -42,20 +41,26 @@ namespace MathApp.Core
             {
                 var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
 
-                if (source != null)
+                // Для подсистемы возвращаем значение выходного порта
+                if (source != null && source.Type == ToolType.SubSystem)
                 {
-                    // Если источник - генератор
-                    if (source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
+                    int sourcePortIndex = conn.SourcePortIndex;
+                    if (source.OutputPortResults.ContainsKey(sourcePortIndex))
+                    {
+                        return source.OutputPortResults[sourcePortIndex];
+                    }
+                    if (source.LastResult.HasValue)
+                    {
                         return source.LastResult.Value;
-
-                    // Если источник - подсистема
-                    if (source.Type == ToolType.SubSystem && _subSystemResults.ContainsKey(source.Id))
-                        return _subSystemResults[source.Id];
-
-                    // Если источник уже вычислен
-                    if (calculatedValues.ContainsKey(conn.SourceToolId))
-                        return calculatedValues[conn.SourceToolId];
+                    }
+                    return double.NaN;
                 }
+
+                if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
+                    return source.LastResult.Value;
+
+                if (calculatedValues.ContainsKey(conn.SourceToolId))
+                    return calculatedValues[conn.SourceToolId];
 
                 return double.NaN;
             }
@@ -82,152 +87,10 @@ namespace MathApp.Core
         }
 
         /// <summary>
-        /// Вычисляет значение подсистемы
-        /// </summary>
-        private double CalculateSubSystem(MathTool subSystem,
-                                          List<MathTool> allTools,
-                                          List<Connection> allConnections,
-                                          Dictionary<Guid, double> externalInputs)
-        {
-            if (subSystem.SubSystemData == null) return 0;
-
-            var internalTools = subSystem.SubSystemData.InternalTools;
-            var internalConnections = subSystem.SubSystemData.InternalConnections;
-            var inputPorts = subSystem.SubSystemData.InputPorts;
-            var outputPorts = subSystem.SubSystemData.OutputPorts;
-
-            if (inputPorts == null || outputPorts == null) return 0;
-            if (inputPorts.Count == 0 || outputPorts.Count == 0) return 0;
-
-            // Находим входные значения для подсистемы из внешних соединений
-            var inputValues = new Dictionary<Guid, double>();
-
-            for (int i = 0; i < inputPorts.Count; i++)
-            {
-                var port = inputPorts[i];
-                // Ищем внешнее соединение, которое подходит к этому порту подсистемы
-                var externalConn = allConnections.FirstOrDefault(c =>
-                    c.TargetToolId == subSystem.Id && c.TargetInput == InputType.A);
-
-                if (externalConn != null && externalInputs.ContainsKey(externalConn.SourceToolId))
-                {
-                    inputValues[port.Id] = externalInputs[externalConn.SourceToolId];
-                }
-                else
-                {
-                    inputValues[port.Id] = 0;
-                }
-            }
-
-            // Создаём карту соответствия: ID порта -> значение
-            var portValues = new Dictionary<Guid, double>();
-            foreach (var port in inputPorts)
-            {
-                portValues[port.Id] = inputValues.ContainsKey(port.Id) ? inputValues[port.Id] : 0;
-            }
-
-            // Вычисляем внутренние блоки подсистемы
-            var internalResults = new Dictionary<Guid, double>();
-            bool changed;
-
-            do
-            {
-                changed = false;
-
-                foreach (var tool in internalTools.Where(t => t.Type == ToolType.Operation)
-                                                  .OrderBy(t => t.Position.X))
-                {
-                    if (internalResults.ContainsKey(tool.Id)) continue;
-
-                    // Получаем входные значения для внутреннего блока
-                    double a = GetInternalInputValue(tool, InputType.A, internalTools,
-                                                      internalConnections, internalResults, portValues);
-                    double b = GetInternalInputValue(tool, InputType.B, internalTools,
-                                                      internalConnections, internalResults, portValues);
-
-                    if (double.IsNaN(a) || double.IsNaN(b)) continue;
-
-                    double result = Calculate(tool.Operation, a, b);
-                    internalResults[tool.Id] = result;
-                    tool.LastResult = result;
-                    changed = true;
-                }
-
-                // Также обрабатываем генераторы внутри подсистемы
-                foreach (var gen in internalTools.Where(t => t.Type == ToolType.SineGenerator))
-                {
-                    if (!internalResults.ContainsKey(gen.Id))
-                    {
-                        double radians = (_time * gen.Frequency * 2 * Math.PI) +
-                                         (gen.Phase * Math.PI / 180.0);
-                        double result = gen.Amplitude * Math.Sin(radians);
-                        internalResults[gen.Id] = result;
-                        gen.LastResult = result;
-                        changed = true;
-                    }
-                }
-
-            } while (changed);
-
-            // Находим значение на выходном порту
-            if (outputPorts.Count > 0)
-            {
-                var outputPort = outputPorts[0];
-                // Ищем соединение от внутреннего блока к выходному порту
-                var connToOutput = internalConnections.FirstOrDefault(c => c.TargetToolId == outputPort.Id);
-                if (connToOutput != null && internalResults.ContainsKey(connToOutput.SourceToolId))
-                {
-                    return internalResults[connToOutput.SourceToolId];
-                }
-            }
-
-            // Если не нашли, возвращаем последний результат или 0
-            var lastResult = internalResults.Values.LastOrDefault();
-            return lastResult;
-        }
-
-        /// <summary>
-        /// Получает входное значение для внутреннего блока подсистемы
-        /// </summary>
-        private double GetInternalInputValue(MathTool tool, InputType input,
-                                             List<MathTool> tools,
-                                             List<Connection> connections,
-                                             Dictionary<Guid, double> calculatedValues,
-                                             Dictionary<Guid, double> portValues)
-        {
-            var conn = connections.FirstOrDefault(c =>
-                c.TargetToolId == tool.Id && c.TargetInput == input);
-
-            if (conn != null)
-            {
-                // Проверяем, не является ли источник портом подсистемы
-                var sourcePort = tools.OfType<PortTool>().FirstOrDefault(p => p.Id == conn.SourceToolId);
-                if (sourcePort != null && portValues.ContainsKey(sourcePort.Id))
-                {
-                    return portValues[sourcePort.Id];
-                }
-
-                var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                if (source != null)
-                {
-                    if (source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
-                        return source.LastResult.Value;
-
-                    if (calculatedValues.ContainsKey(conn.SourceToolId))
-                        return calculatedValues[conn.SourceToolId];
-                }
-
-                return double.NaN;
-            }
-
-            return input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
-        }
-
-        /// <summary>
         /// Выполняет полный цикл вычислений для всех блоков
         /// </summary>
         public Dictionary<Guid, double> CalculateAll(List<MathTool> tools,
-                                              List<Connection> connections)
+                                                      List<Connection> connections)
         {
             UpdateGenerators(tools);
 
@@ -261,105 +124,122 @@ namespace MathApp.Core
                     changed = true;
                 }
 
-                // Вычисления в подсистеме
+                // Вычисляем подсистемы
                 foreach (var subSystem in tools.Where(t => t.Type == ToolType.SubSystem))
                 {
                     if (results.ContainsKey(subSystem.Id)) continue;
 
-                    // Получаем входное значение для подсистемы
-                    var inputConn = connections.FirstOrDefault(c => c.TargetToolId == subSystem.Id);
-                    double inputValue = 0;
-                    bool hasInput = false;
+                    // Проверяем, все ли входные значения готовы
+                    var inputConns = connections.Where(c => c.TargetToolId == subSystem.Id).ToList();
+                    bool inputsReady = true;
 
-                    if (inputConn != null)
+                    foreach (var inputConn in inputConns)
                     {
-                        if (results.ContainsKey(inputConn.SourceToolId))
-                        {
-                            inputValue = results[inputConn.SourceToolId];
-                            hasInput = true;
-                        }
-                        else
+                        if (!results.ContainsKey(inputConn.SourceToolId))
                         {
                             var source = tools.FirstOrDefault(t => t.Id == inputConn.SourceToolId);
-                            if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
+                            if (source == null || (source.Type != ToolType.SineGenerator || !source.LastResult.HasValue))
                             {
-                                inputValue = source.LastResult.Value;
-                                hasInput = true;
+                                inputsReady = false;
+                                break;
                             }
                         }
                     }
 
-                    // Если есть входной сигнал или подсистема имеет внутренние генераторы
-                    if (hasInput || (subSystem.SubSystemData?.InternalTools.Any(t => t.Type == ToolType.SineGenerator) == true))
+                    if (inputsReady)
                     {
-                        double result = CalculateSubSystemInternal(subSystem, inputValue, tools, connections, results);
+                        double result = CalculateSubSystemInternal(subSystem, tools, connections, results);
                         results[subSystem.Id] = result;
-                        subSystem.LastResult = result;
 
+                        // Обновляем CurrentValue для всех соединений, выходящих из подсистемы
                         foreach (var conn in connections.Where(c => c.SourceToolId == subSystem.Id))
                         {
-                            conn.CurrentValue = result;
+                            int portIndex = conn.SourcePortIndex;
+                            if (subSystem.OutputPortResults.ContainsKey(portIndex))
+                            {
+                                conn.CurrentValue = subSystem.OutputPortResults[portIndex];
+                            }
+                            else
+                            {
+                                conn.CurrentValue = result;
+                            }
                         }
 
                         changed = true;
                     }
                 }
+
             } while (changed);
 
             return results;
         }
 
         /// <summary>
-        /// Получает значение от источника (для графиков)
+        /// Вычисляет значение подсистемы на основе входных сигналов
         /// </summary>
-        public double GetSourceValue(Guid id, List<MathTool> tools, Dictionary<Guid, double> values)
+        private double CalculateSubSystemInternal(MathTool subSystem,
+                                          List<MathTool> allTools,
+                                          List<Connection> allConnections,
+                                          Dictionary<Guid, double> externalResults)
         {
-            var source = tools.FirstOrDefault(t => t.Id == id);
-            if (source != null)
-            {
-                if (source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
-                    return source.LastResult.Value;
-
-                if (source.Type == ToolType.SubSystem && _subSystemResults.ContainsKey(source.Id))
-                    return _subSystemResults[source.Id];
-            }
-
-            if (values.ContainsKey(id))
-                return values[id];
-
-            return 0;
-        }
-
-        /// <summary>
-        /// Вычисляет значение подсистемы на основе входного сигнала
-        /// </summary>
-        private double CalculateSubSystemInternal(MathTool subSystem, double inputValue,
-                                                  List<MathTool> allTools,
-                                                  List<Connection> allConnections,
-                                                  Dictionary<Guid, double> externalResults)
-        {
-            if (subSystem.SubSystemData == null) return inputValue;
+            if (subSystem.SubSystemData == null) return 0;
 
             var internalTools = subSystem.SubSystemData.InternalTools;
             var internalConnections = subSystem.SubSystemData.InternalConnections;
             var inputPorts = subSystem.SubSystemData.InputPorts;
             var outputPorts = subSystem.SubSystemData.OutputPorts;
 
-            // Если нет внутренних блоков, просто передаём входной сигнал на выход
-            if (internalTools.Count == 0) return inputValue;
+            // Собираем значения со всех входных портов
+            var inputValues = new Dictionary<int, double>();
+            for (int i = 0; i < (inputPorts?.Count ?? 0); i++)
+            {
+                var inputConn = allConnections.FirstOrDefault(c =>
+                    c.TargetToolId == subSystem.Id && c.TargetPortIndex == i);
 
-            // Находим входной порт подсистемы и связываем его со значением
-            var inputPortId = inputPorts?.FirstOrDefault()?.Id ?? Guid.Empty;
+                if (inputConn != null)
+                {
+                    if (externalResults.ContainsKey(inputConn.SourceToolId))
+                        inputValues[i] = externalResults[inputConn.SourceToolId];
+                    else
+                    {
+                        var source = allTools.FirstOrDefault(t => t.Id == inputConn.SourceToolId);
+                        if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
+                            inputValues[i] = source.LastResult.Value;
+                        else if (source != null && source.Type == ToolType.SubSystem && source.LastResult.HasValue)
+                            inputValues[i] = source.LastResult.Value;
+                        else
+                            inputValues[i] = 0;
+                    }
+                }
+                else
+                {
+                    inputValues[i] = 0;
+                }
+            }
 
-            // Вычисляем внутренние блоки
+            // Создаём карту: ID порта -> значение
+            var portValues = new Dictionary<Guid, double>();
+            for (int i = 0; i < (inputPorts?.Count ?? 0); i++)
+            {
+                var port = inputPorts[i];
+                if (port != null)
+                    portValues[port.Id] = inputValues.ContainsKey(i) ? inputValues[i] : 0;
+            }
+
+            // Если нет внутренних блоков - просто передаём входы на выходы
+            if (internalTools.Count == 0)
+            {
+                subSystem.OutputPortResults.Clear();
+                for (int i = 0; i < (outputPorts?.Count ?? 0); i++)
+                {
+                    subSystem.OutputPortResults[i] = inputValues.ContainsKey(i) ? inputValues[i] : 0;
+                }
+                subSystem.LastResult = subSystem.OutputPortResults.Count > 0 ? subSystem.OutputPortResults[0] : 0;
+                return subSystem.LastResult.Value;
+            }
+
             var internalResults = new Dictionary<Guid, double>();
             bool changed;
-
-            // Добавляем значение входного порта в результаты
-            if (inputPortId != Guid.Empty)
-            {
-                internalResults[inputPortId] = inputValue;
-            }
 
             do
             {
@@ -370,7 +250,6 @@ namespace MathApp.Core
                 {
                     if (!internalResults.ContainsKey(gen.Id))
                     {
-                        // Используем текущее время для генератора
                         double radians = (_time * gen.Frequency * 2 * Math.PI) +
                                          (gen.Phase * Math.PI / 180.0);
                         double result = gen.Amplitude * Math.Sin(radians);
@@ -387,9 +266,9 @@ namespace MathApp.Core
                     if (internalResults.ContainsKey(tool.Id)) continue;
 
                     double a = GetInternalInputValue(tool, InputType.A, internalTools,
-                                                      internalConnections, internalResults);
+                                                      internalConnections, internalResults, portValues);
                     double b = GetInternalInputValue(tool, InputType.B, internalTools,
-                                                      internalConnections, internalResults);
+                                                      internalConnections, internalResults, portValues);
 
                     if (double.IsNaN(a) || double.IsNaN(b)) continue;
 
@@ -401,39 +280,63 @@ namespace MathApp.Core
 
             } while (changed);
 
-            // Находим выходной порт и возвращаем его значение
-            var outputPortId = outputPorts?.FirstOrDefault()?.Id ?? Guid.Empty;
+            // Вычисляем значения для выходных портов 
+            subSystem.OutputPortResults.Clear();
 
-            if (outputPortId != Guid.Empty && internalResults.ContainsKey(outputPortId))
+            if (outputPorts != null && outputPorts.Count > 0)
             {
-                return internalResults[outputPortId];
+                for (int portIdx = 0; portIdx < outputPorts.Count; portIdx++)
+                {
+                    var outputPort = outputPorts[portIdx];
+                    double portResult = 0;
+                    bool found = false;
+
+                    // Ищем соединение от внутреннего блока к этому выходному порту
+                    var connToOutput = internalConnections.FirstOrDefault(c => c.TargetToolId == outputPort.Id);
+                    if (connToOutput != null)
+                    {
+                        // Проверяем, есть ли результат у источника
+                        if (internalResults.ContainsKey(connToOutput.SourceToolId))
+                        {
+                            portResult = internalResults[connToOutput.SourceToolId];
+                            found = true;
+                        }
+                        // Проверяем, не порт ли это (прямая связь вход->выход)
+                        else if (portValues.ContainsKey(connToOutput.SourceToolId))
+                        {
+                            portResult = portValues[connToOutput.SourceToolId];
+                            found = true;
+                        }
+                    }
+
+                    // Если не нашли соединение, пробуем взять значение напрямую из порта
+                    if (!found && portValues.ContainsKey(outputPort.Id))
+                    {
+                        portResult = portValues[outputPort.Id];
+                        found = true;
+                    }
+
+                    subSystem.OutputPortResults[portIdx] = portResult;
+                    System.Diagnostics.Debug.WriteLine($"Подсистема [{subSystem.Name}] Выход {portIdx} = {portResult}");
+                }
             }
 
-            // Если есть соединение к выходному порту
-            var connToOutput = internalConnections.FirstOrDefault(c =>
-                outputPortId != Guid.Empty && c.TargetToolId == outputPortId);
+            // Для совместимости сохраняем первый результат в LastResult
+            subSystem.LastResult = subSystem.OutputPortResults.Count > 0
+                ? subSystem.OutputPortResults[0]
+                : (internalResults.Count > 0 ? internalResults.Values.Last() : 0);
 
-            if (connToOutput != null && internalResults.ContainsKey(connToOutput.SourceToolId))
-            {
-                return internalResults[connToOutput.SourceToolId];
-            }
-
-            // Возвращаем последний вычисленный результат
-            if (internalResults.Count > 0)
-            {
-                return internalResults.Values.Last();
-            }
-
-            return inputValue;
+            return subSystem.LastResult.Value;
         }
 
         /// <summary>
         /// Получает входное значение для внутреннего блока подсистемы
         /// </summary>
         private double GetInternalInputValue(MathTool tool, InputType input,
-                                             List<MathTool> internalTools,
-                                             List<Connection> internalConnections,
-                                             Dictionary<Guid, double> internalResults)
+                                     List<MathTool> internalTools,
+                                     List<Connection> internalConnections,
+                                     Dictionary<Guid, double> internalResults,
+                                     Dictionary<Guid, double> portValues)
         {
             var conn = internalConnections.FirstOrDefault(c =>
                 c.TargetToolId == tool.Id && c.TargetInput == input);
@@ -441,12 +344,12 @@ namespace MathApp.Core
             if (conn != null)
             {
                 // Проверяем, не является ли источник портом подсистемы
-                var sourcePort = internalTools.OfType<PortTool>().FirstOrDefault(p => p.Id == conn.SourceToolId);
-                if (sourcePort != null && internalResults.ContainsKey(sourcePort.Id))
+                if (portValues.ContainsKey(conn.SourceToolId))
                 {
-                    return internalResults[sourcePort.Id];
+                    return portValues[conn.SourceToolId];
                 }
 
+                // Если источник — внутренний генератор или уже вычисленный блок
                 var source = internalTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
                 if (source != null)
                 {
@@ -461,6 +364,45 @@ namespace MathApp.Core
             }
 
             return input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
+        }
+
+        /// <summary>
+        /// Получает символ операции для отладки
+        /// </summary>
+        private string GetOperationSymbol(MathOperation op)
+        {
+            switch (op)
+            {
+                case MathOperation.Addition: return "+";
+                case MathOperation.Subtraction: return "-";
+                case MathOperation.Multiplication: return "×";
+                case MathOperation.Division: return "÷";
+                default: return "?";
+            }
+        }
+
+        /// <summary>
+        /// Получает значение от источника (для графиков)
+        /// </summary>
+        public double GetSourceValue(Guid id, List<MathTool> tools, Dictionary<Guid, double> values)
+        {
+            var source = tools.FirstOrDefault(t => t.Id == id);
+            if (source != null && source.Type == ToolType.SineGenerator && source.LastResult.HasValue)
+            {
+                return source.LastResult.Value;
+            }
+
+            if (source != null && source.Type == ToolType.SubSystem && source.LastResult.HasValue)
+            {
+                return source.LastResult.Value;
+            }
+
+            if (values.ContainsKey(id))
+            {
+                return values[id];
+            }
+
+            return 0;
         }
     }
 }

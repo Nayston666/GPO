@@ -210,13 +210,12 @@ namespace MathApp.Rendering
         public void DrawConnectionPoints(Graphics g, MathTool tool,
                                  IEnumerable<Connection> connections)
         {
-            // Сначала обрабатываем подсистему
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                 int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
 
-                // Входные порты
+                // Входные порты (слева) - сюда ПРИХОДИТ сигнал извне
                 for (int i = 0; i < inputCount; i++)
                 {
                     int yOffset = 35 + i * 20;
@@ -224,12 +223,14 @@ namespace MathApp.Rendering
                         tool.Position.X - 5,
                         tool.Position.Y + yOffset
                     );
+                    // Проверяем соединение именно для этого порта
                     bool hasConn = connections.Any(c =>
-                        c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
+                        c.TargetToolId == tool.Id && c.TargetPortIndex == i);
+
                     DrawConnectionPoint(g, inputPoint, $"IN{i + 1}", Color.LightGreen, hasConn);
                 }
 
-                // Выходные порты 
+                // Выходные порты (справа) - отсюда УХОДИТ сигнал наружу
                 for (int i = 0; i < outputCount; i++)
                 {
                     int yOffset = 35 + i * 20;
@@ -242,7 +243,7 @@ namespace MathApp.Rendering
                 }
                 return;
             }
-                        
+
             // Выходная точка (справа) для всех блоков, кроме Chart
             if (tool.Type != ToolType.Chart)
             {
