@@ -4,7 +4,7 @@
   <description asmv2:publisher="ГПО" asmv2:product="ГПО" xmlns="urn:schemas-microsoft-com:asm.v1" />
   <deployment install="true" mapFileExtensions="true" />
   <compatibleFrameworks xmlns="urn:schemas-microsoft-com:clickonce.v2">
-    <framework targetVersion="4.8.1" profile="Full" supportedRuntime="4.0.30319" />
+    <framework targetVersion="4.8" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
     <dependentAssembly dependencyType="install" codebase="ГПО.exe.manifest" size="3626">
@@ -14,7 +14,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>MCS5WALc8VClZZ4RiPRyilImiZ97iCdCpH99Uk4KYj8=</dsig:DigestValue>
+        <dsig:DigestValue>2MQJuRm4jHsl/kWF1o3m/6RLwgQnkdBHNrd+oYIT4u4=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

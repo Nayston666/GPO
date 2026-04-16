@@ -8,8 +8,8 @@ namespace MathApp.UI
 {
     public class ToolboxControl : UserControl
     {
-        private ListBox _listBox;
-
+        private ComboBox _comboBox;
+        private Label _titleLabel;
         public event MouseEventHandler ItemMouseDown;
 
         public ToolboxControl()
@@ -19,93 +19,67 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 200);
+            this.Size = new Size(260, 60);
             this.BackColor = Color.Transparent;
 
-            var titleLabel = new Label
+            _titleLabel = new Label
             {
                 Text = "📦 ИНСТРУМЕНТЫ",
-                Location = new Point(0, 0),
-                Size = new Size(260, 35),
+                Location = new Point(0, 5),
+                Size = new Size(260, 25),
                 ForeColor = Color.FromArgb(0, 200, 255),
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.Transparent
             };
 
-            _listBox = new ListBox
+            _comboBox = new ComboBox
             {
-                Location = new Point(0, 40),
-                Size = new Size(260, 150),
+                Location = new Point(0, 35),
+                Size = new Size(260, 30),
+                DropDownStyle = ComboBoxStyle.DropDownList,
                 BackColor = Color.FromArgb(45, 45, 50),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10),
-                BorderStyle = BorderStyle.None,
-                ItemHeight = 30,
-                DrawMode = DrawMode.OwnerDrawFixed
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
             };
 
-            _listBox.DrawItem += ListBox_DrawItem;
-            _listBox.MouseDown += (s, e) => ItemMouseDown?.Invoke(s, e);
-
-            _listBox.Items.AddRange(new object[]
+            _comboBox.Items.AddRange(new object[]
             {
                 "➕ Сложение",
                 "➖ Вычитание",
                 "✖️ Умножение",
                 "➗ Деление",
-                "📊 График",
-                "📈 Синусоида"
+                "∫ Интегратор (трапеции)",
+                "d/dt Дифференциатор",
+                "f(x) Интерполятор",
+                "📁 Файловый ввод/вывод",
+                "[ ] График",
+                "~ Синусоида"
             });
+            _comboBox.SelectedIndex = 0;
 
-            this.Controls.AddRange(new Control[] { titleLabel, _listBox });
+            _comboBox.SelectedIndexChanged += (s, e) =>
+            {
+                if (_comboBox.SelectedIndex >= 0 && ItemMouseDown != null)
+                {
+                    ItemMouseDown(_comboBox, new MouseEventArgs(MouseButtons.Left, 1, 0, 0, 0));
+                }
+            };
+
+            this.Controls.AddRange(new Control[] { _titleLabel, _comboBox });
         }
 
-        /// <summary>
-        /// Возвращает выбранный элемент
-        /// </summary>
         public string GetSelectedItem()
         {
-            return _listBox.SelectedItem?.ToString();
+            return _comboBox.SelectedItem?.ToString();
         }
 
-        private void ListBox_DrawItem(object sender, DrawItemEventArgs e)
+        public void SetSelectedIndex(int index)
         {
-            if (e.Index < 0) return;
-
-            e.DrawBackground();
-
-            var rect = e.Bounds;
-            rect.Inflate(-2, -2);
-
-            using (var path = GraphicsExtensions.CreateRoundedRectangle(rect, 5))
-            {
-                if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
-                {
-                    using (var brush = new SolidBrush(Color.FromArgb(0, 120, 212)))
-                    {
-                        e.Graphics.FillPath(brush, path);
-                    }
-                }
-                else if ((e.State & DrawItemState.HotLight) == DrawItemState.HotLight)
-                {
-                    using (var brush = new SolidBrush(Color.FromArgb(60, 60, 65)))
-                    {
-                        e.Graphics.FillPath(brush, path);
-                    }
-                }
-
-                var text = _listBox.Items[e.Index].ToString();
-                using (var sf = new StringFormat
-                {
-                    Alignment = StringAlignment.Near,
-                    LineAlignment = StringAlignment.Center
-                })
-                {
-                    e.Graphics.DrawString(text, e.Font, Brushes.White, rect, sf);
-                }
-            }
-
-            e.DrawFocusRectangle();
+            if (index >= 0 && index < _comboBox.Items.Count)
+                _comboBox.SelectedIndex = index;
         }
     }
 }
