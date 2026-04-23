@@ -4,61 +4,141 @@ using System.Drawing;
 
 namespace MathApp.Models
 {
-    /// <summary>
-    /// Представляет блок в схеме (операция, генератор или график)
-    /// </summary>
     public class MathTool
     {
-        /// <summary>Уникальный идентификатор блока</summary>
         public Guid Id { get; set; } = Guid.NewGuid();
-
-        /// <summary>Отображаемое имя</summary>
         public string Name { get; set; }
-
-        /// <summary>Позиция на рабочей области</summary>
         public Point Position { get; set; }
-
-        /// <summary>Размер блока</summary>
         public Size Size { get; set; }
-
-        /// <summary>Тип операции (для математических блоков)</summary>
         public MathOperation Operation { get; set; }
-
-        /// <summary>Тип блока</summary>
         public ToolType Type { get; set; }
 
-        /// <summary>Собственное значение для входа A</summary>
+        // Пользовательские значения для операций
         public double CustomValueA { get; set; }
-
-        /// <summary>Собственное значение для входа B</summary>
         public double CustomValueB { get; set; }
 
-        /// <summary>История значений (для графика)</summary>
+        // История значений для графика
         public List<double> ValueHistory { get; set; } = new List<double>();
-
-        /// <summary>Максимальный размер истории</summary>
         public int MaxHistorySize { get; set; } = 200;
 
-        /// <summary>Частота (для генератора синусоиды)</summary>
+        // Параметры генератора
         public double Frequency { get; set; } = 1.0;
-
-        /// <summary>Амплитуда (для генератора синусоиды)</summary>
         public double Amplitude { get; set; } = 1.0;
-
-        /// <summary>Фаза (для генератора синусоиды)</summary>
         public int Phase { get; set; }
 
-        /// <summary>Последний вычисленный результат</summary>
+        // Параметры усилителя
+        public double Gain { get; set; } = 2.0;
+
+        // Параметры канала распространения
+        public double Attenuation { get; set; } = 0.8;
+
+        // Параметры объекта (нелинейно-инерционная модель)
+        public double TimeConstant { get; set; } = 1.0;
+
+        // Параметры АЦП
+        public int BitResolution { get; set; } = 10;
+        public double ReferenceVoltage { get; set; } = 5.0;
+
+        // Последнее вычисленное значение
         public double? LastResult { get; set; }
 
+        // Для меандра (скважность)
+        public double DutyCycle { get; set; } = 50.0;
+        public double PulseWidth { get; set; } = 0.5;
+
+        // Для нелинейного фильтра (усилитель с инерционностью)
+        public double Resistance { get; set; } = 1000.0;
+        public double Capacitance { get; set; } = 1e-6;
+        public double LastOutput { get; set; } = 0.0;
+        public double LastInput { get; set; } = 0.0;
+        public double NonlinearA { get; set; } = 0.001;
+        public double NonlinearB { get; set; } = 0.0001;
+
+        // Поворот блока (для двойного клика)
+        public bool Rotated { get; set; } = false;
+
         /// <summary>
-        /// Добавляет значение в историю (для графика)
+        /// Добавление значения в историю (для графика)
         /// </summary>
         public void AddToHistory(double value)
         {
             ValueHistory.Add(value);
             if (ValueHistory.Count > MaxHistorySize * 2)
                 ValueHistory.RemoveRange(0, ValueHistory.Count - MaxHistorySize);
+        }
+
+        /// <summary>
+        /// Очистка истории
+        /// </summary>
+        public void ClearHistory()
+        {
+            ValueHistory.Clear();
+        }
+
+        /// <summary>
+        /// Получение последних N значений для графика
+        /// </summary>
+        public List<double> GetRecentHistory(int count)
+        {
+            if (ValueHistory.Count <= count)
+                return new List<double>(ValueHistory);
+            return ValueHistory.GetRange(ValueHistory.Count - count, count);
+        }
+
+        /// <summary>
+        /// Сброс состояния (для рекурсивных моделей)
+        /// </summary>
+        public void ResetState()
+        {
+            LastOutput = 0;
+            LastInput = 0;
+            LastResult = null;
+        }
+
+        /// <summary>
+        /// Нелинейная функция тока от напряжения (ВАХ)
+        /// I = a*U + b*U^3
+        /// </summary>
+        public double NonlinearCurrent(double voltage)
+        {
+            return NonlinearA * voltage + NonlinearB * Math.Pow(voltage, 3);
+        }
+
+        /// <summary>
+        /// Обратная функция: напряжение от заряда (КВХ)
+        /// Для линейного конденсатора: U = q/C
+        /// </summary>
+        public double VoltageFromCharge(double charge)
+        {
+            return charge / Capacitance;
+        }
+
+        /// <summary>
+        /// Дискретная модель нелинейного рекурсивного фильтра первого порядка
+        /// Аналог нелинейной RC-цепи
+        /// </summary>
+        /// <param name="input">Входной сигнал (ток)</param>
+        /// <param name="dt">Шаг дискретизации (с)</param>
+        /// <returns>Выходной сигнал (напряжение)</returns>
+        public double NonlinearRecursiveFilter(double input, double dt)
+        {
+            // Ток через нелинейный резистор (используем предыдущее выходное напряжение)
+            double iR = NonlinearCurrent(LastOutput);
+
+            // Ток через конденсатор: iC = iвх - iR
+            double iC = input - iR;
+
+            // Интегрирование для получения заряда (метод трапеций)
+            double qC = LastInput * Capacitance + dt * (iC + LastInput) / 2.0;
+
+            // Напряжение на конденсаторе (выход)
+            double output = VoltageFromCharge(qC);
+
+            // Сохраняем состояние для следующего шага
+            LastInput = input;
+            LastOutput = output;
+
+            return output;
         }
     }
 }

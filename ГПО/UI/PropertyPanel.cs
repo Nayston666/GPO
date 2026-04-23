@@ -8,149 +8,62 @@ namespace MathApp.UI
     public class PropertyPanel : UserControl
     {
         private MathTool _selectedTool;
-
-        // Элементы управления
-        private TextBox _txtValueA;
-        private TextBox _txtValueB;
-        private NumericUpDown _numChartPoints;
-        private NumericUpDown _numFrequency;
-        private NumericUpDown _numAmplitude;
-        private NumericUpDown _numPhase;
+        private Panel _workPanel;
         private Button _btnApply;
 
         public event EventHandler ApplyClicked;
 
         public PropertyPanel()
         {
-            InitializeComponent();
+            this.Size = new Size(260, 300);
+            this.BackColor = Color.FromArgb(45, 45, 50);
             this.Visible = false;
-        }
 
-        private void InitializeComponent()
-        {
-            this.Size = new Size(260, 320);
-            this.BackColor = Color.Transparent;
-
-            var titleLabel = new Label
+            _workPanel = new Panel
             {
-                Text = "✏️ РЕДАКТИРОВАНИЕ",
-                Location = new Point(5, 0),
-                Size = new Size(250, 20),
-                ForeColor = Color.FromArgb(0, 200, 255),
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+                Location = new Point(0, 0),
+                Size = new Size(260, 260),
+                AutoScroll = true,
+                BackColor = Color.Transparent
             };
+            this.Controls.Add(_workPanel);
 
-            // Значение A
-            var lblValueA = CreateLabel("Значение A:", new Point(15, 33));
-            _txtValueA = CreateTextBox("0", new Point(100, 30));
+            var title = new Label
+            {
+                Text = "РЕДАКТИРОВАНИЕ",
+                Location = new Point(10, 8),
+                Size = new Size(240, 25),
+                ForeColor = Color.FromArgb(0, 200, 255),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold)
+            };
+            _workPanel.Controls.Add(title);
 
-            // Значение B
-            var lblValueB = CreateLabel("Значение B:", new Point(15, 68));
-            _txtValueB = CreateTextBox("0", new Point(100, 65));
-
-            // Точки на графике
-            var lblChartPoints = CreateLabel("Точек:", new Point(15, 103));
-            _numChartPoints = CreateNumericUpDown(200, 10, 500, new Point(120, 100), 10);
-
-            // Частота
-            var lblFrequency = CreateLabel("Частота:", new Point(15, 103));
-            _numFrequency = CreateNumericUpDown(1.0m, 0.1m, 5.0m, new Point(100, 100), 0.1m);
-
-            // Амплитуда
-            var lblAmplitude = CreateLabel("Амплитуда:", new Point(15, 138));
-            _numAmplitude = CreateNumericUpDown(1.0m, 0.1m, 10.0m, new Point(100, 135), 0.1m);
-
-            // Фаза
-            var lblPhase = CreateLabel("Фаза:", new Point(15, 173));
-            _numPhase = CreateNumericUpDown(0, 0, 360, new Point(100, 170), 15);
-
-            // Кнопка применения
             _btnApply = new Button
             {
-                Text = "✓ ПРИМЕНИТЬ",
-                Location = new Point(15, 215),
-                Size = new Size(230, 35),
+                Text = "ПРИМЕНИТЬ",
+                Location = new Point(10, 220),
+                Size = new Size(240, 35),
                 BackColor = Color.FromArgb(0, 120, 212),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
             _btnApply.Click += (s, e) => ApplyClicked?.Invoke(s, e);
-
-            // Добавляем контролы
-            this.Controls.AddRange(new Control[] {
-                titleLabel, lblValueA, _txtValueA, lblValueB, _txtValueB,
-                lblChartPoints, _numChartPoints, lblFrequency, _numFrequency,
-                lblAmplitude, _numAmplitude, lblPhase, _numPhase, _btnApply
-            });
-
-            // Скрываем все по умолчанию
-            HideAllControls();
+            _workPanel.Controls.Add(_btnApply);
         }
 
-        private Label CreateLabel(string text, Point location)
-        {
-            return new Label
-            {
-                Text = text,
-                Location = location,
-                Size = new Size(80, 20),
-                ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 9),
-                BackColor = Color.Transparent
-            };
-        }
-
-        private TextBox CreateTextBox(string defaultValue, Point location)
-        {
-            return new TextBox
-            {
-                Location = location,
-                Size = new Size(150, 25),
-                Text = defaultValue,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 9)
-            };
-        }
-
-        private NumericUpDown CreateNumericUpDown(decimal value, decimal min,
-                                                   decimal max, Point location,
-                                                   decimal increment)
-        {
-            return new NumericUpDown
-            {
-                Location = location,
-                Size = new Size(130, 25),
-                Minimum = min,
-                Maximum = max,
-                Value = value,
-                Increment = increment,
-                DecimalPlaces = value % 1 == 0 ? 0 : 1,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-        }
-
-        private void HideAllControls()
-        {
-            _txtValueA.Visible = false;
-            _txtValueB.Visible = false;
-            _numChartPoints.Visible = false;
-            _numFrequency.Visible = false;
-            _numAmplitude.Visible = false;
-            _numPhase.Visible = false;
-        }
-
-        /// <summary>
-        /// Отображает свойства для выбранного блока
-        /// </summary>
         public void SetSelectedTool(MathTool tool)
         {
             _selectedTool = tool;
-            HideAllControls();
+
+            for (int i = _workPanel.Controls.Count - 1; i >= 0; i--)
+            {
+                var c = _workPanel.Controls[i];
+                if (c != _workPanel.Controls[0] && c != _btnApply)
+                {
+                    _workPanel.Controls.RemoveAt(i);
+                }
+            }
 
             if (tool == null)
             {
@@ -159,64 +72,139 @@ namespace MathApp.UI
             }
 
             this.Visible = true;
+            int y = 40;
 
             switch (tool.Type)
             {
                 case ToolType.Operation:
-                    _txtValueA.Visible = true;
-                    _txtValueB.Visible = true;
-                    _txtValueA.Text = tool.CustomValueA.ToString("F2");
-                    _txtValueB.Text = tool.CustomValueB.ToString("F2");
-                    break;
-
-                case ToolType.Chart:
-                    _numChartPoints.Visible = true;
-                    _numChartPoints.Value = tool.MaxHistorySize;
+                    AddBox("Значение A:", tool.CustomValueA.ToString(), ref y);
+                    AddBox("Значение B:", tool.CustomValueB.ToString(), ref y);
                     break;
 
                 case ToolType.SineGenerator:
-                    _numFrequency.Visible = true;
-                    _numAmplitude.Visible = true;
-                    _numPhase.Visible = true;
-                    _numFrequency.Value = (decimal)tool.Frequency;
-                    _numAmplitude.Value = (decimal)tool.Amplitude;
-                    _numPhase.Value = tool.Phase;
+                    AddBox("Частота (Гц):", tool.Frequency.ToString(), ref y);
+                    AddBox("Амплитуда:", tool.Amplitude.ToString(), ref y);
+                    AddBox("Фаза (град):", tool.Phase.ToString(), ref y);
+                    break;
+
+                case ToolType.Generator:
+                    AddBox("Частота (Гц):", tool.Frequency.ToString(), ref y);
+                    AddBox("Амплитуда:", tool.Amplitude.ToString(), ref y);
+                    break;
+
+                case ToolType.Amplifier:
+                    AddBox("Коэффициент усиления:", tool.Gain.ToString(), ref y);
+                    break;
+
+                case ToolType.Antenna:
+                    AddBox("Частота (МГц):", tool.Frequency.ToString(), ref y);
+                    AddBox("Усиление (дБ):", tool.Gain.ToString(), ref y);
+                    AddBox("Эффективная площадь (м²):", tool.CustomValueA.ToString(), ref y);
+                    AddBox("КПД (%):", tool.CustomValueB.ToString(), ref y);
+                    break;
+
+                case ToolType.Channel:
+                    AddBox("Расстояние (м):", tool.CustomValueA.ToString(), ref y);
+                    AddBox("Затухание (дБ/м):", tool.Attenuation.ToString(), ref y);
+                    break;
+
+                case ToolType.Object:
+                    AddBox("Постоянная времени (с):", tool.TimeConstant.ToString(), ref y);
+                    break;
+
+                case ToolType.ADC:
+                    AddBox("Разрядность (бит):", tool.BitResolution.ToString(), ref y);
+                    AddBox("Опорное напряжение (В):", tool.ReferenceVoltage.ToString(), ref y);
+                    break;
+
+                case ToolType.Chart:
+                    AddBox("Точек истории:", tool.MaxHistorySize.ToString(), ref y);
                     break;
             }
+
+            _btnApply.Location = new Point(10, y + 10);
+            _workPanel.AutoScrollMinSize = new Size(0, y + 60);
         }
 
-        /// <summary>
-        /// Применяет изменения к выбранному блоку
-        /// </summary>
+        private void AddBox(string text, string val, ref int y)
+        {
+            var lbl = new Label
+            {
+                Text = text,
+                Location = new Point(10, y),
+                Size = new Size(120, 25),
+                ForeColor = Color.LightGray,
+                Font = new Font("Segoe UI", 9)
+            };
+            var txt = new TextBox
+            {
+                Text = val,
+                Location = new Point(135, y),
+                Size = new Size(115, 25),
+                BackColor = Color.FromArgb(60, 60, 65),
+                ForeColor = Color.White
+            };
+            _workPanel.Controls.Add(lbl);
+            _workPanel.Controls.Add(txt);
+            y += 35;
+        }
+
         public void ApplyChanges(MathTool tool)
         {
             if (tool == null) return;
 
             try
             {
+                int idx = 1;
                 switch (tool.Type)
                 {
                     case ToolType.Operation:
-                        tool.CustomValueA = double.Parse(_txtValueA.Text);
-                        tool.CustomValueB = double.Parse(_txtValueB.Text);
+                        tool.CustomValueA = double.Parse(GetBox(idx++));
+                        tool.CustomValueB = double.Parse(GetBox(idx++));
                         break;
-
-                    case ToolType.Chart:
-                        tool.MaxHistorySize = (int)_numChartPoints.Value;
-                        break;
-
                     case ToolType.SineGenerator:
-                        tool.Frequency = (double)_numFrequency.Value;
-                        tool.Amplitude = (double)_numAmplitude.Value;
-                        tool.Phase = (int)_numPhase.Value;
+                        tool.Frequency = double.Parse(GetBox(idx++));
+                        tool.Amplitude = double.Parse(GetBox(idx++));
+                        tool.Phase = int.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.Generator:
+                        tool.Frequency = double.Parse(GetBox(idx++));
+                        tool.Amplitude = double.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.Amplifier:
+                        tool.Gain = double.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.Antenna:
+                        tool.Frequency = double.Parse(GetBox(idx++));
+                        tool.Gain = double.Parse(GetBox(idx++));
+                        tool.CustomValueA = double.Parse(GetBox(idx++));
+                        tool.CustomValueB = double.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.Channel:
+                        tool.CustomValueA = double.Parse(GetBox(idx++));
+                        tool.Attenuation = double.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.Object:
+                        tool.TimeConstant = double.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.ADC:
+                        tool.BitResolution = int.Parse(GetBox(idx++));
+                        tool.ReferenceVoltage = double.Parse(GetBox(idx++));
+                        break;
+                    case ToolType.Chart:
+                        tool.MaxHistorySize = int.Parse(GetBox(idx++));
                         break;
                 }
             }
-            catch
-            {
-                MessageBox.Show("Ошибка ввода данных", "Ошибка",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            catch { MessageBox.Show("Ошибка ввода", "Ошибка"); }
+        }
+
+        private string GetBox(int idx)
+        {
+            int c = 0;
+            foreach (Control x in _workPanel.Controls)
+                if (x is TextBox && c++ == idx - 1) return ((TextBox)x).Text;
+            return "0";
         }
     }
 }

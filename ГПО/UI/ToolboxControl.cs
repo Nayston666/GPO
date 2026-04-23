@@ -9,7 +9,6 @@ namespace MathApp.UI
     public class ToolboxControl : UserControl
     {
         private ListBox _listBox;
-
         public event MouseEventHandler ItemMouseDown;
 
         public ToolboxControl()
@@ -19,7 +18,7 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 200);
+            this.Size = new Size(260, 320);
             this.BackColor = Color.Transparent;
 
             var titleLabel = new Label
@@ -35,7 +34,7 @@ namespace MathApp.UI
             _listBox = new ListBox
             {
                 Location = new Point(0, 40),
-                Size = new Size(260, 150),
+                Size = new Size(260, 270),
                 BackColor = Color.FromArgb(45, 45, 50),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10),
@@ -54,24 +53,23 @@ namespace MathApp.UI
                 "✖️ Умножение",
                 "➗ Деление",
                 "📊 График",
-                "📈 Синусоида"
+                "📈 Синусоида",
+                "⚡ Генератор",
+                "▲ Усилитель",
+                "📡 Антенна",
+                "〰️ Канал",
+                "◻️ Объект",
+                "🔢 АЦП"
             });
 
             this.Controls.AddRange(new Control[] { titleLabel, _listBox });
         }
 
-        /// <summary>
-        /// Возвращает выбранный элемент
-        /// </summary>
-        public string GetSelectedItem()
-        {
-            return _listBox.SelectedItem?.ToString();
-        }
+        public string GetSelectedItem() => _listBox.SelectedItem?.ToString();
 
         private void ListBox_DrawItem(object sender, DrawItemEventArgs e)
         {
             if (e.Index < 0) return;
-
             e.DrawBackground();
 
             var rect = e.Bounds;
@@ -82,29 +80,18 @@ namespace MathApp.UI
                 if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
                 {
                     using (var brush = new SolidBrush(Color.FromArgb(0, 120, 212)))
-                    {
                         e.Graphics.FillPath(brush, path);
-                    }
                 }
                 else if ((e.State & DrawItemState.HotLight) == DrawItemState.HotLight)
                 {
                     using (var brush = new SolidBrush(Color.FromArgb(60, 60, 65)))
-                    {
                         e.Graphics.FillPath(brush, path);
-                    }
                 }
 
                 var text = _listBox.Items[e.Index].ToString();
-                using (var sf = new StringFormat
-                {
-                    Alignment = StringAlignment.Near,
-                    LineAlignment = StringAlignment.Center
-                })
-                {
+                using (var sf = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center })
                     e.Graphics.DrawString(text, e.Font, Brushes.White, rect, sf);
-                }
             }
-
             e.DrawFocusRectangle();
         }
     }
