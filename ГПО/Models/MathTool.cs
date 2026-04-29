@@ -37,7 +37,7 @@ namespace MathApp.Models
         public List<double> ValueHistory { get; set; } = new List<double>();
 
         /// <summary>Максимальный размер истории</summary>
-        public int MaxHistorySize { get; set; } = 200;
+        public int MaxHistorySize { get; set; } = 5000;
 
         /// <summary>Частота (для генератора синусоиды)</summary>
         public double Frequency { get; set; } = 1.0;
@@ -54,7 +54,47 @@ namespace MathApp.Models
         /// <summary>Результаты для каждого выходного порта подсистемы</summary>
         public Dictionary<int, double> OutputPortResults { get; set; } = new Dictionary<int, double>();
 
-        // Свойство подсистемы
+        /// <summary>Отзеркален ли блок (входы справа, выход слева)</summary>
+        public bool Flipped { get; set; } = false;
+
+        // ========== НОВАЯ МАТЕМАТИКА ==========
+
+        /// <summary>Текущее значение интеграла (для интегратора)</summary>
+        public double IntegralValue { get; set; } = 0;
+
+        /// <summary>Предыдущее входное значение (для интегратора)</summary>
+        public double PreviousInput { get; set; } = 0;
+
+        /// <summary>Шаг интегрирования (для интегратора)</summary>
+        public double StepSize { get; set; } = 0.01;
+
+        /// <summary>Предыдущее время (для дифференциатора)</summary>
+        public double PreviousTime { get; set; } = 0;
+
+        /// <summary>Предыдущее выходное значение (для дифференциатора)</summary>
+        public double PreviousOutput { get; set; } = 0;
+
+        /// <summary>Точки интерполяции (для интерполятора)</summary>
+        public List<PointF> InterpolationPoints { get; set; } = new List<PointF>();
+
+        /// <summary>Путь к файлу для чтения (для файлового блока)</summary>
+        public string InputFilePath { get; set; } = "";
+
+        /// <summary>Путь к файлу для записи (для файлового блока)</summary>
+        public string OutputFilePath { get; set; } = "";
+
+        /// <summary>Данные из файла или для записи в файл</summary>
+        public List<double> FileData { get; set; } = new List<double>();
+
+        /// <summary>Текущий индекс при чтении из файла</summary>
+        public int CurrentFileIndex { get; set; } = 0;
+
+        /// <summary>Режим: true = чтение, false = запись</summary>
+        public bool IsReading { get; set; } = true;
+
+        // ========== ПОДСИСТЕМА ==========
+
+        /// <summary>Данные подсистемы (если блок является подсистемой)</summary>
         public SubSystemData SubSystemData { get; set; }
 
         /// <summary>

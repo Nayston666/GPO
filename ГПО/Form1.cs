@@ -138,7 +138,7 @@ namespace MathApp
             toolboxControl.ItemMouseDown += ToolboxControl_ItemMouseDown;
 
             // ============ ПАНЕЛЬ РЕАЛЬНОГО ВРЕМЕНИ ============
-            var realTimePanel = CreateSimplePanel("⚡ РЕЖИМ РЕАЛЬНОГО ВРЕМЕНИ", new Point(0, 230));
+            var realTimePanel = CreateSimplePanel("⚡ РЕЖИМ РЕАЛЬНОГО ВРЕМЕНИ", new Point(0, 300));
 
             var chkRealTime = new CheckBox
             {
@@ -182,7 +182,7 @@ namespace MathApp
             // ============ ПАНЕЛЬ СВОЙСТВ ============
             propertyPanel = new PropertyPanel
             {
-                Location = new Point(0, 320)
+                Location = new Point(0, 420)
             };
             propertyPanel.ApplyClicked += PropertyPanel_ApplyClicked;
 
@@ -263,6 +263,7 @@ namespace MathApp
             var contextMenu = new ContextMenuStrip();
             contextMenu.BackColor = Color.FromArgb(45, 45, 50);
             contextMenu.ForeColor = textColor;
+            contextMenu.Items.Add("🔄 Отзеркалить блок", null, FlipTool_Click);
             contextMenu.Items.Add("🗑️ Удалить блок", null, DeleteTool_Click);
             contextMenu.Items.Add("🔗 Удалить соединения", null, DeleteConnections_Click);
             contextMenu.Items.Add("🧹 Очистить всё", null, ClearAll_Click);
@@ -273,7 +274,18 @@ namespace MathApp
             this.Controls.Add(sidePanel);
         }
 
-        // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
+        private void FlipTool_Click(object sender, EventArgs e)
+        {
+            var mousePos = whiteboardPanel.PointToClient(MousePosition);
+            var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
+            var tool = GetToolAtPosition(realPos);
+
+            if (tool != null)
+            {
+                tool.Flipped = !tool.Flipped;
+                needsRedraw = true;
+            }
+        }
 
         private Panel CreateSimplePanel(string title, Point location)
         {
@@ -325,8 +337,6 @@ namespace MathApp
             return btn;
         }
 
-        // ============ ОБРАБОТЧИКИ СОБЫТИЙ ============
-
         private void ToolboxControl_ItemMouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left && toolboxControl.GetSelectedItem() != null)
@@ -345,7 +355,6 @@ namespace MathApp
         {
             var mousePos = whiteboardPanel.PointToClient(new Point(e.X, e.Y));
             var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
-
             var type = e.Data.GetData("MathTool") as string;
 
             var tool = new MathTool { Position = realPos };
@@ -356,7 +365,6 @@ namespace MathApp
                 tool.Size = new Size(160, 80);
                 tool.Name = $"График {whiteboardTools.Count + 1}";
 
-                // Создаём и показываем окно графика
                 var graph = new GraphForm(tool.Name);
                 graph.Show();
                 graphWindows[tool.Id] = graph;
@@ -376,7 +384,6 @@ namespace MathApp
                 tool.Size = new Size(180, 120);
                 tool.Name = $"Подсистема {whiteboardTools.Count + 1}";
 
-                // Создаем пустые данные для подсхемы
                 tool.SubSystemData = new SubSystemData
                 {
                     Name = tool.Name,
@@ -386,7 +393,49 @@ namespace MathApp
                     OutputPorts = new List<SubSystemPort>()
                 };
             }
-            else  // Математические операции
+            else if (type.Contains("Интегратор"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.Integrator;
+                tool.Size = new Size(140, 100);
+                tool.Name = "Интегратор";
+                tool.IntegralValue = 0;
+                tool.PreviousInput = 0;
+                tool.StepSize = 0.01;
+            }
+            else if (type.Contains("Дифференциатор"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.Differentiator;
+                tool.Size = new Size(140, 100);
+                tool.Name = "Дифференциатор";
+                tool.PreviousTime = 0;
+                tool.PreviousOutput = 0;
+            }
+            else if (type.Contains("Интерполятор"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.Interpolator;
+                tool.Size = new Size(140, 100);
+                tool.Name = "Интерполятор";
+                tool.InterpolationPoints = new List<PointF>();
+                for (int i = 0; i <= 10; i++)
+                {
+                    float x = i / 2f;
+                    float y = (float)Math.Sin(x);
+                    tool.InterpolationPoints.Add(new PointF(x, y));
+                }
+            }
+            else if (type.Contains("Файловый"))
+            {
+                tool.Type = ToolType.Operation;
+                tool.Operation = MathOperation.FileIO;
+                tool.Size = new Size(160, 100);
+                tool.Name = "Файловый ввод/вывод";
+                tool.IsReading = true;
+                tool.FileData = new List<double>();
+            }
+            else
             {
                 tool.Type = ToolType.Operation;
                 tool.Size = new Size(140, 80);
@@ -423,10 +472,8 @@ namespace MathApp
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 
-            // Рисуем сетку
             GridRenderer.Draw(g, whiteboardPanel);
 
-            // Рисуем соединения
             foreach (var conn in connections)
             {
                 var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
@@ -438,7 +485,6 @@ namespace MathApp
                 }
             }
 
-            // Рисуем временное соединение
             if (isConnecting && sourceConnectionPoint.HasValue)
             {
                 var sourceTool = whiteboardTools.FirstOrDefault(t =>
@@ -449,7 +495,6 @@ namespace MathApp
                 }
             }
 
-            // Рисуем блоки
             foreach (var tool in whiteboardTools)
             {
                 if (tool.Type == ToolType.Chart)
@@ -470,7 +515,6 @@ namespace MathApp
             if (e.Button == MouseButtons.Left)
             {
                 var realMousePos = whiteboardPanel.GetRealMouseLocation(e.Location);
-
                 var hitPoint = HitTestConnectionPoint(e.Location);
 
                 if (hitPoint.HasValue)
@@ -483,9 +527,9 @@ namespace MathApp
                         tempConnectionEnd = e.Location;
                         needsRedraw = true;
                     }
-                    else if (hit.Type == ConnectionPointType.Input &&
-                             isConnecting && sourceConnectionPoint.HasValue)
+                    else if (hit.Type == ConnectionPointType.Input && isConnecting && sourceConnectionPoint.HasValue)
                     {
+                        System.Diagnostics.Debug.WriteLine($"[DEBUG] Creating connection to INPUT: {(hit.InputType.HasValue ? hit.InputType.Value.ToString() : "Unknown")}");
                         connectionManager.CreateConnection(sourceConnectionPoint.Value, hit);
                         isConnecting = false;
                         sourceConnectionPoint = null;
@@ -560,7 +604,6 @@ namespace MathApp
             {
                 if (tool.Type == ToolType.SubSystem)
                 {
-                    // Если у подсистемы нет данных, создаём пустые
                     if (tool.SubSystemData == null)
                     {
                         tool.SubSystemData = new SubSystemData
@@ -578,14 +621,12 @@ namespace MathApp
                     {
                         tool.SubSystemData = form.GetResult();
                         tool.Name = tool.SubSystemData.Name;
-                        // Обновляем размер блока подсистемы
                         tool.Size = blockRenderer.CalculateSubSystemSize(tool.SubSystemData);
                         needsRedraw = true;
                     }
                 }
                 else if (tool.Type == ToolType.Chart)
                 {
-                    // Открываем окно графика
                     if (!graphWindows.ContainsKey(tool.Id) || graphWindows[tool.Id].IsDisposed)
                     {
                         var graph = new GraphForm(tool.Name);
@@ -594,7 +635,6 @@ namespace MathApp
                     }
                     else
                     {
-                        // Если уже открыто, просто активируем
                         graphWindows[tool.Id].Activate();
                     }
                 }
@@ -607,58 +647,86 @@ namespace MathApp
 
             foreach (var tool in whiteboardTools)
             {
-                // Для подсистемы - проверяем все порты с ИНДЕКСАМИ
                 if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
                 {
                     int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                     int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
 
-                    // Проверяем входные порты подсистемы (слева, зелёные) - это INPUT точки
-                    for (int i = 0; i < inputCount; i++)
+                    // Входные порты подсистемы
+                    for (int portIdx = 0; portIdx < inputCount; portIdx++)
                     {
-                        int yOffset = 35 + i * 20;
-                        Point inputPoint = new Point(
-                            tool.Position.X - 5,
-                            tool.Position.Y + yOffset
-                        );
+                        int portYOffset = 35 + portIdx * 20;
+                        Point inputPoint;
+
+                        if (tool.Flipped)
+                        {
+                            inputPoint = new Point(
+                                tool.Position.X + tool.Size.Width + 5,
+                                tool.Position.Y + portYOffset
+                            );
+                        }
+                        else
+                        {
+                            inputPoint = new Point(
+                                tool.Position.X - 5,
+                                tool.Position.Y + portYOffset
+                            );
+                        }
+
                         if (Distance(realPoint, inputPoint) < 12)
                         {
-                            Console.WriteLine($"Hit INPUT port {i} at {inputPoint}");
                             return new ConnectionPoint
                             {
                                 ToolId = tool.Id,
                                 Type = ConnectionPointType.Input,
                                 InputType = InputType.A,
-                                PortIndex = i  // ВАЖНО: сохраняем индекс порта
+                                PortIndex = portIdx
                             };
                         }
                     }
 
-                    // Проверяем выходные порты подсистемы (справа, оранжевые) - это OUTPUT точки
-                    for (int i = 0; i < outputCount; i++)
+                    // Выходные порты подсистемы
+                    for (int portIdx = 0; portIdx < outputCount; portIdx++)
                     {
-                        int yOffset = 35 + i * 20;
-                        Point outputPoint = new Point(
-                            tool.Position.X + tool.Size.Width + 5,
-                            tool.Position.Y + yOffset
-                        );
+                        int portYOffset = 35 + portIdx * 20;
+                        Point outputPoint;
+
+                        if (tool.Flipped)
+                        {
+                            outputPoint = new Point(
+                                tool.Position.X - 5,
+                                tool.Position.Y + portYOffset
+                            );
+                        }
+                        else
+                        {
+                            outputPoint = new Point(
+                                tool.Position.X + tool.Size.Width + 5,
+                                tool.Position.Y + portYOffset
+                            );
+                        }
+
                         if (Distance(realPoint, outputPoint) < 12)
                         {
-                            Console.WriteLine($"Hit OUTPUT port {i} at {outputPoint}");
                             return new ConnectionPoint
                             {
                                 ToolId = tool.Id,
                                 Type = ConnectionPointType.Output,
-                                PortIndex = i  // ВАЖНО: сохраняем индекс порта
+                                PortIndex = portIdx
                             };
                         }
                     }
                 }
 
-                // Проверяем выходную точку обычного блока
+                // Выходная точка обычного блока
                 if (tool.Type != ToolType.Chart && tool.Type != ToolType.SubSystem)
                 {
-                    var output = GetOutputPoint(tool);
+                    Point output;
+                    if (tool.Flipped)
+                        output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    else
+                        output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+
                     if (Distance(realPoint, output) < 12)
                     {
                         return new ConnectionPoint
@@ -669,12 +737,25 @@ namespace MathApp
                     }
                 }
 
-                // Проверяем входные точки обычных блоков
+                // Входные точки обычных блоков
                 if (tool.Type == ToolType.Operation)
                 {
-                    var inputA = GetInputPoint(tool, InputType.A);
+                    Point inputA, inputB;
+
+                    if (tool.Flipped)
+                    {
+                        inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 20);
+                        inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height - 20);
+                    }
+                    else
+                    {
+                        inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
+                        inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+                    }
+
                     if (Distance(realPoint, inputA) < 12)
                     {
+                        System.Diagnostics.Debug.WriteLine($"[HIT] Tool={tool.Name}, INPUT A");
                         return new ConnectionPoint
                         {
                             ToolId = tool.Id,
@@ -683,9 +764,9 @@ namespace MathApp
                         };
                     }
 
-                    var inputB = GetInputPoint(tool, InputType.B);
                     if (Distance(realPoint, inputB) < 12)
                     {
+                        System.Diagnostics.Debug.WriteLine($"[HIT] Tool={tool.Name}, INPUT B");
                         return new ConnectionPoint
                         {
                             ToolId = tool.Id,
@@ -696,7 +777,12 @@ namespace MathApp
                 }
                 else if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
                 {
-                    var input = GetInputPoint(tool, InputType.A);
+                    Point input;
+                    if (tool.Flipped)
+                        input = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    else
+                        input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+
                     if (Distance(realPoint, input) < 12)
                     {
                         return new ConnectionPoint
@@ -721,51 +807,50 @@ namespace MathApp
         {
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
-                // Для подсистемы возвращаем позицию первого выходного порта
-                 return new Point(
-                    tool.Position.X + tool.Size.Width + 5,
-                    tool.Position.Y + tool.Size.Height / 2
-                );
+                if (tool.Flipped)
+                    return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
-            return new Point(
-                tool.Position.X + tool.Size.Width + 5,
-                tool.Position.Y + tool.Size.Height / 2
-            );
+            if (tool.Flipped)
+                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+            else
+                return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
         }
 
         private Point GetInputPoint(MathTool tool, InputType input)
         {
-            // Для подсистемы нужно возвращать позицию  порта
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                 if (inputCount > 0)
                 {
-                    return new Point(
-                        tool.Position.X - 5,
-                        tool.Position.Y + 35  // Первый порт
-                    );
+                    if (tool.Flipped)
+                        return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 35);
+                    else
+                        return new Point(tool.Position.X - 5, tool.Position.Y + 35);
                 }
-                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                if (tool.Flipped)
+                    return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
-                return new Point(
-                    tool.Position.X - 5,
-                    tool.Position.Y + tool.Size.Height / 2
-                );
+                if (tool.Flipped)
+                    return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
-            if (input == InputType.A)
-            {
-                return new Point(tool.Position.X - 5, tool.Position.Y + 20);
-            }
+            int yOffset = input == InputType.A ? 20 : tool.Size.Height - 20;
+
+            if (tool.Flipped)
+                return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + yOffset);
             else
-            {
-                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
-            }
+                return new Point(tool.Position.X - 5, tool.Position.Y + yOffset);
         }
 
         private MathTool GetToolAtPosition(Point point)
@@ -798,7 +883,6 @@ namespace MathApp
 
             var results = calculator.CalculateAll(whiteboardTools, connections);
 
-            // Обновляем графики
             foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
             {
                 var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
@@ -809,7 +893,6 @@ namespace MathApp
 
                     if (source != null && source.Type == ToolType.SubSystem)
                     {
-                        // Берём значение из конкретного выходного порта
                         int portIndex = conn.SourcePortIndex;
                         if (source.OutputPortResults.ContainsKey(portIndex))
                         {
@@ -831,7 +914,6 @@ namespace MathApp
                 }
             }
 
-            // Обновляем результат на главной форме 
             var lastTool = whiteboardTools
                 .Where(t => t.Type == ToolType.Operation || t.Type == ToolType.SubSystem)
                 .OrderByDescending(t => t.Position.X)

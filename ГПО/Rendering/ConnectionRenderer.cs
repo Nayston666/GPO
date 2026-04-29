@@ -109,32 +109,70 @@ namespace MathApp.Rendering
 
         private static Point GetInputPoint(MathTool tool, Connection conn)
         {
-            // Для подсистемы используем индекс порта
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int portIndex = conn.TargetPortIndex;
-                int yOffset = 35 + portIndex * 20;
-                return new Point(
-                    tool.Position.X - 5,
-                    tool.Position.Y + yOffset
-                );
+
+                // Для подсистемы при отзеркаливании входные порты справа
+                if (tool.Flipped)
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + 35 + (portIndex * 20)
+                    );
+                }
+                else
+                {
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + 35 + (portIndex * 20)
+                    );
+                }
             }
 
             // Для остальных блоков
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
-                return new Point(tool.Position.X - 5,
-                                tool.Position.Y + tool.Size.Height / 2);
+                // При отзеркаливании вход справа
+                if (tool.Flipped)
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
+                else
+                {
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
             }
 
-            return new Point(tool.Position.X - 5,
-                conn.TargetInput == InputType.A ? tool.Position.Y + 20 :
-                tool.Position.Y + tool.Size.Height - 20);
+            // Для Operation блоков
+            int yOffset = conn.TargetInput == InputType.A ? 20 : tool.Size.Height - 20;
+
+            if (tool.Flipped)
+            {
+                // При отзеркаливании входы справа
+                return new Point(
+                    tool.Position.X + tool.Size.Width + 5,
+                    tool.Position.Y + yOffset
+                );
+            }
+            else
+            {
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + yOffset
+                );
+            }
         }
 
         private static Point GetOutputPoint(MathTool tool, Connection conn = null)
         {
-            // Для подсистемы используем индекс выходного порта из соединения
+            // Для подсистемы
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
@@ -142,19 +180,57 @@ namespace MathApp.Rendering
                 {
                     int portIndex = conn.SourcePortIndex;
                     int yOffset = 35 + portIndex * 20;
+
+                    // При отзеркаливании выходные порты слева
+                    if (tool.Flipped)
+                    {
+                        return new Point(
+                            tool.Position.X - 5,
+                            tool.Position.Y + yOffset
+                        );
+                    }
+                    else
+                    {
+                        return new Point(
+                            tool.Position.X + tool.Size.Width + 5,
+                            tool.Position.Y + yOffset
+                        );
+                    }
+                }
+
+                // fallback
+                if (tool.Flipped)
+                {
                     return new Point(
-                        tool.Position.X + tool.Size.Width + 5,
-                        tool.Position.Y + yOffset
+                        tool.Position.X - 5,
+                        tool.Position.Y + tool.Size.Height / 2
                     );
                 }
+                else
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
+            }
+
+            // Для обычных блоков
+            if (tool.Flipped)
+            {
+                // При отзеркаливании выход слева
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
+            else
+            {
                 return new Point(
                     tool.Position.X + tool.Size.Width + 5,
                     tool.Position.Y + tool.Size.Height / 2
                 );
             }
-
-            return new Point(tool.Position.X + tool.Size.Width + 5,
-                            tool.Position.Y + tool.Size.Height / 2);
         }
     }
 }

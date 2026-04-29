@@ -28,33 +28,90 @@ namespace MathApp.Rendering
         public void DrawMathTool(Graphics g, MathTool tool, MathTool selectedTool)
         {
             Rectangle rect = new Rectangle(tool.Position, tool.Size);
-
             DrawShadow(g, rect);
 
-            using (var brush = new LinearGradientBrush(rect,
-                Color.FromArgb(70, 130, 220),
-                Color.FromArgb(40, 70, 140), 45))
+            // Цвета для разных типов операций
+            Color startColor, endColor;
+            switch (tool.Operation)
             {
+                case MathOperation.Integrator:
+                    startColor = Color.FromArgb(200, 120, 70);
+                    endColor = Color.FromArgb(120, 70, 40);
+                    break;
+                case MathOperation.Differentiator:
+                    startColor = Color.FromArgb(70, 120, 200);
+                    endColor = Color.FromArgb(40, 70, 120);
+                    break;
+                case MathOperation.Interpolator:
+                    startColor = Color.FromArgb(120, 70, 200);
+                    endColor = Color.FromArgb(70, 40, 120);
+                    break;
+                case MathOperation.FileIO:
+                    startColor = Color.FromArgb(70, 200, 120);
+                    endColor = Color.FromArgb(40, 120, 70);
+                    break;
+                default:
+                    startColor = Color.FromArgb(70, 130, 220);
+                    endColor = Color.FromArgb(40, 70, 140);
+                    break;
+            }
+
+            using (var brush = new LinearGradientBrush(rect, startColor, endColor, 45))
                 GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 10);
-            }
 
-            using (var pen = new Pen(selectedTool == tool ?
-                   Color.Yellow : Color.FromArgb(100, 150, 255),
-                   selectedTool == tool ? 3 : 2))
-            {
+            using (var pen = new Pen(selectedTool == tool ? Color.Yellow : Color.FromArgb(100, 150, 255),
+                                     selectedTool == tool ? 3 : 2))
                 GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 10);
+
+            // Специальная отрисовка для файлового блока
+            if (tool.Operation == MathOperation.FileIO)
+            {
+                DrawCenteredText(g, tool.IsReading ? "📂 ЧТЕНИЕ" : "💾 ЗАПИСЬ",
+                                new Font("Segoe UI", 9, FontStyle.Bold), Brushes.White, rect);
+
+                string fileInfo = tool.IsReading
+                    ? System.IO.Path.GetFileName(tool.InputFilePath)
+                    : System.IO.Path.GetFileName(tool.OutputFilePath);
+
+                if (string.IsNullOrEmpty(fileInfo)) fileInfo = "не выбран";
+                g.DrawString(fileInfo, _paramFont, Brushes.LightYellow,
+                            rect.X + 10, rect.Y + rect.Height - 20);
+
+                if (tool.FileData.Count > 0)
+                    g.DrawString($"данных: {tool.FileData.Count}", _paramFont,
+                                Brushes.LightGreen, rect.X + 10, rect.Y + 10);
+            }
+            // Специальная отрисовка для интегратора
+            else if (tool.Operation == MathOperation.Integrator)
+            {
+                DrawCenteredText(g, "∫", _iconFont, Brushes.White, rect);
+                g.DrawString($"h={tool.StepSize:F3}", _paramFont, Brushes.LightYellow,
+                            rect.X + 10, rect.Y + rect.Height - 20);
+            }
+            // Специальная отрисовка для дифференциатора
+            else if (tool.Operation == MathOperation.Differentiator)
+            {
+                DrawCenteredText(g, "d/dt", new Font("Segoe UI", 12, FontStyle.Bold), Brushes.White, rect);
+            }
+            // Специальная отрисовка для интерполятора
+            else if (tool.Operation == MathOperation.Interpolator)
+            {
+                DrawCenteredText(g, "f(x)", _iconFont, Brushes.White, rect);
+                g.DrawString($"{tool.InterpolationPoints?.Count ?? 0} точек", _paramFont,
+                            Brushes.LightYellow, rect.X + 10, rect.Y + rect.Height - 20);
+            }
+            // Обычные операции
+            else
+            {
+                DrawCenteredText(g, GetOperationIcon(tool.Operation), _iconFont, Brushes.White, rect);
             }
 
-            string icon = GetOperationIcon(tool.Operation);
-            DrawCenteredText(g, icon, _iconFont, Brushes.White, rect);
-
+            // Отображение результата
             if (tool.LastResult.HasValue)
             {
-                string valueText = $"= {tool.LastResult.Value:F1}";
-                var valueRect = new Rectangle(rect.X, rect.Y + rect.Height - 20,
-                                             rect.Width, 15);
-                DrawCenteredText(g, valueText, _valueFont,
-                               Brushes.LightGreen, valueRect);
+                string valueText = $"= {tool.LastResult.Value:F2}";
+                var valueRect = new Rectangle(rect.X, rect.Y + rect.Height - 20, rect.Width, 15);
+                DrawCenteredText(g, valueText, _valueFont, Brushes.LightGreen, valueRect);
             }
         }
 
@@ -115,7 +172,6 @@ namespace MathApp.Rendering
         /// </summary>
         public void DrawSubSystemTool(Graphics g, MathTool tool, MathTool selectedTool)
         {
-            // Автоматически обновляем размер блока
             if (tool.SubSystemData != null)
             {
                 tool.Size = CalculateSubSystemSize(tool.SubSystemData);
@@ -159,10 +215,16 @@ namespace MathApp.Rendering
 
                 // Рисуем мини-порты на блоке для визуализации
                 // Входные порты (слева, зелёные) - сюда ПРИХОДИТ сигнал
-                for (int i = 0; i < Math.Min(inputCount, 8); i++)
+                for (int idx = 0; idx < Math.Min(inputCount, 8); idx++)
                 {
-                    int yOffset = 35 + i * 20;
-                    Point inputPoint = new Point(rect.X - 3, rect.Y + yOffset);
+                    int portYPos = 35 + idx * 20;
+                    Point inputPoint;
+
+                    if (tool.Flipped)
+                        inputPoint = new Point(rect.X + rect.Width + 3, rect.Y + portYPos);
+                    else
+                        inputPoint = new Point(rect.X - 3, rect.Y + portYPos);
+
                     using (var brush = new SolidBrush(Color.LightGreen))
                     {
                         g.FillEllipse(brush, inputPoint.X - 4, inputPoint.Y - 4, 8, 8);
@@ -174,10 +236,16 @@ namespace MathApp.Rendering
                 }
 
                 // Выходные порты (справа, оранжевые) - отсюда УХОДИТ сигнал
-                for (int i = 0; i < Math.Min(outputCount, 8); i++)
+                for (int idx = 0; idx < Math.Min(outputCount, 8); idx++)
                 {
-                    int yOffset = 35 + i * 20;
-                    Point outputPoint = new Point(rect.X + rect.Width + 3, rect.Y + yOffset);
+                    int portYPos = 35 + idx * 20;
+                    Point outputPoint;
+
+                    if (tool.Flipped)
+                        outputPoint = new Point(rect.X - 3, rect.Y + portYPos);
+                    else
+                        outputPoint = new Point(rect.X + rect.Width + 3, rect.Y + portYPos);
+
                     using (var brush = new SolidBrush(Color.Orange))
                     {
                         g.FillEllipse(brush, outputPoint.X - 4, outputPoint.Y - 4, 8, 8);
@@ -208,57 +276,75 @@ namespace MathApp.Rendering
         }
 
         public void DrawConnectionPoints(Graphics g, MathTool tool,
-                                 IEnumerable<Connection> connections)
+                         IEnumerable<Connection> connections)
         {
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                 int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
 
-                // Входные порты (слева) - сюда ПРИХОДИТ сигнал извне
+                // Входные порты подсистемы
                 for (int i = 0; i < inputCount; i++)
                 {
                     int yOffset = 35 + i * 20;
-                    Point inputPoint = new Point(
-                        tool.Position.X - 5,
-                        tool.Position.Y + yOffset
-                    );
-                    // Проверяем соединение именно для этого порта
+                    Point inputPoint;
+
+                    if (tool.Flipped)
+                        inputPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + yOffset);
+                    else
+                        inputPoint = new Point(tool.Position.X - 5, tool.Position.Y + yOffset);
+
                     bool hasConn = connections.Any(c =>
                         c.TargetToolId == tool.Id && c.TargetPortIndex == i);
 
                     DrawConnectionPoint(g, inputPoint, $"IN{i + 1}", Color.LightGreen, hasConn);
                 }
 
-                // Выходные порты (справа) - отсюда УХОДИТ сигнал наружу
+                // Выходные порты подсистемы
                 for (int i = 0; i < outputCount; i++)
                 {
                     int yOffset = 35 + i * 20;
-                    Point outputPoint = new Point(
-                        tool.Position.X + tool.Size.Width + 5,
-                        tool.Position.Y + yOffset
-                    );
+                    Point outputPoint;
+
+                    if (tool.Flipped)
+                        outputPoint = new Point(tool.Position.X - 5, tool.Position.Y + yOffset);
+                    else
+                        outputPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + yOffset);
+
                     bool hasConn = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawConnectionPoint(g, outputPoint, $"OUT{i + 1}", Color.Orange, hasConn);
                 }
                 return;
             }
 
-            // Выходная точка (справа) для всех блоков, кроме Chart
+            // Выходная точка — если Flipped, то слева, иначе справа
             if (tool.Type != ToolType.Chart)
             {
-                Point output = new Point(tool.Position.X + tool.Size.Width + 5,
-                                         tool.Position.Y + tool.Size.Height / 2);
+                Point output;
+                if (tool.Flipped)
+                    output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+
                 bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                 DrawConnectionPoint(g, output, "out", Color.Orange, hasOutput);
             }
 
-            // Входные точки для разных типов блоков
+            // Входные точки — если Flipped, то справа, иначе слева
             if (tool.Type == ToolType.Operation)
             {
-                // Для математических операций - два входа A и B
-                Point inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
-                Point inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+                Point inputA, inputB;
+
+                if (tool.Flipped)
+                {
+                    inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 20);
+                    inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height - 20);
+                }
+                else
+                {
+                    inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
+                    inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+                }
 
                 bool hasA = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
                 bool hasB = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
@@ -268,8 +354,12 @@ namespace MathApp.Rendering
             }
             else if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
-                // Для графика и генератора
-                Point input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                Point input;
+                if (tool.Flipped)
+                    input = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+
                 bool hasConn = connections.Any(c => c.TargetToolId == tool.Id);
                 DrawConnectionPoint(g, input, "in", Color.LightGreen, hasConn);
             }
@@ -387,62 +477,60 @@ namespace MathApp.Rendering
 
         private Point GetInputPoint(MathTool tool, InputType input)
         {
-            // Для подсистемы возвращаем позицию входного порта
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int inputCount = tool.SubSystemData.InputPorts?.Count ?? 0;
                 if (inputCount > 0)
                 {
-                    // Возвращаем позицию первого входного порта 
-                    return new Point(
-                        tool.Position.X - 5,
-                        tool.Position.Y + 35  // Отступ для первого порта
-                    );
+                    if (tool.Flipped)
+                        return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 35);
+                    else
+                        return new Point(tool.Position.X - 5, tool.Position.Y + 35);
                 }
-                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                if (tool.Flipped)
+                    return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
             if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
             {
-                return new Point(
-                    tool.Position.X - 5,
-                    tool.Position.Y + tool.Size.Height / 2
-                );
+                if (tool.Flipped)
+                    return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
-            if (input == InputType.A)
-            {
-                return new Point(tool.Position.X - 5, tool.Position.Y + 20);
-            }
+            int yOffset = input == InputType.A ? 20 : tool.Size.Height - 20;
+            if (tool.Flipped)
+                return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + yOffset);
             else
-            {
-                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
-            }
+                return new Point(tool.Position.X - 5, tool.Position.Y + yOffset);
         }
 
         private Point GetOutputPoint(MathTool tool)
         {
-            // Для подсистемы возвращаем позицию выходного порта
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
                 if (outputCount > 0)
                 {
-                    return new Point(
-                        tool.Position.X + tool.Size.Width + 5,
-                        tool.Position.Y + 35
-                    );
+                    int yOffset = 35;
+                    if (tool.Flipped)
+                        return new Point(tool.Position.X - 5, tool.Position.Y + yOffset);
+                    else
+                        return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + yOffset);
                 }
-                return new Point(
-                    tool.Position.X + tool.Size.Width + 5,
-                    tool.Position.Y + tool.Size.Height / 2
-                );
+                if (tool.Flipped)
+                    return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                else
+                    return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
             }
 
-            return new Point(
-                tool.Position.X + tool.Size.Width + 5,
-                tool.Position.Y + tool.Size.Height / 2
-            );
+            if (tool.Flipped)
+                return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+            else
+                return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
         }
 
         private string GetOperationIcon(MathOperation op)
@@ -453,6 +541,10 @@ namespace MathApp.Rendering
                 case MathOperation.Subtraction: return "−";
                 case MathOperation.Multiplication: return "×";
                 case MathOperation.Division: return "÷";
+                case MathOperation.Integrator: return "∫";
+                case MathOperation.Differentiator: return "d/dt";
+                case MathOperation.Interpolator: return "f(x)";
+                case MathOperation.FileIO: return "📁";
                 default: return "?";
             }
         }

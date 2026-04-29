@@ -19,7 +19,7 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 200);
+            this.Size = new Size(260, 280); 
             this.BackColor = Color.Transparent;
 
             var titleLabel = new Label
@@ -35,7 +35,7 @@ namespace MathApp.UI
             _listBox = new ListBox
             {
                 Location = new Point(0, 40),
-                Size = new Size(260, 150),
+                Size = new Size(260, 230),  
                 BackColor = Color.FromArgb(45, 45, 50),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10),
@@ -53,6 +53,10 @@ namespace MathApp.UI
                 "➖ Вычитание",
                 "✖️ Умножение",
                 "➗ Деление",
+                "∫ Интегратор",
+                "d/dt Дифференциатор",
+                "f(x) Интерполятор",
+                "📁 Файловый ввод/вывод",
                 "📊 График",
                 "📈 Синусоида",
                 "🧩 Подсистема"
@@ -61,9 +65,6 @@ namespace MathApp.UI
             this.Controls.AddRange(new Control[] { titleLabel, _listBox });
         }
 
-        /// <summary>
-        /// Возвращает выбранный элемент
-        /// </summary>
         public string GetSelectedItem()
         {
             return _listBox.SelectedItem?.ToString();

@@ -23,11 +23,19 @@ namespace MathApp.Core
             if (source.ToolId == target.ToolId)
                 return false;
 
-            // Для подсистемы: удаляем старое соединение для КОНКРЕТНОГО порта
-            _connections.RemoveAll(c =>
-                c.TargetToolId == target.ToolId &&
-                c.TargetInput == target.InputType &&
-                c.TargetPortIndex == target.PortIndex);  // Учитываем индекс порта
+            if (target.InputType.HasValue)
+            {
+                _connections.RemoveAll(c =>
+                    c.TargetToolId == target.ToolId &&
+                    c.TargetInput == target.InputType.Value);  
+            }
+            else
+            {
+                // Для портов подсистемы
+                _connections.RemoveAll(c =>
+                    c.TargetToolId == target.ToolId &&
+                    c.TargetPortIndex == target.PortIndex);
+            }
 
             // Создаем новое
             var newConn = new Connection
@@ -35,17 +43,18 @@ namespace MathApp.Core
                 Id = Guid.NewGuid(),
                 SourceToolId = source.ToolId,
                 TargetToolId = target.ToolId,
-                TargetInput = target.InputType ?? InputType.A,
-                TargetPortIndex = target.PortIndex, // Сохраняем индекс порта входа
-                SourcePortIndex = source.PortIndex  // Сохраняем индекс порта выхода
+                TargetInput = target.InputType ?? InputType.A,  // Используем переданный тип входа
+                TargetPortIndex = target.PortIndex,
+                SourcePortIndex = source.PortIndex
             };
 
             _connections.Add(newConn);
 
-            System.Diagnostics.Debug.WriteLine($"Created connection: Source={source.ToolId}, Target={target.ToolId}, PortIndex={target.PortIndex}");
+            System.Diagnostics.Debug.WriteLine($"Created connection: Source={source.ToolId}, Target={target.ToolId}, Input={newConn.TargetInput}, PortIndex={target.PortIndex}");
 
             return true;
         }
+
 
         /// <summary>
         /// Удаляет все соединения, связанные с блоком

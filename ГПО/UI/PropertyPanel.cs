@@ -171,7 +171,7 @@ namespace MathApp.UI
 
                 case ToolType.Chart:
                     _numChartPoints.Visible = true;
-                    _numChartPoints.Value = tool.MaxHistorySize;
+                  //  _numChartPoints.Value = tool.MaxHistorySize;
                     break;
 
                 case ToolType.SineGenerator:

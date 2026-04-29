@@ -334,7 +334,7 @@ namespace MathApp.UI
             toolboxList = new ListBox
             {
                 Location = new Point(10, 55),
-                Size = new Size(200, 200),
+                Size = new Size(200, 300),
                 BackColor = Color.FromArgb(60, 60, 65),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10),
@@ -348,6 +348,10 @@ namespace MathApp.UI
                 "➖ Вычитание",
                 "✖️ Умножение",
                 "➗ Деление",
+                "∫ Интегратор",
+                "d/dt Дифференциатор",
+                "f(x) Интерполятор",
+                "📁 Файловый ввод/вывод",
                 "📈 Синусоида"
             });
 
@@ -357,7 +361,7 @@ namespace MathApp.UI
             var portsInfo = new GroupBox
             {
                 Text = "Порты подсистемы",
-                Location = new Point(10, 270),
+                Location = new Point(10, 370),
                 Size = new Size(200, 150),
                 ForeColor = Color.LightGray,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
@@ -565,14 +569,64 @@ namespace MathApp.UI
                     Name = "Деление"
                 };
             }
-            else if (type.Contains("График"))
+            // ========== НОВЫЕ БЛОКИ ==========
+            else if (type.Contains("Интегратор"))
             {
                 tool = new MathTool
                 {
                     Position = realPos,
-                    Type = ToolType.Chart,
-                    Size = new Size(160, 80),
-                    Name = "График"
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 100),
+                    Operation = MathOperation.Integrator,
+                    Name = "Интегратор",
+                    IntegralValue = 0,
+                    PreviousInput = 0,
+                    StepSize = 0.01
+                };
+            }
+            else if (type.Contains("Дифференциатор"))
+            {
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 100),
+                    Operation = MathOperation.Differentiator,
+                    Name = "Дифференциатор",
+                    PreviousTime = 0,
+                    PreviousOutput = 0
+                };
+            }
+            else if (type.Contains("Интерполятор"))
+            {
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(140, 100),
+                    Operation = MathOperation.Interpolator,
+                    Name = "Интерполятор",
+                    InterpolationPoints = new List<PointF>()
+                };
+                // Добавляем синусоиду как пример
+                for (int i = 0; i <= 10; i++)
+                {
+                    float x = i / 2f;
+                    float y = (float)Math.Sin(x);
+                    tool.InterpolationPoints.Add(new PointF(x, y));
+                }
+            }
+            else if (type.Contains("Файловый"))
+            {
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Size = new Size(160, 100),
+                    Operation = MathOperation.FileIO,
+                    Name = "Файловый ввод/вывод",
+                    IsReading = true,
+                    FileData = new List<double>()
                 };
             }
             else if (type.Contains("Синусоида"))
@@ -692,7 +746,6 @@ namespace MathApp.UI
             Point point;
             if (port.PortType == PortType.Input)
             {
-                // Входной порт
                 point = new Point(port.Position.X + port.Size.Width + 5,
                                   port.Position.Y + port.Size.Height / 2);
             }
@@ -704,8 +757,8 @@ namespace MathApp.UI
             }
 
             bool hasConnection = _connections.Any(c =>
-                (port.PortType == PortType.Input && c.SourceToolId == port.Id) ||  // Входной порт - источник
-                (port.PortType == PortType.Output && c.TargetToolId == port.Id));   // Выходной порт - цель
+                (port.PortType == PortType.Input && c.SourceToolId == port.Id) ||
+                (port.PortType == PortType.Output && c.TargetToolId == port.Id));
 
             string label = port.PortType == PortType.Input ? "out" : "in";
             Color color = port.PortType == PortType.Input ? Color.Orange : Color.LightGreen;
@@ -715,14 +768,26 @@ namespace MathApp.UI
 
         private void DrawStandardConnectionPoints(Graphics g, MathTool tool)
         {
-            // Выходная точка (справа)
-            Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+            Point output;
+            if (tool.Flipped)
+                output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+            else
+                output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+
             bool hasOutput = _connections.Any(c => c.SourceToolId == tool.Id);
             DrawPoint(g, output, "out", Color.Orange, hasOutput);
 
-            // Входные точки (слева)
-            Point inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
-            Point inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+            Point inputA, inputB;
+            if (tool.Flipped)
+            {
+                inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 20);
+                inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height - 20);
+            }
+            else
+            {
+                inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
+                inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+            }
 
             bool hasA = _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
             bool hasB = _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
@@ -799,6 +864,17 @@ namespace MathApp.UI
                 if (tool != null)
                 {
                     var menu = new ContextMenuStrip();
+
+                    if (!(tool is PortTool))
+                    {
+                        menu.Items.Add("🔄 Отзеркалить", null, (s, ev) =>
+                        {
+                            tool.Flipped = !tool.Flipped;
+                            _needsRedraw = true;
+                            _isDirty = true;
+                        });
+                    }
+
                     menu.Items.Add("🗑️ Удалить блок", null, (s, ev) =>
                     {
                         if (tool is PortTool port)
@@ -885,48 +961,59 @@ namespace MathApp.UI
                     Point portPoint;
                     if (port.PortType == PortType.Input)
                     {
-                        // Входной порт
+                        // Входной порт - точка соединения справа
                         portPoint = new Point(tool.Position.X + tool.Size.Width + 5,
                                               tool.Position.Y + tool.Size.Height / 2);
                     }
                     else
                     {
-                        // Выходной порт
+                        // Выходной порт - точка соединения слева
                         portPoint = new Point(tool.Position.X - 5,
                                               tool.Position.Y + tool.Size.Height / 2);
                     }
 
                     if (Distance(point, portPoint) < 12)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Hit port {port.PortName} at {portPoint}, Type={port.PortType}");
-
                         return new ConnectionPoint
                         {
                             ToolId = tool.Id,
                             Type = port.PortType == PortType.Input ? ConnectionPointType.Output : ConnectionPointType.Input,
                             InputType = port.PortType == PortType.Output ? InputType.A : (InputType?)null,
-                            PortIndex = port.PortIndex  
+                            PortIndex = port.PortIndex
                         };
                     }
                 }
                 else
                 {
-                    // Выходная точка обычного блока 
-                    Point output = new Point(tool.Position.X + tool.Size.Width + 5,
-                                             tool.Position.Y + tool.Size.Height / 2);
+                    // Учитываем Flipped для обычных блоков внутри подсистемы
+                    Point output;
+                    if (tool.Flipped)
+                        output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    else
+                        output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+
                     if (Distance(point, output) < 12)
                     {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };
                     }
 
-                    // Входные точки обычного блока 
-                    Point inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
+                    Point inputA, inputB;
+                    if (tool.Flipped)
+                    {
+                        inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 20);
+                        inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height - 20);
+                    }
+                    else
+                    {
+                        inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
+                        inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
+                    }
+
                     if (Distance(point, inputA) < 12)
                     {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.A };
                     }
 
-                    Point inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
                     if (Distance(point, inputB) < 12)
                     {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.B };
@@ -935,6 +1022,7 @@ namespace MathApp.UI
             }
             return null;
         }
+
 
         private MathTool GetToolAtPosition(Point point)
         {

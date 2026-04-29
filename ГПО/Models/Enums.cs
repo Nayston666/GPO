@@ -10,7 +10,11 @@ namespace MathApp.Models
         Addition,
         Subtraction,
         Multiplication,
-        Division
+        Division,
+        Integrator,
+        Differentiator,
+        Interpolator,
+        FileIO
     }
 
     /// <summary>

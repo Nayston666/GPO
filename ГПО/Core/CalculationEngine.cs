@@ -1,7 +1,8 @@
-﻿using System;
+﻿using MathApp.Models;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
-using MathApp.Models;
 
 namespace MathApp.Core
 {
@@ -11,6 +12,7 @@ namespace MathApp.Core
     public class CalculationEngine
     {
         private double _time = 0;
+        private double _currentTime = 0;
 
         /// <summary>
         /// Обновляет значения генераторов синусоиды
@@ -31,8 +33,8 @@ namespace MathApp.Core
         /// Вычисляет значение для входа блока
         /// </summary>
         public double GetInputValue(MathTool tool, InputType input,
-                            List<MathTool> tools, List<Connection> connections,
-                            Dictionary<Guid, double> calculatedValues)
+                    List<MathTool> tools, List<Connection> connections,
+                    Dictionary<Guid, double> calculatedValues)
         {
             var conn = connections.FirstOrDefault(c =>
                 c.TargetToolId == tool.Id && c.TargetInput == input);
@@ -40,6 +42,8 @@ namespace MathApp.Core
             if (conn != null)
             {
                 var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+
+                System.Diagnostics.Debug.WriteLine($"[CALC] Tool={tool.Name}, Input={input}, Has connection from={source?.Name ?? "null"}");
 
                 // Для подсистемы возвращаем значение выходного порта
                 if (source != null && source.Type == ToolType.SubSystem)
@@ -65,16 +69,17 @@ namespace MathApp.Core
                 return double.NaN;
             }
 
-            if (input == InputType.A)
-                return tool.CustomValueA;
-            else
-                return tool.CustomValueB;
+            // Если нет соединения, используем пользовательские значения
+            double defaultValue = input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
+            System.Diagnostics.Debug.WriteLine($"[CALC] Tool={tool.Name}, Input={input}, NO connection, using default={defaultValue}");
+
+            return defaultValue;
         }
 
         /// <summary>
         /// Выполняет математическую операцию
         /// </summary>
-        public double Calculate(MathOperation op, double a, double b)
+        public double Calculate(MathOperation op, double a, double b, MathTool tool)
         {
             switch (op)
             {
@@ -82,8 +87,59 @@ namespace MathApp.Core
                 case MathOperation.Subtraction: return a - b;
                 case MathOperation.Multiplication: return a * b;
                 case MathOperation.Division: return b != 0 ? a / b : 0;
+                case MathOperation.Integrator:
+                    double step = tool.StepSize;
+                    double newIntegral = tool.IntegralValue + (tool.PreviousInput + a) / 2 * step;
+                    tool.IntegralValue = newIntegral;
+                    tool.PreviousInput = a;
+                    return newIntegral;
+                case MathOperation.Differentiator:
+                    double dt = _currentTime - tool.PreviousTime;
+                    if (dt < 0.0001) dt = 0.001;
+                    double derivative = (a - tool.PreviousOutput) / dt;
+                    tool.PreviousOutput = a;
+                    tool.PreviousTime = _currentTime;
+                    return derivative;
+                case MathOperation.Interpolator:
+                    return Interpolate(a, tool.InterpolationPoints);
+                case MathOperation.FileIO:
+                    if (tool.IsReading)
+                    {
+                        if (tool.FileData.Count > 0 && tool.CurrentFileIndex < tool.FileData.Count)
+                        {
+                            double value = tool.FileData[tool.CurrentFileIndex];
+                            tool.CurrentFileIndex++;
+                            return value;
+                        }
+                        return 0;
+                    }
+                    else
+                    {
+                        tool.FileData.Add(a);
+                        return a;
+                    }
                 default: return 0;
             }
+        }
+
+        private double Interpolate(double x, List<PointF> points)
+        {
+            if (points == null || points.Count == 0) return x;
+            if (points.Count == 1) return points[0].Y;
+
+            var sorted = points.OrderBy(p => p.X).ToList();
+            if (x <= sorted[0].X) return sorted[0].Y;
+            if (x >= sorted[sorted.Count - 1].X) return sorted[sorted.Count - 1].Y;
+
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                if (x >= sorted[i].X && x <= sorted[i + 1].X)
+                {
+                    double t = (x - sorted[i].X) / (sorted[i + 1].X - sorted[i].X);
+                    return sorted[i].Y + t * (sorted[i + 1].Y - sorted[i].Y);
+                }
+            }
+            return sorted.Last().Y;
         }
 
         /// <summary>
@@ -112,7 +168,7 @@ namespace MathApp.Core
 
                     if (double.IsNaN(a) || double.IsNaN(b)) continue;
 
-                    double result = Calculate(tool.Operation, a, b);
+                    double result = Calculate(tool.Operation, a, b, tool);
                     results[tool.Id] = result;
                     tool.LastResult = result;
 
@@ -173,7 +229,7 @@ namespace MathApp.Core
 
             return results;
         }
-
+                
         /// <summary>
         /// Вычисляет значение подсистемы на основе входных сигналов
         /// </summary>
@@ -272,7 +328,7 @@ namespace MathApp.Core
 
                     if (double.IsNaN(a) || double.IsNaN(b)) continue;
 
-                    double result = Calculate(tool.Operation, a, b);
+                    double result = Calculate(tool.Operation, a, b, tool);
                     internalResults[tool.Id] = result;
                     tool.LastResult = result;
                     changed = true;
