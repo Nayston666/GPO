@@ -17,7 +17,7 @@ namespace MathApp.Models
         SineGenerator,
         Generator,
         Amplifier,
-        Antenna,        // ← ДОЛЖЕН БЫТЬ!
+        Antenna,        
         Channel,
         Object,
         ADC
