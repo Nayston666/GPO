@@ -14,10 +14,9 @@ namespace MathApp.Models
     {
         Operation,
         Chart,
-        SineGenerator,
         Generator,
         Amplifier,
-        Antenna,        
+        Antenna,
         Channel,
         Object,
         ADC

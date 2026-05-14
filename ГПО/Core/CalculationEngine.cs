@@ -14,9 +14,11 @@ namespace MathApp.Core
         {
             _time += 0.05;
 
-            foreach (var gen in tools.Where(t => t.Type == ToolType.SineGenerator || t.Type == ToolType.Generator))
+            // ИСПРАВЛЕНО: убран SineGenerator, используем только Generator
+            foreach (var gen in tools.Where(t => t.Type == ToolType.Generator))
             {
-                double radians = (_time * gen.Frequency * 2 * Math.PI) + (gen.Phase * Math.PI / 180.0);
+                // ИСПРАВЛЕНО: gen.PhaseRad вместо gen.Phase
+                double radians = (_time * gen.Frequency * 2 * Math.PI) + gen.PhaseRad;
                 gen.LastResult = gen.Amplitude * Math.Sin(radians);
             }
         }
@@ -31,7 +33,8 @@ namespace MathApp.Core
             if (conn != null)
             {
                 var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                if (source != null && (source.Type == ToolType.SineGenerator || source.Type == ToolType.Generator) && source.LastResult.HasValue)
+                // ИСПРАВЛЕНО: убран SineGenerator
+                if (source != null && source.Type == ToolType.Generator && source.LastResult.HasValue)
                     return source.LastResult.Value;
                 if (calculatedValues.ContainsKey(conn.SourceToolId))
                     return calculatedValues[conn.SourceToolId];
@@ -120,7 +123,8 @@ namespace MathApp.Core
         public double GetSourceValue(Guid id, List<MathTool> tools, Dictionary<Guid, double> values)
         {
             var source = tools.FirstOrDefault(t => t.Id == id);
-            if (source != null && (source.Type == ToolType.SineGenerator || source.Type == ToolType.Generator) && source.LastResult.HasValue)
+            // ИСПРАВЛЕНО: убран SineGenerator
+            if (source != null && source.Type == ToolType.Generator && source.LastResult.HasValue)
                 return source.LastResult.Value;
             return values.ContainsKey(id) ? values[id] : 0;
         }

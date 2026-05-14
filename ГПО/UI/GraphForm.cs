@@ -77,7 +77,6 @@ namespace MathApp.UI
 
                 int topOffset = 50;
 
-                // Сетка
                 using (var gridPen = new Pen(Color.FromArgb(60, 60, 65), 1))
                 {
                     for (int x = 50; x < Width - 50; x += 50)
@@ -86,14 +85,12 @@ namespace MathApp.UI
                         g.DrawLine(gridPen, 50, y, Width - 50, y);
                 }
 
-                // Оси
                 using (var axisPen = new Pen(Color.White, 2))
                 {
                     g.DrawLine(axisPen, 50, Height - 50, Width - 50, Height - 50);
                     g.DrawLine(axisPen, 50, topOffset, 50, Height - 50);
                 }
 
-                // График
                 if (_values.Count > 1)
                 {
                     int graphLeft = 60, graphRight = Width - 60, graphTop = topOffset, graphBottom = Height - 70;
@@ -123,7 +120,6 @@ namespace MathApp.UI
                         g.DrawString("Нет данных", new Font("Segoe UI", 14, FontStyle.Bold), Brushes.Gray, new Rectangle(0, topOffset, Width, Height - topOffset), sf);
                 }
 
-                // Статистика
                 if (_values.Count > 0)
                 {
                     string stats = $"Значений: {_values.Count} | Мин: {_values.Min():F2} | Макс: {_values.Max():F2} | Тек: {_values.Last():F2}";

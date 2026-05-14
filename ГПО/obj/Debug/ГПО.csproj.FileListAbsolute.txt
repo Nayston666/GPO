@@ -26,17 +26,17 @@ C:\Users\User\Desktop\ГПО\ГПО\obj\Debug\ГПО.exe.manifest
 C:\Users\User\Desktop\ГПО\ГПО\obj\Debug\ГПО.application
 C:\Users\User\Desktop\ГПО\ГПО\obj\Debug\ГПО.exe
 C:\Users\User\Desktop\ГПО\ГПО\obj\Debug\ГПО.pdb
-C:\Users\User\Documents\GitHub\GPO\ГПО\bin\Debug\ГПО.exe.config
-C:\Users\User\Documents\GitHub\GPO\ГПО\bin\Debug\ГПО.exe.manifest
-C:\Users\User\Documents\GitHub\GPO\ГПО\bin\Debug\ГПО.application
-C:\Users\User\Documents\GitHub\GPO\ГПО\bin\Debug\ГПО.exe
-C:\Users\User\Documents\GitHub\GPO\ГПО\bin\Debug\ГПО.pdb
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.csproj.AssemblyReference.cache
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\MathApp.Form1.resources
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.Properties.Resources.resources
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.csproj.GenerateResource.cache
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.csproj.CoreCompileInputs.cache
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.exe.manifest
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.application
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.exe
-C:\Users\User\Documents\GitHub\GPO\ГПО\obj\Debug\ГПО.pdb
+C:\Users\User\Desktop\ГПО — копия\ГПО\bin\Debug\ГПО.exe.config
+C:\Users\User\Desktop\ГПО — копия\ГПО\bin\Debug\ГПО.exe.manifest
+C:\Users\User\Desktop\ГПО — копия\ГПО\bin\Debug\ГПО.application
+C:\Users\User\Desktop\ГПО — копия\ГПО\bin\Debug\ГПО.exe
+C:\Users\User\Desktop\ГПО — копия\ГПО\bin\Debug\ГПО.pdb
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.csproj.AssemblyReference.cache
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\MathApp.Form1.resources
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.Properties.Resources.resources
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.csproj.GenerateResource.cache
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.csproj.CoreCompileInputs.cache
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.exe.manifest
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.application
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.exe
+C:\Users\User\Desktop\ГПО — копия\ГПО\obj\Debug\ГПО.pdb

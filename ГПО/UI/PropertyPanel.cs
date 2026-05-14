@@ -76,20 +76,10 @@ namespace MathApp.UI
 
             switch (tool.Type)
             {
-                case ToolType.Operation:
-                    AddBox("Значение A:", tool.CustomValueA.ToString(), ref y);
-                    AddBox("Значение B:", tool.CustomValueB.ToString(), ref y);
-                    break;
-
-                case ToolType.SineGenerator:
-                    AddBox("Частота (Гц):", tool.Frequency.ToString(), ref y);
-                    AddBox("Амплитуда:", tool.Amplitude.ToString(), ref y);
-                    AddBox("Фаза (град):", tool.Phase.ToString(), ref y);
-                    break;
-
                 case ToolType.Generator:
+                    AddBox("Амплитуда (В):", tool.Amplitude.ToString(), ref y);
                     AddBox("Частота (Гц):", tool.Frequency.ToString(), ref y);
-                    AddBox("Амплитуда:", tool.Amplitude.ToString(), ref y);
+                    AddBox("Фаза (рад):", tool.PhaseRad.ToString(), ref y);
                     break;
 
                 case ToolType.Amplifier:
@@ -97,10 +87,8 @@ namespace MathApp.UI
                     break;
 
                 case ToolType.Antenna:
-                    AddBox("Частота (МГц):", tool.Frequency.ToString(), ref y);
                     AddBox("Усиление (дБ):", tool.Gain.ToString(), ref y);
-                    AddBox("Эффективная площадь (м²):", tool.CustomValueA.ToString(), ref y);
-                    AddBox("КПД (%):", tool.CustomValueB.ToString(), ref y);
+                    AddBox("Эффективная площадь (м²):", tool.EffectiveArea.ToString(), ref y);
                     break;
 
                 case ToolType.Channel:
@@ -109,12 +97,14 @@ namespace MathApp.UI
                     break;
 
                 case ToolType.Object:
-                    AddBox("Постоянная времени (с):", tool.TimeConstant.ToString(), ref y);
+                    AddBox("ЭПР (σ) (м²):", tool.RadarCrossSection.ToString(), ref y);
                     break;
 
                 case ToolType.ADC:
                     AddBox("Разрядность (бит):", tool.BitResolution.ToString(), ref y);
-                    AddBox("Опорное напряжение (В):", tool.ReferenceVoltage.ToString(), ref y);
+                    AddBox("Частота дискретизации (Гц):", tool.SamplingRate.ToString(), ref y);
+                    AddBox("Шаг квантования (В):", tool.QuantizationStep.ToString(), ref y);
+                    AddBox("Динамический диапазон (дБ):", tool.DynamicRange.ToString(), ref y);
                     break;
 
                 case ToolType.Chart:
@@ -132,15 +122,15 @@ namespace MathApp.UI
             {
                 Text = text,
                 Location = new Point(10, y),
-                Size = new Size(120, 25),
+                Size = new Size(150, 25),
                 ForeColor = Color.LightGray,
                 Font = new Font("Segoe UI", 9)
             };
             var txt = new TextBox
             {
                 Text = val,
-                Location = new Point(135, y),
-                Size = new Size(115, 25),
+                Location = new Point(165, y),
+                Size = new Size(85, 25),
                 BackColor = Color.FromArgb(60, 60, 65),
                 ForeColor = Color.White
             };
@@ -158,38 +148,30 @@ namespace MathApp.UI
                 int idx = 1;
                 switch (tool.Type)
                 {
-                    case ToolType.Operation:
-                        tool.CustomValueA = double.Parse(GetBox(idx++));
-                        tool.CustomValueB = double.Parse(GetBox(idx++));
-                        break;
-                    case ToolType.SineGenerator:
-                        tool.Frequency = double.Parse(GetBox(idx++));
-                        tool.Amplitude = double.Parse(GetBox(idx++));
-                        tool.Phase = int.Parse(GetBox(idx++));
-                        break;
                     case ToolType.Generator:
-                        tool.Frequency = double.Parse(GetBox(idx++));
                         tool.Amplitude = double.Parse(GetBox(idx++));
+                        tool.Frequency = double.Parse(GetBox(idx++));
+                        tool.PhaseRad = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Amplifier:
                         tool.Gain = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Antenna:
-                        tool.Frequency = double.Parse(GetBox(idx++));
                         tool.Gain = double.Parse(GetBox(idx++));
-                        tool.CustomValueA = double.Parse(GetBox(idx++));
-                        tool.CustomValueB = double.Parse(GetBox(idx++));
+                        tool.EffectiveArea = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Channel:
                         tool.CustomValueA = double.Parse(GetBox(idx++));
                         tool.Attenuation = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Object:
-                        tool.TimeConstant = double.Parse(GetBox(idx++));
+                        tool.RadarCrossSection = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.ADC:
                         tool.BitResolution = int.Parse(GetBox(idx++));
-                        tool.ReferenceVoltage = double.Parse(GetBox(idx++));
+                        tool.SamplingRate = double.Parse(GetBox(idx++));
+                        tool.QuantizationStep = double.Parse(GetBox(idx++));
+                        tool.DynamicRange = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Chart:
                         tool.MaxHistorySize = int.Parse(GetBox(idx++));
