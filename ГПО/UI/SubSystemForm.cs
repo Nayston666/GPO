@@ -16,8 +16,8 @@ namespace MathApp.UI
         private SubSystemData _subSystemData;
         private List<MathTool> _tools;
         private List<Connection> _connections;
-        private List<PortTool> _inputPorts;   // Входные порты 
-        private List<PortTool> _outputPorts;  // Выходные порты 
+        private List<PortTool> _inputPorts;
+        private List<PortTool> _outputPorts;
 
         private DoubleBufferedPanel workspace;
         private ListBox toolboxList;
@@ -45,7 +45,9 @@ namespace MathApp.UI
         private Button btnSave;
         private Button btnCancel;
 
-        // Константы для отрисовки портов
+        private Panel _leftPanel;
+        private PropertyPanel _propertyPanel;
+
         private const int PORT_WIDTH = 100;
         private const int PORT_HEIGHT = 40;
         private const int PORT_SPACING = 55;
@@ -133,81 +135,24 @@ namespace MathApp.UI
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(45, 45, 48)
             };
-
-            Label textLabel = new Label()
-            {
-                Left = 20,
-                Top = 20,
-                Text = text,
-                Width = 350,
-                ForeColor = Color.White,
-                BackColor = Color.Transparent
-            };
-
-            TextBox textBox = new TextBox()
-            {
-                Left = 20,
-                Top = 50,
-                Width = 350,
-                Text = defaultValue,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-
-            Button confirmation = new Button()
-            {
-                Text = "OK",
-                Left = 250,
-                Width = 100,
-                Top = 80,
-                DialogResult = DialogResult.OK,
-                BackColor = Color.FromArgb(0, 120, 212),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-
-            Button cancel = new Button()
-            {
-                Text = "Отмена",
-                Left = 140,
-                Width = 100,
-                Top = 80,
-                DialogResult = DialogResult.Cancel,
-                BackColor = Color.FromArgb(70, 70, 75),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-
+            Label textLabel = new Label() { Left = 20, Top = 20, Text = text, Width = 350, ForeColor = Color.White, BackColor = Color.Transparent };
+            TextBox textBox = new TextBox() { Left = 20, Top = 50, Width = 350, Text = defaultValue, BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            Button confirmation = new Button() { Text = "OK", Left = 250, Width = 100, Top = 80, DialogResult = DialogResult.OK, BackColor = Color.FromArgb(0, 120, 212), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            Button cancel = new Button() { Text = "Отмена", Left = 140, Width = 100, Top = 80, DialogResult = DialogResult.Cancel, BackColor = Color.FromArgb(70, 70, 75), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             prompt.Controls.Add(textLabel);
             prompt.Controls.Add(textBox);
             prompt.Controls.Add(confirmation);
             prompt.Controls.Add(cancel);
             prompt.AcceptButton = confirmation;
-
             return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : defaultValue;
         }
 
         public SubSystemData GetResult()
         {
-            // Сохраняем порты обратно в SubSystemData
-            _subSystemData.InputPorts = _inputPorts.Select(p => new SubSystemPort
-            {
-                Id = p.Id,
-                Name = p.PortName ?? $"Вход{p.PortIndex + 1}",
-                Index = p.PortIndex
-            }).ToList();
-
-            _subSystemData.OutputPorts = _outputPorts.Select(p => new SubSystemPort
-            {
-                Id = p.Id,
-                Name = p.PortName ?? $"Выход{p.PortIndex + 1}",
-                Index = p.PortIndex
-            }).ToList();
-
+            _subSystemData.InputPorts = _inputPorts.Select(p => new SubSystemPort { Id = p.Id, Name = p.PortName ?? $"Вход{p.PortIndex + 1}", Index = p.PortIndex }).ToList();
+            _subSystemData.OutputPorts = _outputPorts.Select(p => new SubSystemPort { Id = p.Id, Name = p.PortName ?? $"Выход{p.PortIndex + 1}", Index = p.PortIndex }).ToList();
             _subSystemData.InternalTools = _tools.Where(t => !(t is PortTool)).ToList();
             _subSystemData.InternalConnections = _connections;
-
             return _subSystemData;
         }
 
@@ -225,186 +170,45 @@ namespace MathApp.UI
             this.BackColor = Color.FromArgb(30, 30, 35);
             this.MinimumSize = new Size(1000, 700);
 
-            // Верхняя панель
-            var topPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 70,
-                BackColor = Color.FromArgb(38, 38, 40)
-            };
+            var topPanel = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(38, 38, 40) };
+            var nameLabel = new Label { Text = "Имя подсхемы:", Location = new Point(15, 20), Size = new Size(100, 25), ForeColor = Color.LightGray, Font = new Font("Segoe UI", 10) };
+            nameBox = new TextBox { Text = _subSystemData.Name, Location = new Point(120, 18), Size = new Size(250, 30), BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 10) };
+            nameBox.TextChanged += (s, e) => { _subSystemData.Name = nameBox.Text; this.Text = nameBox.Text; _isDirty = true; };
 
-            var nameLabel = new Label
-            {
-                Text = "Имя подсхемы:",
-                Location = new Point(15, 20),
-                Size = new Size(100, 25),
-                ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 10)
-            };
-
-            nameBox = new TextBox
-            {
-                Text = _subSystemData.Name,
-                Location = new Point(120, 18),
-                Size = new Size(250, 30),
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 10)
-            };
-            nameBox.TextChanged += (s, e) =>
-            {
-                _subSystemData.Name = nameBox.Text;
-                this.Text = nameBox.Text;
-                _isDirty = true;
-            };
-
-            // Кнопка "Добавить вход"
-            var btnAddInput = new Button
-            {
-                Text = "+ Вход",
-                Location = new Point(400, 15),
-                Size = new Size(90, 38),
-                BackColor = Color.FromArgb(0, 150, 100),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold)
-            };
+            var btnAddInput = new Button { Text = "+ Вход", Location = new Point(400, 15), Size = new Size(90, 38), BackColor = Color.FromArgb(0, 150, 100), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             btnAddInput.Click += (s, e) => AddInputPort();
-
-            // Кнопка "Добавить выход"
-            var btnAddOutput = new Button
-            {
-                Text = "+ Выход",
-                Location = new Point(500, 15),
-                Size = new Size(90, 38),
-                BackColor = Color.FromArgb(200, 120, 0),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold)
-            };
+            var btnAddOutput = new Button { Text = "+ Выход", Location = new Point(500, 15), Size = new Size(90, 38), BackColor = Color.FromArgb(200, 120, 0), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             btnAddOutput.Click += (s, e) => AddOutputPort();
 
-            // Кнопка Сохранить
-            btnSave = new Button
-            {
-                Text = "СОХРАНИТЬ",
-                Size = new Size(90, 40),
-                BackColor = Color.FromArgb(0, 120, 212),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
+            btnSave = new Button { Text = "СОХРАНИТЬ", Size = new Size(90, 40), BackColor = Color.FromArgb(0, 120, 212), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold), Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnSave.Click += (s, e) => SaveAndClose();
-
-            // Кнопка Отмена
-            btnCancel = new Button
-            {
-                Text = "ОТМЕНА",
-                Size = new Size(85, 40),
-                BackColor = Color.FromArgb(70, 70, 75),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
+            btnCancel = new Button { Text = "ОТМЕНА", Size = new Size(85, 40), BackColor = Color.FromArgb(70, 70, 75), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold), Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnCancel.Click += (s, e) => this.DialogResult = DialogResult.Cancel;
 
             topPanel.Controls.AddRange(new Control[] { nameLabel, nameBox, btnAddInput, btnAddOutput, btnSave, btnCancel });
 
-            // Левая панель с инструментами
-            var leftPanel = new Panel
-            {
-                Dock = DockStyle.Left,
-                Width = 220,
-                BackColor = Color.FromArgb(45, 45, 48)
-            };
+            var leftPanel = new Panel { Dock = DockStyle.Left, Width = 220, BackColor = Color.FromArgb(45, 45, 48), AutoScroll = true };
+            _leftPanel = leftPanel;
 
-            var toolsTitle = new Label
-            {
-                Text = "🧮 МАТЕМАТИКА",
-                Location = new Point(10, 15),
-                Size = new Size(200, 30),
-                ForeColor = Color.FromArgb(0, 200, 255),
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-
-            toolboxList = new ListBox
-            {
-                Location = new Point(10, 55),
-                Size = new Size(200, 300),
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10),
-                BorderStyle = BorderStyle.None,
-                ItemHeight = 35
-            };
-
-            toolboxList.Items.AddRange(new object[]
-            {
-                "➕ Сложение",
-                "➖ Вычитание",
-                "✖️ Умножение",
-                "➗ Деление",
-                "∫ Интегратор",
-                "d/dt Дифференциатор",
-                "f(x) Интерполятор",
-                "📁 Файловый ввод/вывод",
-                "📈 Синусоида"
-            });
-
+            var toolsTitle = new Label { Text = "🧮 МАТЕМАТИКА", Location = new Point(10, 15), Size = new Size(200, 30), ForeColor = Color.FromArgb(0, 200, 255), Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+            toolboxList = new ListBox { Location = new Point(10, 55), Size = new Size(200, 300), BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White, Font = new Font("Segoe UI", 10), BorderStyle = BorderStyle.None, ItemHeight = 35 };
+            toolboxList.Items.AddRange(new object[] { "➕ Сложение", "➖ Вычитание", "✖️ Умножение", "➗ Деление", "∫ Интегратор", "d/dt Дифференциатор", "f(x) Интерполятор", "📁 Файловый ввод/вывод", "📈 Синусоида" });
             toolboxList.MouseDown += ToolboxList_MouseDown;
 
-            // Информация о портах
-            var portsInfo = new GroupBox
-            {
-                Text = "Порты подсистемы",
-                Location = new Point(10, 370),
-                Size = new Size(200, 150),
-                ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
-            };
-
-            lblInputs = new Label
-            {
-                Text = $"Входов: {_inputPorts.Count}",
-                Location = new Point(10, 30),
-                Size = new Size(180, 25),
-                ForeColor = Color.LightGreen,
-                Font = new Font("Segoe UI", 9)
-            };
-
-            lblOutputs = new Label
-            {
-                Text = $"Выходов: {_outputPorts.Count}",
-                Location = new Point(10, 60),
-                Size = new Size(180, 25),
-                ForeColor = Color.Orange,
-                Font = new Font("Segoe UI", 9)
-            };
-
-            var lblHint = new Label
-            {
-                Text = "Входной порт (зелёный):\n  • Точка СПРАВА (выход)\n  • В него НЕЛЬЗЯ зайти\nВыходной порт (оранжевый):\n  • Точка СЛЕВА (вход)\n  • Из него НЕЛЬЗЯ выйти",
-                Location = new Point(10, 95),
-                Size = new Size(180, 80),
-                ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 7)
-            };
-
+            var portsInfo = new GroupBox { Text = "Порты подсистемы", Location = new Point(10, 370), Size = new Size(200, 150), ForeColor = Color.LightGray, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            lblInputs = new Label { Text = $"Входов: {_inputPorts.Count}", Location = new Point(10, 30), Size = new Size(180, 25), ForeColor = Color.LightGreen, Font = new Font("Segoe UI", 9) };
+            lblOutputs = new Label { Text = $"Выходов: {_outputPorts.Count}", Location = new Point(10, 60), Size = new Size(180, 25), ForeColor = Color.Orange, Font = new Font("Segoe UI", 9) };
+            var lblHint = new Label { Text = "Входной порт (зелёный):\n  • Точка СПРАВА (выход)\n  • В него НЕЛЬЗЯ зайти\nВыходной порт (оранжевый):\n  • Точка СЛЕВА (вход)\n  • Из него НЕЛЬЗЯ выйти", Location = new Point(10, 95), Size = new Size(180, 80), ForeColor = Color.Gray, Font = new Font("Segoe UI", 7) };
             portsInfo.Controls.AddRange(new Control[] { lblInputs, lblOutputs, lblHint });
+            leftPanel.Controls.Add(toolsTitle);
+            leftPanel.Controls.Add(toolboxList);
+            leftPanel.Controls.Add(portsInfo);
 
-            leftPanel.Controls.AddRange(new Control[] { toolsTitle, toolboxList, portsInfo });
+            _propertyPanel = new PropertyPanel { Location = new Point(10, 530), Size = new Size(200, 280), Visible = false };
+            _propertyPanel.ApplyClicked += PropertyPanel_ApplyClicked;
+            leftPanel.Controls.Add(_propertyPanel);
 
-            // Рабочая область
-            workspace = new DoubleBufferedPanel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(35, 35, 40)
-            };
-
+            workspace = new DoubleBufferedPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(35, 35, 40) };
             workspace.Paint += Workspace_Paint;
             workspace.MouseDown += Workspace_MouseDown;
             workspace.MouseMove += Workspace_MouseMove;
@@ -415,13 +219,19 @@ namespace MathApp.UI
             this.Controls.Add(workspace);
             this.Controls.Add(leftPanel);
             this.Controls.Add(topPanel);
-
-            this.Resize += (s, e) =>
-            {
-                _needsRedraw = true;
-                UpdateButtonPositions();
-            };
+            this.Resize += (s, e) => { _needsRedraw = true; UpdateButtonPositions(); };
             this.Shown += (s, e) => UpdateButtonPositions();
+        }
+
+        private void PropertyPanel_ApplyClicked(object sender, EventArgs e)
+        {
+            if (_selectedTool != null)
+            {
+                _propertyPanel.ApplyChanges(_selectedTool);
+                _needsRedraw = true;
+                _isDirty = true;
+                workspace.Invalidate();
+            }
         }
 
         private void UpdateButtonPositions()
@@ -449,10 +259,7 @@ namespace MathApp.UI
             };
             _inputPorts.Add(newPort);
             _tools.Add(newPort);
-
-            if (lblInputs != null)
-                lblInputs.Text = $"Входов: {_inputPorts.Count}";
-
+            if (lblInputs != null) lblInputs.Text = $"Входов: {_inputPorts.Count}";
             _needsRedraw = true;
             _isDirty = true;
         }
@@ -473,10 +280,7 @@ namespace MathApp.UI
             };
             _outputPorts.Add(newPort);
             _tools.Add(newPort);
-
-            if (lblOutputs != null)
-                lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
-
+            if (lblOutputs != null) lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
             _needsRedraw = true;
             _isDirty = true;
         }
@@ -492,29 +296,19 @@ namespace MathApp.UI
         {
             _renderTimer = new Timer();
             _renderTimer.Interval = 16;
-            _renderTimer.Tick += (s, e) =>
-            {
-                if (_needsRedraw)
-                {
-                    workspace.Invalidate();
-                    _needsRedraw = false;
-                }
-            };
+            _renderTimer.Tick += (s, e) => { if (_needsRedraw) { workspace.Invalidate(); _needsRedraw = false; } };
             _renderTimer.Start();
         }
 
         private void ToolboxList_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left && toolboxList.SelectedItem != null)
-            {
                 DoDragDrop(new DataObject("MathTool", toolboxList.SelectedItem.ToString()), DragDropEffects.Copy);
-            }
         }
 
         private void Workspace_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("MathTool"))
-                e.Effect = DragDropEffects.Copy;
+            if (e.Data.GetDataPresent("MathTool")) e.Effect = DragDropEffects.Copy;
         }
 
         private void Workspace_DragDrop(object sender, DragEventArgs e)
@@ -524,124 +318,27 @@ namespace MathApp.UI
             var type = e.Data.GetData("MathTool") as string;
 
             MathTool tool = null;
-
             if (type.Contains("Сложение"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 80),
-                    Operation = MathOperation.Addition,
-                    Name = "Сложение"
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 80), Operation = MathOperation.Addition, Name = "Сложение" };
             else if (type.Contains("Вычитание"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 80),
-                    Operation = MathOperation.Subtraction,
-                    Name = "Вычитание"
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 80), Operation = MathOperation.Subtraction, Name = "Вычитание" };
             else if (type.Contains("Умножение"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 80),
-                    Operation = MathOperation.Multiplication,
-                    Name = "Умножение"
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 80), Operation = MathOperation.Multiplication, Name = "Умножение" };
             else if (type.Contains("Деление"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 80),
-                    Operation = MathOperation.Division,
-                    Name = "Деление"
-                };
-            }
-            // ========== НОВЫЕ БЛОКИ ==========
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 80), Operation = MathOperation.Division, Name = "Деление" };
             else if (type.Contains("Интегратор"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 100),
-                    Operation = MathOperation.Integrator,
-                    Name = "Интегратор",
-                    IntegralValue = 0,
-                    PreviousInput = 0,
-                    StepSize = 0.01
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 100), Operation = MathOperation.Integrator, Name = "Интегратор", IntegralValue = 0, PreviousInput = 0, StepSize = 0.01 };
             else if (type.Contains("Дифференциатор"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 100),
-                    Operation = MathOperation.Differentiator,
-                    Name = "Дифференциатор",
-                    PreviousTime = 0,
-                    PreviousOutput = 0
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 100), Operation = MathOperation.Differentiator, Name = "Дифференциатор", PreviousTime = 0, PreviousOutput = 0 };
             else if (type.Contains("Интерполятор"))
             {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(140, 100),
-                    Operation = MathOperation.Interpolator,
-                    Name = "Интерполятор",
-                    InterpolationPoints = new List<PointF>()
-                };
-                // Добавляем синусоиду как пример
-                for (int i = 0; i <= 10; i++)
-                {
-                    float x = i / 2f;
-                    float y = (float)Math.Sin(x);
-                    tool.InterpolationPoints.Add(new PointF(x, y));
-                }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(140, 100), Operation = MathOperation.Interpolator, Name = "Интерполятор", InterpolationPoints = new List<PointF>() };
+                for (int i = 0; i <= 10; i++) tool.InterpolationPoints.Add(new PointF(i / 2f, (float)Math.Sin(i / 2f)));
             }
             else if (type.Contains("Файловый"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.Operation,
-                    Size = new Size(160, 100),
-                    Operation = MathOperation.FileIO,
-                    Name = "Файловый ввод/вывод",
-                    IsReading = true,
-                    FileData = new List<double>()
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Size = new Size(160, 100), Operation = MathOperation.FileIO, Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
             else if (type.Contains("Синусоида"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.SineGenerator,
-                    Size = new Size(160, 100),
-                    Name = "Синусоида",
-                    Frequency = 1.0,
-                    Amplitude = 1.0,
-                    Phase = 0
-                };
-            }
+                tool = new MathTool { Position = realPos, Type = ToolType.Generator, Size = new Size(160, 100), Name = "Синусоида", Frequency = 1.0, Amplitude = 1.0, Phase = 0 };
 
             if (tool != null)
             {
@@ -656,30 +353,23 @@ namespace MathApp.UI
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-
             GridRenderer.Draw(g, workspace);
 
-            // Рисуем соединения
             foreach (var conn in _connections)
             {
                 var source = _tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
                 var target = _tools.FirstOrDefault(t => t.Id == conn.TargetToolId);
                 if (source != null && target != null)
-                {
                     ConnectionRenderer.Draw(g, conn, source, target);
-                }
             }
 
             if (_isConnecting && _sourceConnectionPoint.HasValue)
             {
                 var sourceTool = _tools.FirstOrDefault(t => t.Id == _sourceConnectionPoint.Value.ToolId);
                 if (sourceTool != null)
-                {
                     ConnectionRenderer.DrawTemp(g, sourceTool, _tempConnectionEnd);
-                }
             }
 
-            // Рисуем блоки
             foreach (var tool in _tools)
             {
                 if (tool is PortTool port)
@@ -698,82 +388,49 @@ namespace MathApp.UI
         private void DrawPortBlock(Graphics g, PortTool port)
         {
             Rectangle rect = new Rectangle(port.Position, port.Size);
-
-            // Цвета для портов
             Color startColor, endColor;
             if (port.PortType == PortType.Input)
             {
-                // Входной порт — зелёный
                 startColor = Color.FromArgb(60, 100, 80);
                 endColor = Color.FromArgb(40, 70, 55);
             }
             else
             {
-                // Выходной порт — оранжевый
                 startColor = Color.FromArgb(100, 80, 60);
                 endColor = Color.FromArgb(80, 60, 40);
             }
-
             using (var brush = new LinearGradientBrush(rect, startColor, endColor, 45))
-            {
                 GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 8);
-            }
-
-            // Рамка
             using (var pen = new Pen(port.PortType == PortType.Input ? Color.LightGreen : Color.Orange, 2))
-            {
                 GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 8);
-            }
-
-            // Текст
             string displayName = port.PortName ?? (port.PortType == PortType.Input ? $"Вход {port.PortIndex + 1}" : $"Выход {port.PortIndex + 1}");
             using (var font = new Font("Segoe UI", 9, FontStyle.Bold))
             using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-            {
                 g.DrawString(displayName, font, Brushes.White, rect, sf);
-            }
-
-            // Поясняющая иконка
             string icon = port.PortType == PortType.Input ? "⬅️ ВХОД" : "ВЫХОД ➡️";
             using (var font = new Font("Segoe UI", 7, FontStyle.Bold))
-            {
                 g.DrawString(icon, font, Brushes.LightYellow, rect.X + 5, rect.Y + 5);
-            }
         }
 
         private void DrawPortConnectionPoints(Graphics g, PortTool port)
         {
             Point point;
             if (port.PortType == PortType.Input)
-            {
-                point = new Point(port.Position.X + port.Size.Width + 5,
-                                  port.Position.Y + port.Size.Height / 2);
-            }
+                point = new Point(port.Position.X + port.Size.Width + 5, port.Position.Y + port.Size.Height / 2);
             else
-            {
-                // Выходной порт
-                point = new Point(port.Position.X - 5,
-                                  port.Position.Y + port.Size.Height / 2);
-            }
+                point = new Point(port.Position.X - 5, port.Position.Y + port.Size.Height / 2);
 
             bool hasConnection = _connections.Any(c =>
                 (port.PortType == PortType.Input && c.SourceToolId == port.Id) ||
                 (port.PortType == PortType.Output && c.TargetToolId == port.Id));
-
             string label = port.PortType == PortType.Input ? "out" : "in";
             Color color = port.PortType == PortType.Input ? Color.Orange : Color.LightGreen;
-
             DrawPoint(g, point, label, color, hasConnection);
         }
 
         private void DrawStandardConnectionPoints(Graphics g, MathTool tool)
         {
-            Point output;
-            if (tool.Flipped)
-                output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-            else
-                output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-
+            Point output = tool.Flipped ? new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2) : new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
             bool hasOutput = _connections.Any(c => c.SourceToolId == tool.Id);
             DrawPoint(g, output, "out", Color.Orange, hasOutput);
 
@@ -788,10 +445,8 @@ namespace MathApp.UI
                 inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
                 inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
             }
-
             bool hasA = _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
             bool hasB = _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
-
             DrawPoint(g, inputA, "A", Color.LightGreen, hasA);
             DrawPoint(g, inputB, "B", Color.LightGreen, hasB);
         }
@@ -800,19 +455,12 @@ namespace MathApp.UI
         {
             int size = 10;
             Color finalColor = hasConnection ? Color.Yellow : color;
-
             using (var brush = new SolidBrush(finalColor))
-            {
                 g.FillEllipse(brush, point.X - size / 2, point.Y - size / 2, size, size);
-            }
             using (var pen = new Pen(Color.White, 1))
-            {
                 g.DrawEllipse(pen, point.X - size / 2, point.Y - size / 2, size, size);
-            }
             using (var font = new Font("Segoe UI", 7, FontStyle.Bold))
-            {
                 g.DrawString(label, font, Brushes.White, point.X - 8, point.Y - 12);
-            }
         }
 
         private void Workspace_MouseDown(object sender, MouseEventArgs e)
@@ -822,7 +470,6 @@ namespace MathApp.UI
             if (e.Button == MouseButtons.Left)
             {
                 var hitPoint = HitTestConnectionPoint(realPos);
-
                 if (hitPoint.HasValue)
                 {
                     if (hitPoint.Value.Type == ConnectionPointType.Output)
@@ -843,18 +490,22 @@ namespace MathApp.UI
                 }
                 else
                 {
-                    _draggedTool = GetToolAtPosition(realPos);
-                    if (_draggedTool != null)
+                    var tool = GetToolAtPosition(realPos);
+                    if (tool != null)
                     {
-                        _selectedTool = _draggedTool;
+                        _selectedTool = tool;
                         _isDragging = true;
-                        _dragStartPoint = new Point(realPos.X - _draggedTool.Position.X, realPos.Y - _draggedTool.Position.Y);
+                        _draggedTool = tool;
+                        _dragStartPoint = new Point(realPos.X - tool.Position.X, realPos.Y - tool.Position.Y);
                         _needsRedraw = true;
+                        _propertyPanel.SetSelectedTool(_selectedTool);
+                        _propertyPanel.Visible = true;
                     }
                     else
                     {
                         _selectedTool = null;
                         _needsRedraw = true;
+                        _propertyPanel.Visible = false;
                     }
                 }
             }
@@ -864,17 +515,10 @@ namespace MathApp.UI
                 if (tool != null)
                 {
                     var menu = new ContextMenuStrip();
-
                     if (!(tool is PortTool))
                     {
-                        menu.Items.Add("🔄 Отзеркалить", null, (s, ev) =>
-                        {
-                            tool.Flipped = !tool.Flipped;
-                            _needsRedraw = true;
-                            _isDirty = true;
-                        });
+                        menu.Items.Add("🔄 Отзеркалить", null, (s, ev) => { tool.Flipped = !tool.Flipped; _needsRedraw = true; _isDirty = true; });
                     }
-
                     menu.Items.Add("🗑️ Удалить блок", null, (s, ev) =>
                     {
                         if (tool is PortTool port)
@@ -882,28 +526,26 @@ namespace MathApp.UI
                             if (port.PortType == PortType.Input)
                             {
                                 _inputPorts.Remove(port);
-                                if (lblInputs != null)
-                                    lblInputs.Text = $"Входов: {_inputPorts.Count}";
+                                if (lblInputs != null) lblInputs.Text = $"Входов: {_inputPorts.Count}";
                             }
                             else
                             {
                                 _outputPorts.Remove(port);
-                                if (lblOutputs != null)
-                                    lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
+                                if (lblOutputs != null) lblOutputs.Text = $"Выходов: {_outputPorts.Count}";
                             }
+                            _propertyPanel.Visible = false;
                         }
                         _connectionManager.RemoveConnectionsForTool(tool.Id);
                         _tools.Remove(tool);
+                        if (_selectedTool == tool) _selectedTool = null;
                         _needsRedraw = true;
                         _isDirty = true;
                     });
-
                     if (tool is PortTool portTool)
                     {
                         menu.Items.Add("✏️ Переименовать", null, (s, ev) =>
                         {
-                            string newName = ShowInputDialog("Введите имя порта:", "Переименование",
-                                portTool.PortName ?? (portTool.PortType == PortType.Input ? "Вход" : "Выход"));
+                            string newName = ShowInputDialog("Введите имя порта:", "Переименование", portTool.PortName ?? (portTool.PortType == PortType.Input ? "Вход" : "Выход"));
                             if (!string.IsNullOrEmpty(newName))
                             {
                                 portTool.PortName = newName;
@@ -913,12 +555,10 @@ namespace MathApp.UI
                             }
                         });
                     }
-
                     menu.Show(workspace, e.Location);
                 }
                 else
                 {
-                    // Сброс соединения при ПКМ
                     _isConnecting = false;
                     _sourceConnectionPoint = null;
                     _needsRedraw = true;
@@ -929,11 +569,11 @@ namespace MathApp.UI
         private void Workspace_MouseMove(object sender, MouseEventArgs e)
         {
             var realPos = GetRealLocation(e.Location);
-
             if (_isDragging && _draggedTool != null)
             {
                 _draggedTool.Position = new Point(realPos.X - _dragStartPoint.X, realPos.Y - _dragStartPoint.Y);
                 _needsRedraw = true;
+                workspace.Invalidate();
             }
             else if (_isConnecting)
             {
@@ -960,43 +600,17 @@ namespace MathApp.UI
                 {
                     Point portPoint;
                     if (port.PortType == PortType.Input)
-                    {
-                        // Входной порт - точка соединения справа
-                        portPoint = new Point(tool.Position.X + tool.Size.Width + 5,
-                                              tool.Position.Y + tool.Size.Height / 2);
-                    }
+                        portPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
                     else
-                    {
-                        // Выходной порт - точка соединения слева
-                        portPoint = new Point(tool.Position.X - 5,
-                                              tool.Position.Y + tool.Size.Height / 2);
-                    }
-
+                        portPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
                     if (Distance(point, portPoint) < 12)
-                    {
-                        return new ConnectionPoint
-                        {
-                            ToolId = tool.Id,
-                            Type = port.PortType == PortType.Input ? ConnectionPointType.Output : ConnectionPointType.Input,
-                            InputType = port.PortType == PortType.Output ? InputType.A : (InputType?)null,
-                            PortIndex = port.PortIndex
-                        };
-                    }
+                        return new ConnectionPoint { ToolId = tool.Id, Type = port.PortType == PortType.Input ? ConnectionPointType.Output : ConnectionPointType.Input, InputType = port.PortType == PortType.Output ? InputType.A : (InputType?)null, PortIndex = port.PortIndex };
                 }
                 else
                 {
-                    // Учитываем Flipped для обычных блоков внутри подсистемы
-                    Point output;
-                    if (tool.Flipped)
-                        output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                    else
-                        output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-
+                    Point output = tool.Flipped ? new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2) : new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
                     if (Distance(point, output) < 12)
-                    {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };
-                    }
-
                     Point inputA, inputB;
                     if (tool.Flipped)
                     {
@@ -1008,28 +622,20 @@ namespace MathApp.UI
                         inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
                         inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
                     }
-
                     if (Distance(point, inputA) < 12)
-                    {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.A };
-                    }
-
                     if (Distance(point, inputB) < 12)
-                    {
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.B };
-                    }
                 }
             }
             return null;
         }
 
-
         private MathTool GetToolAtPosition(Point point)
         {
             foreach (var tool in _tools)
             {
-                var rect = new Rectangle(tool.Position, tool.Size);
-                if (rect.Contains(point))
+                if (new Rectangle(tool.Position, tool.Size).Contains(point))
                     return tool;
             }
             return null;
@@ -1037,33 +643,18 @@ namespace MathApp.UI
 
         private Point GetRealLocation(Point mouseLocation)
         {
-            return new Point(
-                mouseLocation.X - workspace.AutoScrollPosition.X,
-                mouseLocation.Y - workspace.AutoScrollPosition.Y
-            );
+            return new Point(mouseLocation.X - workspace.AutoScrollPosition.X, mouseLocation.Y - workspace.AutoScrollPosition.Y);
         }
 
-        private double Distance(Point p1, Point p2)
-        {
-            return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
-        }
+        private double Distance(Point p1, Point p2) => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (this.DialogResult != DialogResult.Cancel && _isDirty)
             {
-                var result = MessageBox.Show("Сохранить изменения?", "Подсистема",
-                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-
-                if (result == DialogResult.Yes)
-                {
-                    this.DialogResult = DialogResult.OK;
-                }
-                else if (result == DialogResult.Cancel)
-                {
-                    e.Cancel = true;
-                    return;
-                }
+                var result = MessageBox.Show("Сохранить изменения?", "Подсистема", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes) this.DialogResult = DialogResult.OK;
+                else if (result == DialogResult.Cancel) e.Cancel = true;
             }
             base.OnFormClosing(e);
         }

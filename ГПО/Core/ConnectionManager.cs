@@ -14,60 +14,47 @@ namespace MathApp.Core
             _connections = connections;
         }
 
-        /// <summary>
-        /// Создает новое соединение между блоками
-        /// </summary>
         public bool CreateConnection(ConnectionPoint source, ConnectionPoint target)
         {
-            // Нельзя соединять блок сам с собой
             if (source.ToolId == target.ToolId)
                 return false;
 
-            if (target.InputType.HasValue)
+            // Если цель - порт подсистемы (TargetPortIndex >= 0 и InputType == null)
+            if (target.PortIndex >= 0 && !target.InputType.HasValue)
             {
-                _connections.RemoveAll(c =>
-                    c.TargetToolId == target.ToolId &&
-                    c.TargetInput == target.InputType.Value);  
+                // Удаляем только соединения, ведущие на этот же порт
+                _connections.RemoveAll(c => c.TargetToolId == target.ToolId && c.TargetPortIndex == target.PortIndex);
+            }
+            else if (target.InputType.HasValue)
+            {
+                // Обычный вход A или B
+                _connections.RemoveAll(c => c.TargetToolId == target.ToolId && c.TargetInput == target.InputType.Value);
             }
             else
             {
-                // Для портов подсистемы
-                _connections.RemoveAll(c =>
-                    c.TargetToolId == target.ToolId &&
-                    c.TargetPortIndex == target.PortIndex);
+                // fallback
+                _connections.RemoveAll(c => c.TargetToolId == target.ToolId);
             }
 
-            // Создаем новое
             var newConn = new Connection
             {
                 Id = Guid.NewGuid(),
                 SourceToolId = source.ToolId,
                 TargetToolId = target.ToolId,
-                TargetInput = target.InputType ?? InputType.A,  // Используем переданный тип входа
+                TargetInput = target.InputType ?? InputType.A,
                 TargetPortIndex = target.PortIndex,
                 SourcePortIndex = source.PortIndex
             };
 
             _connections.Add(newConn);
-
-            System.Diagnostics.Debug.WriteLine($"Created connection: Source={source.ToolId}, Target={target.ToolId}, Input={newConn.TargetInput}, PortIndex={target.PortIndex}");
-
             return true;
         }
 
-
-        /// <summary>
-        /// Удаляет все соединения, связанные с блоком
-        /// </summary>
         public void RemoveConnectionsForTool(Guid toolId)
         {
-            _connections.RemoveAll(c =>
-                c.SourceToolId == toolId || c.TargetToolId == toolId);
+            _connections.RemoveAll(c => c.SourceToolId == toolId || c.TargetToolId == toolId);
         }
 
-        /// <summary>
-        /// Удаляет все входящие соединения для блока
-        /// </summary>
         public void RemoveIncomingConnections(Guid toolId)
         {
             _connections.RemoveAll(c => c.TargetToolId == toolId);

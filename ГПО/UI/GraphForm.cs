@@ -1,238 +1,235 @@
-﻿using System;
+﻿using MathApp.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using MathApp.Helpers;
 
 namespace MathApp.UI
 {
     public class GraphForm : Form
     {
         private List<double> _values = new List<double>();
-        private Timer _refreshTimer;
+        private List<double> _timeValues = new List<double>();
         private string _sourceName;
-        private int _maxPoints = 200;
 
-        private CheckBox _chkAutoScroll;
-        private CheckBox _chkShowGrid;
+        private double _xMin = 0, _xMax = 10, _yMin = -2, _yMax = 2;
+        private double _viewXMin, _viewXMax, _viewYMin, _viewYMax;
+        private bool _autoScale = true;
+
+        private Point _dragStart;
+        private bool _isPanning = false;
+
+        private CheckBox _chkAutoScale, _chkShowGrid;
         private ComboBox _cmbLineColor;
+        private Button _btnResetView, _btnExport, _btnCalculate;
+        private Label _lblCoordinates;
+        private NumericUpDown _numPoints;
 
         private Bitmap _backBuffer;
         private Graphics _backGraphics;
-        private bool needsRedraw = true;
+        private bool _needsRedraw = true;
         private Color _lineColor = Color.Cyan;
-        private bool _isDisposing = false;
+
+        private Func<double, double> _calcFunction;
+        private double _calcStart = 0, _calcEnd = 10;
+        private int _calcPoints = 200;
+
+        // Флаг статического режима (для файловых данных) – не добавляем точки из таймера
+        private bool _staticMode = false;
+
+        public void SetDataDirectly(List<double> timeValues, List<double> values)
+        {
+            _timeValues = new List<double>(timeValues);
+            _values = new List<double>(values);
+            _staticMode = true; // отключаем добавление точек из таймера
+            if (_autoScale) AutoScale();
+            _needsRedraw = true;
+        }
 
         public GraphForm(string source)
         {
             _sourceName = source;
+            _viewXMin = _xMin; _viewXMax = _xMax; _viewYMin = _yMin; _viewYMax = _yMax;
             InitializeComponent();
 
-            _refreshTimer = new Timer();
-            _refreshTimer.Interval = 50;
-            _refreshTimer.Tick += (s, e) => needsRedraw = true;
-            _refreshTimer.Start();
+            var timer = new Timer { Interval = 16 };
+            timer.Tick += (s, e) => { if (_needsRedraw) { DrawToBuffer(); Invalidate(); _needsRedraw = false; } };
+            timer.Start();
 
-            var renderTimer = new Timer();
-            renderTimer.Interval = 16;
-            renderTimer.Tick += (s, e) =>
-            {
-                if (needsRedraw && !_isDisposing && !this.IsDisposed)
-                {
-                    DrawToBuffer();
-                    this.Invalidate();
-                    needsRedraw = false;
-                }
-            };
-            renderTimer.Start();
-
-            this.FormClosing += GraphForm_FormClosing;
-
-            // Создаём буфер после того, как форма отобразилась
-            this.Shown += (s, e) => CreateBackBuffer();
-        }
-
-        private void GraphForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            _isDisposing = true;
-            if (_refreshTimer != null)
-            {
-                _refreshTimer.Stop();
-                _refreshTimer.Dispose();
-                _refreshTimer = null;
-            }
+            this.Shown += (s, e) => CreateBackBuffer(); // создаём буфер после отображения
         }
 
         private void InitializeComponent()
         {
-            this.Text = $"График - {_sourceName}";
-            this.Size = new Size(900, 600);
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.BackColor = Color.FromArgb(30, 30, 32);
-            this.DoubleBuffered = true;
+            Text = $"График - {_sourceName}";
+            Size = new Size(1000, 700);
+            StartPosition = FormStartPosition.CenterParent;
+            BackColor = Color.FromArgb(30, 30, 32);
+            DoubleBuffered = true;
 
-            var topPanel = new Panel
-            {
-                Height = 40,
-                Dock = DockStyle.Top,
-                BackColor = Color.FromArgb(45, 45, 48)
-            };
+            var topPanel = new Panel { Height = 45, Dock = DockStyle.Top, BackColor = Color.FromArgb(45, 45, 48) };
 
-            _chkAutoScroll = new CheckBox
-            {
-                Text = "Авто-скролл",
-                Location = new Point(10, 10),
-                Size = new Size(100, 25),
-                ForeColor = Color.White,
-                Checked = true,
-                BackColor = Color.Transparent
-            };
-            _chkAutoScroll.CheckedChanged += (s, e) => needsRedraw = true;
+            _chkAutoScale = new CheckBox { Text = "Автомасштаб", Location = new Point(10, 12), Size = new Size(100, 25), ForeColor = Color.White, Checked = true, FlatStyle = FlatStyle.Flat };
+            _chkAutoScale.CheckedChanged += (s, e) => { _autoScale = _chkAutoScale.Checked; if (_autoScale) AutoScale(); _needsRedraw = true; };
 
-            _chkShowGrid = new CheckBox
-            {
-                Text = "Сетка",
-                Location = new Point(120, 10),
-                Size = new Size(80, 25),
-                ForeColor = Color.White,
-                Checked = true,
-                BackColor = Color.Transparent
-            };
-            _chkShowGrid.CheckedChanged += (s, e) => needsRedraw = true;
+            _chkShowGrid = new CheckBox { Text = "Сетка", Location = new Point(120, 12), Size = new Size(80, 25), ForeColor = Color.White, Checked = true, FlatStyle = FlatStyle.Flat };
+            _chkShowGrid.CheckedChanged += (s, e) => _needsRedraw = true;
 
-            _cmbLineColor = new ComboBox
-            {
-                Location = new Point(210, 10),
-                Size = new Size(100, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White
-            };
-            _cmbLineColor.Items.AddRange(new object[] {
-                "Голубой", "Зеленый", "Красный", "Желтый", "Белый"
-            });
+            var lblColor = new Label { Text = "Цвет:", Location = new Point(210, 15), Size = new Size(40, 20), ForeColor = Color.White };
+            _cmbLineColor = new ComboBox { Location = new Point(250, 12), Size = new Size(100, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White };
+            _cmbLineColor.Items.AddRange(new[] { "Голубой", "Зеленый", "Красный", "Желтый", "Белый" });
             _cmbLineColor.SelectedIndex = 0;
             _cmbLineColor.SelectedIndexChanged += (s, e) =>
             {
-                int index = _cmbLineColor.SelectedIndex;
-                if (index == 0) _lineColor = Color.Cyan;
-                else if (index == 1) _lineColor = Color.LightGreen;
-                else if (index == 2) _lineColor = Color.Orange;
-                else if (index == 3) _lineColor = Color.Yellow;
+                int idx = _cmbLineColor.SelectedIndex;
+                if (idx == 0) _lineColor = Color.Cyan;
+                else if (idx == 1) _lineColor = Color.LightGreen;
+                else if (idx == 2) _lineColor = Color.Orange;
+                else if (idx == 3) _lineColor = Color.Yellow;
                 else _lineColor = Color.White;
-
-                needsRedraw = true;
+                _needsRedraw = true;
             };
 
-            var btnClear = new Button
+            var lblPoints = new Label { Text = "Точек:", Location = new Point(360, 15), Size = new Size(45, 20), ForeColor = Color.White };
+            _numPoints = new NumericUpDown
             {
-                Text = "Очистить",
-                Location = new Point(320, 10),
-                Size = new Size(80, 25),
-                BackColor = Color.FromArgb(0, 120, 215),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                Location = new Point(405, 12),
+                Size = new Size(100, 25),
+                Minimum = 100,
+                Maximum = 10000,
+                Value = 1000,
+                Increment = 500,
+                BackColor = Color.FromArgb(60, 60, 65),
+                ForeColor = Color.White
             };
-            btnClear.Click += (s, e) => { _values.Clear(); needsRedraw = true; };
 
-            var btnSave = new Button
-            {
-                Text = "Сохранить",
-                Location = new Point(410, 10),
-                Size = new Size(80, 25),
-                BackColor = Color.FromArgb(0, 120, 215),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnSave.Click += SaveButton_Click;
+            _btnCalculate = new Button { Text = "⟳ Пересчитать", Location = new Point(515, 12), Size = new Size(100, 25), BackColor = Color.FromArgb(0, 120, 215), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnCalculate.Click += (s, e) => Recalculate();
 
-            topPanel.Controls.AddRange(new Control[] {
-                _chkAutoScroll, _chkShowGrid, _cmbLineColor, btnClear, btnSave
-            });
+            _btnResetView = new Button { Text = "Сброс масштаба", Location = new Point(625, 12), Size = new Size(100, 25), BackColor = Color.FromArgb(100, 100, 100), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnResetView.Click += (s, e) => ResetView();
 
-            this.Controls.Add(topPanel);
+            _btnExport = new Button { Text = "💾 Экспорт", Location = new Point(735, 12), Size = new Size(80, 25), BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnExport.Click += (s, e) => ExportData();
+
+            _lblCoordinates = new Label { Text = "x: --  y: --", Location = new Point(825, 15), Size = new Size(150, 20), ForeColor = Color.LightGray, Font = new Font("Segoe UI", 8) };
+
+            topPanel.Controls.AddRange(new Control[] { _chkAutoScale, _chkShowGrid, lblColor, _cmbLineColor, lblPoints, _numPoints, _btnCalculate, _btnResetView, _btnExport, _lblCoordinates });
+            Controls.Add(topPanel);
+
+            MouseWheel += (s, e) => { if (_values.Count > 0) Zoom(e.Delta > 0 ? 0.9 : 1.1, PointToClient(Cursor.Position)); };
+            MouseDown += (s, e) => { if (e.Button == MouseButtons.Middle || e.Button == MouseButtons.Left) { _isPanning = true; _dragStart = e.Location; } };
+            MouseMove += (s, e) => { double x = ScreenToGraphX(e.X), y = ScreenToGraphY(e.Y); _lblCoordinates.Text = $"x: {x:F3}  y: {y:F3}"; if (_isPanning) Pan(e.Location); };
+            MouseUp += (s, e) => _isPanning = false;
         }
 
-        public void AddValue(double value)
+        public void SetCalculationFunction(Func<double, double> func, double start, double end, int points)
         {
-            if (_isDisposing || this.IsDisposed) return;
-
-            _values.Add(value);
-            if (_values.Count > _maxPoints * 2)
-                _values.RemoveRange(0, _values.Count - _maxPoints);
-            needsRedraw = true;
+            _calcFunction = func;
+            _calcStart = start;
+            _calcEnd = end;
+            _calcPoints = points;
+            _staticMode = false; // динамический режим
+            Recalculate();
         }
+
+        private void Recalculate()
+        {
+            if (_calcFunction == null) return;
+            _calcPoints = (int)_numPoints.Value;
+            _values.Clear();
+            _timeValues.Clear();
+            double step = (_calcEnd - _calcStart) / (_calcPoints - 1);
+            for (int i = 0; i < _calcPoints; i++)
+            {
+                double x = _calcStart + i * step;
+                _timeValues.Add(x);
+                _values.Add(_calcFunction(x));
+            }
+            if (_autoScale) AutoScale();
+            _needsRedraw = true;
+        }
+
+        private void AutoScale()
+        {
+            if (_values.Count == 0) return;
+            _xMin = _timeValues.Min();
+            _xMax = _timeValues.Max();
+            _yMin = _values.Min();
+            _yMax = _values.Max();
+            double xMargin = Math.Max(0.1, (_xMax - _xMin) * 0.05);
+            double yMargin = Math.Max(0.1, (_yMax - _yMin) * 0.05);
+            _xMin -= xMargin;
+            _xMax += xMargin;
+            _yMin -= yMargin;
+            _yMax += yMargin;
+            _viewXMin = _xMin;
+            _viewXMax = _xMax;
+            _viewYMin = _yMin;
+            _viewYMax = _yMax;
+        }
+
+        private void ResetView() { _viewXMin = _xMin; _viewXMax = _xMax; _viewYMin = _yMin; _viewYMax = _yMax; _needsRedraw = true; }
+
+        private void Zoom(double factor, Point mouse)
+        {
+            double xMouse = ScreenToGraphX(mouse.X), yMouse = ScreenToGraphY(mouse.Y);
+            double newWidth = (_viewXMax - _viewXMin) * factor;
+            double newHeight = (_viewYMax - _viewYMin) * factor;
+            double tX = (xMouse - _viewXMin) / (_viewXMax - _viewXMin);
+            double tY = (yMouse - _viewYMin) / (_viewYMax - _viewYMin);
+            _viewXMin = xMouse - newWidth * tX;
+            _viewXMax = xMouse + newWidth * (1 - tX);
+            _viewYMin = yMouse - newHeight * tY;
+            _viewYMax = yMouse + newHeight * (1 - tY);
+            _needsRedraw = true;
+        }
+
+        private void Pan(Point mouse)
+        {
+            double dx = ScreenToGraphX(_dragStart.X) - ScreenToGraphX(mouse.X);
+            double dy = ScreenToGraphY(_dragStart.Y) - ScreenToGraphY(mouse.Y);
+            _viewXMin += dx;
+            _viewXMax += dx;
+            _viewYMin += dy;
+            _viewYMax += dy;
+            _dragStart = mouse;
+            _needsRedraw = true;
+        }
+
+        private double ScreenToGraphX(int screenX) => _viewXMin + (screenX - 70) / (double)(Width - 120) * (_viewXMax - _viewXMin);
+        private double ScreenToGraphY(int screenY) => _viewYMax - (screenY - 60) / (double)(Height - 130) * (_viewYMax - _viewYMin);
 
         private void CreateBackBuffer()
         {
-            if (_isDisposing || this.IsDisposed) return;
-
-            int width = this.ClientSize.Width;
-            int height = this.ClientSize.Height;
-
-            // Проверяем, что размеры допустимы
-            if (width <= 0 || height <= 40)
-                return;
-
-            try
-            {
-                if (_backBuffer != null)
-                {
-                    _backGraphics?.Dispose();
-                    _backBuffer.Dispose();
-                }
-
-                _backBuffer = new Bitmap(width, height);
-                _backGraphics = Graphics.FromImage(_backBuffer);
-                _backGraphics.SmoothingMode = SmoothingMode.AntiAlias;
-                _backGraphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-            }
-            catch (Exception ex)
-            {
-                // Игнорируем ошибки при создании буфера
-                System.Diagnostics.Debug.WriteLine($"CreateBackBuffer error: {ex.Message}");
-            }
+            if (Width <= 0 || Height <= 60) return;
+            _backBuffer?.Dispose();
+            _backGraphics?.Dispose();
+            _backBuffer = new Bitmap(Width, Height);
+            _backGraphics = Graphics.FromImage(_backBuffer);
+            _backGraphics.SmoothingMode = SmoothingMode.AntiAlias;
         }
 
         private void DrawToBuffer()
         {
-            if (_isDisposing || this.IsDisposed) return;
-            if (_backGraphics == null) return;
+            if (_backGraphics == null || _backBuffer == null) return;
+            if (Width <= 0 || Height <= 60) return;
 
             try
             {
-                _backGraphics.Clear(this.BackColor);
+                _backGraphics.Clear(BackColor);
+                int left = 70, right = Width - 50, top = 60, bottom = Height - 70;
+                if (right <= left || bottom <= top) return;
 
-                int topOffset = 50;
-
-                // Проверяем, что размеры клиентской области допустимы
-                if (this.ClientSize.Width <= 100 || this.ClientSize.Height <= 100)
-                    return;
-
-                if (_chkShowGrid.Checked)
-                {
-                    DrawGrid(_backGraphics, topOffset);
-                }
-
-                DrawAxes(_backGraphics, topOffset);
-
-                if (_values.Count > 1)
-                {
-                    DrawGraph(_backGraphics, topOffset);
-                }
-                else
-                {
-                    DrawNoDataMessage(_backGraphics, topOffset);
-                }
-
-                if (_values.Count > 0)
-                {
-                    DrawStats(_backGraphics);
-                }
-
-                DrawSourceInfo(_backGraphics, topOffset);
+                using (var pen = new Pen(Color.FromArgb(80, 80, 85), 1))
+                    _backGraphics.DrawRectangle(pen, left, top, right - left, bottom - top);
+                if (_chkShowGrid.Checked) DrawGrid(left, right, top, bottom);
+                DrawAxes(left, right, top, bottom);
+                if (_values.Count > 1) DrawGraph(left, right, top, bottom);
+                else _backGraphics.DrawString("Нет данных", new Font("Segoe UI", 14), Brushes.Gray, left, top + (bottom - top) / 2);
+                if (_values.Count > 0) DrawStats();
             }
             catch (Exception ex)
             {
@@ -240,182 +237,152 @@ namespace MathApp.UI
             }
         }
 
-        private void DrawGrid(Graphics g, int topOffset)
+        private void DrawGrid(int left, int right, int top, int bottom)
         {
             using (var pen = new Pen(Color.FromArgb(60, 60, 65), 1))
             {
-                for (int x = 50; x < this.ClientSize.Width - 50; x += 50)
-                    g.DrawLine(pen, x, topOffset, x, this.ClientSize.Height - 50);
+                double xStep = Math.Pow(10, Math.Floor(Math.Log10(_viewXMax - _viewXMin))) / 2;
+                if (xStep < 0.1) xStep = 0.1;
 
-                for (int y = topOffset; y < this.ClientSize.Height - 50; y += 50)
-                    g.DrawLine(pen, 50, y, this.ClientSize.Width - 50, y);
-            }
-        }
-
-        private void DrawAxes(Graphics g, int topOffset)
-        {
-            using (var pen = new Pen(Color.White, 2))
-            {
-                g.DrawLine(pen, 50, this.ClientSize.Height - 50, this.ClientSize.Width - 50, this.ClientSize.Height - 50);
-                g.DrawLine(pen, 50, topOffset, 50, this.ClientSize.Height - 50);
-            }
-        }
-
-        private void DrawGraph(Graphics g, int topOffset)
-        {
-            int graphLeft = 60;
-            int graphRight = this.ClientSize.Width - 60;
-            int graphTop = topOffset;
-            int graphBottom = this.ClientSize.Height - 70;
-            int graphWidth = graphRight - graphLeft;
-            int graphHeight = graphBottom - graphTop;
-
-            if (graphWidth <= 0 || graphHeight <= 0) return;
-
-            double minValue = _values.Min();
-            double maxValue = _values.Max();
-            double range = maxValue - minValue;
-            if (range < 0.001) range = 1;
-
-            int startIndex = 0;
-            int endIndex = _values.Count - 1;
-
-            if (_chkAutoScroll.Checked && _values.Count > _maxPoints)
-                startIndex = _values.Count - _maxPoints;
-
-            int pointCount = endIndex - startIndex + 1;
-            if (pointCount < 2) return;
-
-            var points = new List<PointF>();
-
-            for (int i = startIndex; i <= endIndex; i++)
-            {
-                float x = graphLeft + (float)((i - startIndex) * graphWidth / (pointCount - 1));
-                float y = graphTop + graphHeight -
-                          (float)((_values[i] - minValue) / range * graphHeight);
-                y = Math.Max(graphTop, Math.Min(graphBottom, y));
-                points.Add(new PointF(x, y));
-            }
-
-            using (var pen = new Pen(_lineColor, 2))
-            {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                for (int i = 0; i < points.Count - 1; i++)
+                for (double x = Math.Ceiling(_viewXMin / xStep) * xStep; x <= _viewXMax; x += xStep)
                 {
-                    g.DrawLine(pen, points[i], points[i + 1]);
-                }
-            }
-
-            foreach (var point in points)
-            {
-                g.FillEllipse(Brushes.Red, point.X - 3, point.Y - 3, 6, 6);
-            }
-        }
-
-        private void DrawNoDataMessage(Graphics g, int topOffset)
-        {
-            using (var sf = new StringFormat
-            {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center
-            })
-            {
-                g.DrawString("Ожидание данных...",
-                    new Font("Segoe UI", 14, FontStyle.Bold),
-                    Brushes.Gray,
-                    new Rectangle(0, topOffset, this.ClientSize.Width, this.ClientSize.Height - topOffset),
-                    sf);
-            }
-        }
-
-        private void DrawStats(Graphics g)
-        {
-            string stats = $"Значений: {_values.Count} | " +
-                          $"Мин: {_values.Min():F2} | " +
-                          $"Макс: {_values.Max():F2} | " +
-                          $"Среднее: {_values.Average():F2} | " +
-                          $"Текущее: {_values.Last():F2}";
-
-            g.DrawString(stats, new Font("Segoe UI", 9),
-                Brushes.LightGreen, 60, this.ClientSize.Height - 30);
-        }
-
-        private void DrawSourceInfo(Graphics g, int topOffset)
-        {
-            g.DrawString($"Источник: {_sourceName}",
-                new Font("Segoe UI", 9, FontStyle.Bold),
-                Brushes.Yellow, 60, topOffset - 20);
-        }
-
-        private void SaveButton_Click(object sender, EventArgs e)
-        {
-            if (_values.Count == 0) return;
-
-            var saveDialog = new SaveFileDialog
-            {
-                Filter = "CSV файлы (*.csv)|*.csv",
-                DefaultExt = "csv",
-                FileName = $"graph_{_sourceName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
-            };
-
-            if (saveDialog.ShowDialog() == DialogResult.OK)
-            {
-                using (var writer = new System.IO.StreamWriter(saveDialog.FileName))
-                {
-                    writer.WriteLine("Index,Value");
-                    for (int i = 0; i < _values.Count; i++)
+                    if (x < _viewXMin) continue;
+                    int sx = left + (int)((x - _viewXMin) / (_viewXMax - _viewXMin) * (right - left));
+                    if (sx >= left && sx <= right)
                     {
-                        writer.WriteLine($"{i},{_values[i]:F6}");
+                        _backGraphics.DrawLine(pen, sx, top, sx, bottom);
+                        _backGraphics.DrawString(x.ToString("F2"), new Font("Segoe UI", 7), Brushes.Gray, sx - 15, bottom + 5);
                     }
                 }
 
-                MessageBox.Show("Данные сохранены!", "Успех",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                double yStep = Math.Pow(10, Math.Floor(Math.Log10(_viewYMax - _viewYMin))) / 2;
+                if (yStep < 0.1) yStep = 0.1;
+
+                for (double y = Math.Ceiling(_viewYMin / yStep) * yStep; y <= _viewYMax; y += yStep)
+                {
+                    if (y < _viewYMin) continue;
+                    int sy = bottom - (int)((y - _viewYMin) / (_viewYMax - _viewYMin) * (bottom - top));
+                    if (sy >= top && sy <= bottom)
+                    {
+                        _backGraphics.DrawLine(pen, left, sy, right, sy);
+                        _backGraphics.DrawString(y.ToString("F2"), new Font("Segoe UI", 7), Brushes.Gray, left - 35, sy - 7);
+                    }
+                }
             }
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        private void DrawAxes(int left, int right, int top, int bottom)
         {
-            if (_backBuffer != null && !_isDisposing && !this.IsDisposed)
-                e.Graphics.DrawImage(_backBuffer, 0, 0);
+            using (var pen = new Pen(Color.White, 2))
+            {
+                if (_viewYMin <= 0 && _viewYMax >= 0)
+                {
+                    int yZero = bottom - (int)((0 - _viewYMin) / (_viewYMax - _viewYMin) * (bottom - top));
+                    _backGraphics.DrawLine(pen, left, yZero, right, yZero);
+                }
+                if (_viewXMin <= 0 && _viewXMax >= 0)
+                {
+                    int xZero = left + (int)((0 - _viewXMin) / (_viewXMax - _viewXMin) * (right - left));
+                    _backGraphics.DrawLine(pen, xZero, top, xZero, bottom);
+                }
+            }
         }
 
+        private void DrawGraph(int left, int right, int top, int bottom)
+        {
+            var points = new List<PointF>();
+            // Для статического режима или малого числа точек рисуем все точки
+            int step = (_staticMode || _values.Count < 2000) ? 1 : Math.Max(1, _values.Count / 2000);
+
+            for (int i = 0; i < _values.Count; i += step)
+            {
+                double x = _timeValues[i], y = _values[i];
+                if (x < _viewXMin || x > _viewXMax || y < _viewYMin || y > _viewYMax) continue;
+                float sx = left + (float)((x - _viewXMin) / (_viewXMax - _viewXMin) * (right - left));
+                float sy = bottom - (float)((y - _viewYMin) / (_viewYMax - _viewYMin) * (bottom - top));
+                points.Add(new PointF(sx, sy));
+            }
+            if (points.Count < 2) return;
+
+            using (var pen = new Pen(_lineColor, 2))
+            {
+                for (int i = 0; i < points.Count - 1; i++)
+                    _backGraphics.DrawLine(pen, points[i], points[i + 1]);
+            }
+
+            if (points.Count < 500)
+            {
+                foreach (var p in points)
+                    _backGraphics.FillEllipse(Brushes.Red, p.X - 2, p.Y - 2, 4, 4);
+            }
+        }
+
+        private void DrawStats()
+        {
+            string stats = $"Значений: {_values.Count} | Мин: {_values.Min():F3} | Макс: {_values.Max():F3} | Среднее: {_values.Average():F3}";
+            _backGraphics.DrawString(stats, new Font("Segoe UI", 9), Brushes.LightGreen, 70, Height - 25);
+        }
+
+        private void ExportData()
+        {
+            if (_values.Count == 0) return;
+            var dlg = new SaveFileDialog { Filter = "CSV файлы (*.csv)|*.csv", FileName = $"graph_{_sourceName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
+            if (dlg.ShowDialog() == DialogResult.OK)
+                using (var w = new System.IO.StreamWriter(dlg.FileName))
+                {
+                    w.WriteLine("Time,Value");
+                    for (int i = 0; i < _values.Count; i++)
+                        w.WriteLine($"{_timeValues[i]:F6},{_values[i]:F6}");
+                    MessageBox.Show($"Сохранено {_values.Count} точек!", "Успех");
+                }
+        }
+
+        public void AddValue(double value)
+        {
+            if (_staticMode) return; // не добавляем точки в статическом режиме
+            _values.Add(value);
+            double lastTime = _timeValues.Count > 0 ? _timeValues.Last() : 0;
+            _timeValues.Add(lastTime + 0.05);
+
+            const int maxPoints = 5000;
+            if (_values.Count > maxPoints)
+            {
+                _values.RemoveAt(0);
+                _timeValues.RemoveAt(0);
+            }
+
+            if (_autoScale) AutoScale();
+            _needsRedraw = true;
+        }
+
+        public void AddValue(double value, double time)
+        {
+            if (_staticMode) return;
+            _values.Add(value);
+            _timeValues.Add(time);
+            const int maxPoints = 5000;
+            if (_values.Count > maxPoints)
+            {
+                _values.RemoveAt(0);
+                _timeValues.RemoveAt(0);
+            }
+            if (_autoScale) AutoScale();
+            _needsRedraw = true;
+        }
+
+        protected override void OnPaint(PaintEventArgs e) { if (_backBuffer != null) e.Graphics.DrawImage(_backBuffer, 0, 0); }
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            if (!_isDisposing && !this.IsDisposed && this.ClientSize.Width > 0 && this.ClientSize.Height > 40)
+            if (Width > 0 && Height > 60)
             {
                 CreateBackBuffer();
-                needsRedraw = true;
+                _needsRedraw = true;
             }
         }
-
         protected override void Dispose(bool disposing)
         {
-            _isDisposing = true;
-
-            if (disposing)
-            {
-                if (_refreshTimer != null)
-                {
-                    _refreshTimer.Stop();
-                    _refreshTimer.Dispose();
-                    _refreshTimer = null;
-                }
-
-                if (_backGraphics != null)
-                {
-                    _backGraphics.Dispose();
-                    _backGraphics = null;
-                }
-
-                if (_backBuffer != null)
-                {
-                    _backBuffer.Dispose();
-                    _backBuffer = null;
-                }
-            }
+            if (disposing) { _backGraphics?.Dispose(); _backBuffer?.Dispose(); }
             base.Dispose(disposing);
         }
     }

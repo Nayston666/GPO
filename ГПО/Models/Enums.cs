@@ -2,9 +2,6 @@
 
 namespace MathApp.Models
 {
-    /// <summary>
-    /// Математические операции
-    /// </summary>
     public enum MathOperation
     {
         Addition,
@@ -17,30 +14,26 @@ namespace MathApp.Models
         FileIO
     }
 
-    /// <summary>
-    /// Типы блоков
-    /// </summary>
     public enum ToolType
     {
-        Operation,       // Математическая операция
-        Chart,           // График
-        SineGenerator,   // Генератор синусоиды
-        SubSystem,       // Подсистема
-        Port             // Порт внутри подсистемы
+        Operation,      // Математическая операция 
+        Chart,          // График
+        Generator,      // Генератор синусоиды 
+        Amplifier,      // Усилитель
+        Antenna,        // Антенна
+        Channel,        // Канал связи
+        Object,         // Объект (РЛС)
+        ADC,            // Аналого-цифровой преобразователь
+        SubSystem,      // Подсистема
+        Port            // Порт 
     }
 
-    /// <summary>
-    /// Типы входов блока
-    /// </summary>
     public enum InputType
     {
         A,
         B
     }
 
-    /// <summary>
-    /// Типы точек соединения
-    /// </summary>
     public enum ConnectionPointType
     {
         Input,
@@ -48,7 +41,7 @@ namespace MathApp.Models
     }
 
     /// <summary>
-    /// Структура для хранения информации о точке соединения
+    /// Структура для хранения информации о точке соединения (пине)
     /// </summary>
     public struct ConnectionPoint
     {
@@ -56,5 +49,32 @@ namespace MathApp.Models
         public ConnectionPointType Type { get; set; }
         public InputType? InputType { get; set; }
         public int PortIndex { get; set; }
+
+        // Конструктор для двух аргументов (используется в коде)
+        public ConnectionPoint(Guid toolId, ConnectionPointType type)
+        {
+            ToolId = toolId;
+            Type = type;
+            InputType = null;
+            PortIndex = 0;
+        }
+
+        // Конструктор для трёх аргументов
+        public ConnectionPoint(Guid toolId, ConnectionPointType type, InputType inputType)
+        {
+            ToolId = toolId;
+            Type = type;
+            InputType = inputType;
+            PortIndex = 0;
+        }
+
+        // Полный конструктор (со всеми полями)
+        public ConnectionPoint(Guid toolId, ConnectionPointType type, InputType? inputType, int portIndex)
+        {
+            ToolId = toolId;
+            Type = type;
+            InputType = inputType;
+            PortIndex = portIndex;
+        }
     }
 }

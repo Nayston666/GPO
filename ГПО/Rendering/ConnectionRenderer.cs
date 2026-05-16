@@ -131,7 +131,7 @@ namespace MathApp.Rendering
             }
 
             // Для остальных блоков
-            if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
+            if (tool.Type == ToolType.Chart || tool.Type == ToolType.Generator)
             {
                 // При отзеркаливании вход справа
                 if (tool.Flipped)

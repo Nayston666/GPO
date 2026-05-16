@@ -26,7 +26,7 @@ namespace MathApp.UI
             {
                 Text = "📦 ИНСТРУМЕНТЫ",
                 Location = new Point(0, 0),
-                Size = new Size(260, 35),
+                Size = new Size(400, 35),
                 ForeColor = Color.FromArgb(0, 200, 255),
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
@@ -37,7 +37,7 @@ namespace MathApp.UI
                 Location = new Point(0, 40),
                 Size = new Size(260, 230),  
                 BackColor = Color.FromArgb(45, 45, 50),
-                ForeColor = Color.White,
+                ForeColor = Color.Black,
                 Font = new Font("Segoe UI", 10),
                 BorderStyle = BorderStyle.None,
                 ItemHeight = 30,

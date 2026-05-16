@@ -5,106 +5,100 @@ using System.Drawing;
 namespace MathApp.Models
 {
     /// <summary>
-    /// Представляет блок в схеме (операция, генератор или график)
+    /// Блок в схеме (операция, генератор, усилитель, антенна, канал, объект, АЦП, график, подсистема)
     /// </summary>
     public class MathTool
     {
-        /// <summary>Уникальный идентификатор блока</summary>
         public Guid Id { get; set; } = Guid.NewGuid();
-
-        /// <summary>Отображаемое имя</summary>
         public string Name { get; set; }
-
-        /// <summary>Позиция на рабочей области</summary>
         public Point Position { get; set; }
-
-        /// <summary>Размер блока</summary>
         public Size Size { get; set; }
 
-        /// <summary>Тип операции (для математических блоков)</summary>
+        // Тип блока и операция (для математических)
+        public ToolType Type { get; set; }
         public MathOperation Operation { get; set; }
 
-        /// <summary>Тип блока</summary>
-        public ToolType Type { get; set; }
-
-        /// <summary>Собственное значение для входа A</summary>
+        // Пользовательские значения для входов A и B (для операций)
         public double CustomValueA { get; set; }
-
-        /// <summary>Собственное значение для входа B</summary>
         public double CustomValueB { get; set; }
 
-        /// <summary>История значений (для графика)</summary>
+        // История значений (для графика)
         public List<double> ValueHistory { get; set; } = new List<double>();
+        public int MaxHistorySize { get; set; } = 200;
 
-        /// <summary>Максимальный размер истории</summary>
-        public int MaxHistorySize { get; set; } = 5000;
-
-        /// <summary>Частота (для генератора синусоиды)</summary>
-        public double Frequency { get; set; } = 1.0;
-
-        /// <summary>Амплитуда (для генератора синусоиды)</summary>
-        public double Amplitude { get; set; } = 1.0;
-
-        /// <summary>Фаза (для генератора синусоиды)</summary>
-        public int Phase { get; set; }
-
-        /// <summary>Последний вычисленный результат</summary>
+        // Общее поле результата
         public double? LastResult { get; set; }
 
-        /// <summary>Результаты для каждого выходного порта подсистемы</summary>
-        public Dictionary<int, double> OutputPortResults { get; set; } = new Dictionary<int, double>();
+        // Отзеркаливание блока (true – входы справа, выход слева)
+        public bool Flipped { get; set; } = false;   // вместо Rotated
 
-        /// <summary>Отзеркален ли блок (входы справа, выход слева)</summary>
-        public bool Flipped { get; set; } = false;
+        // ============ ГЕНЕРАТОР ============
+        public double Frequency { get; set; } = 1.0;      // Гц
+        public double Amplitude { get; set; } = 1.0;      // В
+        public double Phase { get; set; } = 0.0;       // Фаза
 
-        // ========== НОВАЯ МАТЕМАТИКА ==========
+        // ============ УСИЛИТЕЛЬ ============
+        public double Gain { get; set; } = 10.0;
 
-        /// <summary>Текущее значение интеграла (для интегратора)</summary>
+        // ============ АНТЕННА ============
+        public double EffectiveArea { get; set; } = 0.1;   // м²
+
+        // ============ КАНАЛ ============
+        public double Distance { get; set; } = 1000.0;     // м
+        public double Attenuation { get; set; } = 0.01;    // дБ/м
+
+        // ============ ОБЪЕКТ ============
+        public double RadarCrossSection { get; set; } = 1.0; // м²
+        public double TimeConstant { get; set; } = 0.1;      // с
+
+        // ============ АЦП ============
+        public int BitResolution { get; set; } = 12;
+        public double SamplingRate { get; set; } = 10000.0;   // Гц
+        public double QuantizationStep { get; set; } = 0.001; // В
+        public double DynamicRange { get; set; } = 120.0;     // дБ
+        public double ReferenceVoltage { get; set; } = 5.0;   // В
+
+        // ============ ИНТЕГРАТОР / ДИФФЕРЕНЦИАТОР / ИНТЕРПОЛЯТОР / ФАЙЛ ============
         public double IntegralValue { get; set; } = 0;
-
-        /// <summary>Предыдущее входное значение (для интегратора)</summary>
         public double PreviousInput { get; set; } = 0;
-
-        /// <summary>Шаг интегрирования (для интегратора)</summary>
         public double StepSize { get; set; } = 0.01;
-
-        /// <summary>Предыдущее время (для дифференциатора)</summary>
         public double PreviousTime { get; set; } = 0;
-
-        /// <summary>Предыдущее выходное значение (для дифференциатора)</summary>
         public double PreviousOutput { get; set; } = 0;
-
-        /// <summary>Точки интерполяции (для интерполятора)</summary>
         public List<PointF> InterpolationPoints { get; set; } = new List<PointF>();
-
-        /// <summary>Путь к файлу для чтения (для файлового блока)</summary>
         public string InputFilePath { get; set; } = "";
-
-        /// <summary>Путь к файлу для записи (для файлового блока)</summary>
         public string OutputFilePath { get; set; } = "";
-
-        /// <summary>Данные из файла или для записи в файл</summary>
         public List<double> FileData { get; set; } = new List<double>();
-
-        /// <summary>Текущий индекс при чтении из файла</summary>
         public int CurrentFileIndex { get; set; } = 0;
-
-        /// <summary>Режим: true = чтение, false = запись</summary>
         public bool IsReading { get; set; } = true;
 
-        // ========== ПОДСИСТЕМА ==========
-
-        /// <summary>Данные подсистемы (если блок является подсистемой)</summary>
+        // ============ ПОДСИСТЕМА ============
         public SubSystemData SubSystemData { get; set; }
+        public Dictionary<int, double> OutputPortResults { get; set; } = new Dictionary<int, double>();
 
-        /// <summary>
-        /// Добавляет значение в историю (для графика)
-        /// </summary>
+        // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
         public void AddToHistory(double value)
         {
             ValueHistory.Add(value);
             if (ValueHistory.Count > MaxHistorySize * 2)
                 ValueHistory.RemoveRange(0, ValueHistory.Count - MaxHistorySize);
+        }
+
+        public void ClearHistory() => ValueHistory.Clear();
+
+        public List<double> GetRecentHistory(int count)
+        {
+            if (ValueHistory.Count <= count) return new List<double>(ValueHistory);
+            return ValueHistory.GetRange(ValueHistory.Count - count, count);
+        }
+
+        public void ResetState()
+        {
+            LastResult = null;
+            IntegralValue = 0;
+            PreviousInput = 0;
+            PreviousOutput = 0;
+            PreviousTime = 0;
+            CurrentFileIndex = 0;
         }
     }
 }

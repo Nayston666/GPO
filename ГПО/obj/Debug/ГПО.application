@@ -7,14 +7,14 @@
     <framework targetVersion="4.8" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="ГПО.exe.manifest" size="3626">
+    <dependentAssembly dependencyType="install" codebase="ГПО.exe.manifest" size="3627">
       <assemblyIdentity name="ГПО.exe" version="1.0.0.2" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>XY/mcELB/FgZjxPjHycan6G4Xu/mOmaV1c9K/QxQyVg=</dsig:DigestValue>
+        <dsig:DigestValue>+AaIqMn7OlcTjtK/xxq27l9aZTr5LuVZAvdW7mlr360=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
