@@ -14,6 +14,10 @@ namespace MathApp.Rendering
         private Font _generatorFont = new Font("Segoe UI", 24, FontStyle.Regular);
         private Font _blockNameFont = new Font("Segoe UI", 9, FontStyle.Bold);
 
+        // Фиксированный размер для всех блоков
+        private Size _defaultBlockSize = new Size(100, 60);
+        private Size _triangleBlockSize = new Size(80, 80);
+
         private void DrawShadow(Graphics g, Rectangle rect)
         {
             using (var shadowBrush = new SolidBrush(Color.FromArgb(20, 0, 0, 0)))
@@ -31,10 +35,16 @@ namespace MathApp.Rendering
                 g.FillPolygon(shadowBrush, shadowPoints);
         }
 
-        // ============ ОПЕРАЦИИ (ДВА ВХОДА СЛЕВА, ВЫХОД СПРАВА) ============
+        private Rectangle GetToolRect(MathTool tool)
+        {
+            if (tool.Type == ToolType.Amplifier)
+                return new Rectangle(tool.Position, _triangleBlockSize);
+            return new Rectangle(tool.Position, _defaultBlockSize);
+        }
+
         public void DrawAdditionTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -56,7 +66,7 @@ namespace MathApp.Rendering
 
         public void DrawSubtractionTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -78,7 +88,7 @@ namespace MathApp.Rendering
 
         public void DrawMultiplicationTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -100,7 +110,7 @@ namespace MathApp.Rendering
 
         public void DrawDivisionTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -120,10 +130,9 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ ГЕНЕРАТОР (ТОЛЬКО ВЫХОД, НЕТ ВХОДА) ============
         public void DrawGeneratorTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -143,7 +152,6 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ УСИЛИТЕЛЬ (ТРЕУГОЛЬНИК) ============
         public void DrawAmplifierTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
             Point[] triangle = GetTrianglePoints(tool);
@@ -167,10 +175,9 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ АНТЕННА ============
         public void DrawAntennaTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -187,18 +194,22 @@ namespace MathApp.Rendering
 
             using (var antennaPen = new Pen(Color.Black, 2))
             {
+                // Вертикальная линия
                 g.DrawLine(antennaPen, centerX, startY, centerX, topY + 8);
-                int rayLength = 16;
+
+                // Боковые палочки
+                int rayLength = 8;
                 g.DrawLine(antennaPen, centerX, topY + 8, centerX - rayLength, topY);
                 g.DrawLine(antennaPen, centerX, topY + 8, centerX + rayLength, topY);
+
+                // Верхняя палочка
                 g.DrawLine(antennaPen, centerX, topY + 8, centerX, topY - 5);
             }
         }
 
-        // ============ КАНАЛ ============
         public void DrawChannelTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -218,10 +229,9 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ ОБЪЕКТ ============
         public void DrawObjectTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -241,10 +251,9 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ АЦП ============
         public void DrawADCTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = GetToolRect(tool);
             DrawShadow(g, rect);
 
             using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
@@ -257,71 +266,79 @@ namespace MathApp.Rendering
 
             using (var brush = new SolidBrush(Color.Black))
             {
-                SizeF textSize = g.MeasureString("АЦП", _blockNameFont);
-                float x = rect.X + (rect.Width - textSize.Width) / 2;
-                float y = rect.Y + (rect.Height - textSize.Height) / 2;
-                g.DrawString("АЦП", _blockNameFont, brush, x, y);
-            }
-        }
-
-        // ============ ГРАФИК ============
-        public void DrawChartTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
-        {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
-            DrawShadow(g, rect);
-
-            using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
-                g.FillRectangle(brush, rect);
-            using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(120, 120, 120), selectedTool == tool ? 2 : 1))
-                g.DrawRectangle(pen, rect);
-
-            using (var brush = new SolidBrush(Color.Black))
-                g.DrawString($"ID{idNumber}", _idFont, brush, rect.X + 5, rect.Y + 3);
-
-            using (var axisPen = new Pen(Color.Black, 1.5f))
-            {
-                g.DrawLine(axisPen, rect.X + 15, rect.Y + rect.Height - 15, rect.X + rect.Width - 10, rect.Y + rect.Height - 15);
-                g.DrawLine(axisPen, rect.X + 15, rect.Y + 20, rect.X + 15, rect.Y + rect.Height - 15);
-            }
-
-            if (tool.ValueHistory != null && tool.ValueHistory.Count > 1)
-            {
-                int startIdx = Math.Max(0, tool.ValueHistory.Count - 30);
-                int pointCount = tool.ValueHistory.Count - startIdx;
-                if (pointCount > 1)
+                using (var stringFormat = new StringFormat())
                 {
-                    double min = tool.ValueHistory.Min();
-                    double max = tool.ValueHistory.Max();
-                    double range = max - min;
-                    if (range < 0.001) range = 1;
-
-                    int graphLeft = rect.X + 20;
-                    int graphRight = rect.X + rect.Width - 15;
-                    int graphTop = rect.Y + 25;
-                    int graphBottom = rect.Y + rect.Height - 20;
-
-                    using (var linePen = new Pen(Color.Black, 2))
-                    {
-                        Point? prev = null;
-                        for (int i = startIdx; i < tool.ValueHistory.Count; i++)
-                        {
-                            float x = graphLeft + (float)((i - startIdx) * (graphRight - graphLeft) / (pointCount - 1));
-                            float y = graphBottom - (float)((tool.ValueHistory[i] - min) / range * (graphBottom - graphTop - 10));
-                            y = Math.Max(graphTop, Math.Min(graphBottom - 5, y));
-                            if (prev.HasValue)
-                                g.DrawLine(linePen, prev.Value.X, prev.Value.Y, x, y);
-                            prev = new Point((int)x, (int)y);
-                        }
-                    }
+                    stringFormat.Alignment = StringAlignment.Center;
+                    stringFormat.LineAlignment = StringAlignment.Center;
+                    g.DrawString("АЦП", _blockNameFont, brush, rect, stringFormat);
                 }
             }
         }
 
-        // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
+        public void DrawChartTool(Graphics g, MathTool tool, MathTool selectedTool, int idNumber)
+        {
+            Rectangle rect = GetToolRect(tool);
+            DrawShadow(g, rect);
+
+            using (var brush = new SolidBrush(Color.FromArgb(230, 230, 230)))
+                g.FillRectangle(brush, rect);
+            using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(120, 120, 120), selectedTool == tool ? 2 : 1))
+                g.DrawRectangle(pen, rect);
+
+            using (var brush = new SolidBrush(Color.Black))
+                g.DrawString($"ID{idNumber}", _idFont, brush, rect.X + 5, rect.Y + 3);
+
+            // Рисуем оси координат
+            int graphLeft = rect.X + 15;
+            int graphRight = rect.X + rect.Width - 15;
+            int graphTop = rect.Y + 20;
+            int graphBottom = rect.Y + rect.Height - 15;
+
+            using (var axisPen = new Pen(Color.Black, 1.2f))
+            {
+                g.DrawLine(axisPen, graphLeft, graphBottom, graphRight, graphBottom);
+                g.DrawLine(axisPen, graphLeft, graphTop, graphLeft, graphBottom);
+            }
+
+            // Если есть данные - рисуем график
+            if (tool.Values != null && tool.Values.Count > 1)
+            {
+                double min = tool.Values.Min();
+                double max = tool.Values.Max();
+                double range = max - min;
+                if (range < 0.001) range = 1;
+
+                using (var graphPen = new Pen(Color.FromArgb(0, 120, 215), 1.5f))
+                {
+                    Point? prev = null;
+                    for (int i = 0; i < tool.Values.Count; i++)
+                    {
+                        float x = graphLeft + (float)(i * (graphRight - graphLeft) / (tool.Values.Count - 1));
+                        float y = graphBottom - (float)((tool.Values[i] - min) / range * (graphBottom - graphTop));
+                        y = Math.Max(graphTop, Math.Min(graphBottom, y));
+                        if (prev.HasValue)
+                            g.DrawLine(graphPen, prev.Value.X, prev.Value.Y, x, y);
+                        prev = new Point((int)x, (int)y);
+                    }
+                }
+            }
+            else
+            {
+                // Показываем надпись "Нет данных"
+                using (var font = new Font("Segoe UI", 7, FontStyle.Italic))
+                using (var brushGray = new SolidBrush(Color.Gray))
+                {
+                    SizeF textSize = g.MeasureString("Нет данных", font);
+                    float x = rect.X + (rect.Width - textSize.Width) / 2;
+                    float y = rect.Y + (rect.Height - textSize.Height) / 2;
+                    g.DrawString("Нет данных", font, brushGray, x, y);
+                }
+            }
+        }
 
         public Point[] GetTrianglePoints(MathTool tool)
         {
-            Rectangle rect = new Rectangle(tool.Position, tool.Size);
+            Rectangle rect = new Rectangle(tool.Position, _triangleBlockSize);
 
             if (!tool.Rotated)
             {
@@ -352,51 +369,43 @@ namespace MathApp.Rendering
             return new Rectangle(minX, minY, maxX - minX, maxY - minY);
         }
 
-        // ============ ТОЧКИ ПОДКЛЮЧЕНИЯ ============
         public void DrawConnectionPoints(Graphics g, MathTool tool, IEnumerable<Connection> connections, List<MathTool> allTools)
         {
-            // ДЛЯ ОПЕРАЦИЙ - ДВА ВХОДА СЛЕВА, ВЫХОД СПРАВА
+            Rectangle rect = GetToolRect(tool);
+
             if (tool.Type == ToolType.Operation)
             {
                 if (!tool.Rotated)
                 {
-                    // Вход A (верхняя часть слева)
-                    Point inputAPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 3);
+                    Point inputAPoint = new Point(rect.X - 5, rect.Y + rect.Height / 3);
                     bool hasInputA = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
                     DrawPoint(g, inputAPoint, hasInputA ? Color.Gold : Color.FromArgb(40, 167, 69));
 
-                    // Вход B (нижняя часть слева)
-                    Point inputBPoint = new Point(tool.Position.X - 5, tool.Position.Y + 2 * tool.Size.Height / 3);
+                    Point inputBPoint = new Point(rect.X - 5, rect.Y + 2 * rect.Height / 3);
                     bool hasInputB = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
                     DrawPoint(g, inputBPoint, hasInputB ? Color.Gold : Color.FromArgb(40, 167, 69));
 
-                    // Выход (справа посередине)
-                    Point outputPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point outputPoint = new Point(rect.X + rect.Width + 5, rect.Y + rect.Height / 2);
                     bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawPoint(g, outputPoint, hasOutput ? Color.Gold : Color.FromArgb(255, 140, 0));
                 }
                 else
                 {
-                    // При повороте: входы справа, выход слева
-                    // Вход A (верхняя часть справа)
-                    Point inputAPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 3);
+                    Point inputAPoint = new Point(rect.X + rect.Width + 5, rect.Y + rect.Height / 3);
                     bool hasInputA = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
                     DrawPoint(g, inputAPoint, hasInputA ? Color.Gold : Color.FromArgb(40, 167, 69));
 
-                    // Вход B (нижняя часть справа)
-                    Point inputBPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 2 * tool.Size.Height / 3);
+                    Point inputBPoint = new Point(rect.X + rect.Width + 5, rect.Y + 2 * rect.Height / 3);
                     bool hasInputB = connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
                     DrawPoint(g, inputBPoint, hasInputB ? Color.Gold : Color.FromArgb(40, 167, 69));
 
-                    // Выход (слева посередине)
-                    Point outputPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point outputPoint = new Point(rect.X - 5, rect.Y + rect.Height / 2);
                     bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawPoint(g, outputPoint, hasOutput ? Color.Gold : Color.FromArgb(255, 140, 0));
                 }
                 return;
             }
 
-            // Для усилителя
             if (tool.Type == ToolType.Amplifier)
             {
                 Point[] triangle = GetTrianglePoints(tool);
@@ -424,67 +433,58 @@ namespace MathApp.Rendering
                 return;
             }
 
-            // Для графика - только вход
             if (tool.Type == ToolType.Chart)
             {
                 if (!tool.Rotated)
                 {
-                    Point inputPoint = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point inputPoint = new Point(rect.X - 5, rect.Y + rect.Height / 2);
                     bool hasInput = connections.Any(c => c.TargetToolId == tool.Id);
                     DrawPoint(g, inputPoint, hasInput ? Color.Gold : Color.FromArgb(40, 167, 69));
                 }
                 else
                 {
-                    Point inputPoint = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point inputPoint = new Point(rect.X + rect.Width + 5, rect.Y + rect.Height / 2);
                     bool hasInput = connections.Any(c => c.TargetToolId == tool.Id);
                     DrawPoint(g, inputPoint, hasInput ? Color.Gold : Color.FromArgb(40, 167, 69));
                 }
                 return;
             }
 
-            // ДЛЯ ГЕНЕРАТОРА - ТОЛЬКО ВЫХОД (БЕЗ ВХОДА)
             if (tool.Type == ToolType.Generator)
             {
                 if (!tool.Rotated)
                 {
-                    // Выход справа (оранжевый)
-                    Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point output = new Point(rect.X + rect.Width + 5, rect.Y + rect.Height / 2);
                     bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawPoint(g, output, hasOutput ? Color.Gold : Color.FromArgb(255, 140, 0));
-
-                    // ВХОДА НЕТ - НЕ РИСУЕМ
                 }
                 else
                 {
-                    // Выход слева (оранжевый)
-                    Point output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point output = new Point(rect.X - 5, rect.Y + rect.Height / 2);
                     bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawPoint(g, output, hasOutput ? Color.Gold : Color.FromArgb(255, 140, 0));
-
-                    // ВХОДА НЕТ - НЕ РИСУЕМ
                 }
                 return;
             }
 
-            // Для всех остальных блоков (антенна, канал, объект, АЦП) - вход и выход
             {
                 if (!tool.Rotated)
                 {
-                    Point output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point output = new Point(rect.X + rect.Width + 5, rect.Y + rect.Height / 2);
                     bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawPoint(g, output, hasOutput ? Color.Gold : Color.FromArgb(255, 140, 0));
 
-                    Point input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point input = new Point(rect.X - 5, rect.Y + rect.Height / 2);
                     bool hasInput = connections.Any(c => c.TargetToolId == tool.Id);
                     DrawPoint(g, input, hasInput ? Color.Gold : Color.FromArgb(40, 167, 69));
                 }
                 else
                 {
-                    Point output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point output = new Point(rect.X - 5, rect.Y + rect.Height / 2);
                     bool hasOutput = connections.Any(c => c.SourceToolId == tool.Id);
                     DrawPoint(g, output, hasOutput ? Color.Gold : Color.FromArgb(255, 140, 0));
 
-                    Point input = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                    Point input = new Point(rect.X + rect.Width + 5, rect.Y + rect.Height / 2);
                     bool hasInput = connections.Any(c => c.TargetToolId == tool.Id);
                     DrawPoint(g, input, hasInput ? Color.Gold : Color.FromArgb(40, 167, 69));
                 }

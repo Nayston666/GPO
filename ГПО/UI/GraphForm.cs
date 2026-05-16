@@ -9,17 +9,16 @@ namespace MathApp.UI
 {
     public class GraphForm : Form
     {
-        private List<double> _values = new List<double>();
-        private Timer _timer;
-        private int _maxPoints = 200;
-        private Bitmap _buffer;
-        private bool _needRedraw = true;
-        private string _sourceName;
+        private List<double> values = new List<double>();
+        private Timer renderTimer;
+        private Bitmap buffer;
+        private bool needRedraw = true;
+        private string sourceName;
 
         public GraphForm(string source)
         {
-            _sourceName = source;
-            Text = $"График - {_sourceName}";
+            sourceName = source;
+            Text = $"График - {sourceName}";
             Size = new Size(800, 500);
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(30, 30, 32);
@@ -36,41 +35,34 @@ namespace MathApp.UI
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
-            btnClear.Click += (s, e) => { _values.Clear(); _needRedraw = true; };
+            btnClear.Click += (s, e) => { values.Clear(); needRedraw = true; };
 
             topPanel.Controls.Add(btnClear);
             Controls.Add(topPanel);
 
-            _timer = new Timer { Interval = 50 };
-            _timer.Tick += (s, e) => _needRedraw = true;
-            _timer.Start();
-
-            var renderTimer = new Timer { Interval = 16 };
-            renderTimer.Tick += (s, e) => { if (_needRedraw) { DrawToBuffer(); Invalidate(); _needRedraw = false; } };
+            renderTimer = new Timer { Interval = 50 };
+            renderTimer.Tick += (s, e) => { if (needRedraw) { DrawToBuffer(); Invalidate(); needRedraw = false; } };
             renderTimer.Start();
         }
 
         public void AddValue(double value)
         {
-            _values.Add(value);
-            if (_values.Count > _maxPoints * 2)
-                _values.RemoveRange(0, _values.Count - _maxPoints);
-            _needRedraw = true;
-        }
-
-        private void CreateBuffer()
-        {
-            if (Width <= 0 || Height <= 40) return;
-            _buffer?.Dispose();
-            _buffer = new Bitmap(Width, Height);
+            values.Add(value);
+            needRedraw = true;
         }
 
         private void DrawToBuffer()
         {
-            if (_buffer == null) CreateBuffer();
-            if (_buffer == null) return;
+            if (Width <= 0 || Height <= 40) return;
 
-            using (var g = Graphics.FromImage(_buffer))
+            // Создаем новый буфер только если размер изменился
+            if (buffer == null || buffer.Width != Width || buffer.Height != Height)
+            {
+                if (buffer != null) buffer.Dispose();
+                buffer = new Bitmap(Width, Height);
+            }
+
+            using (var g = Graphics.FromImage(buffer))
             {
                 g.Clear(BackColor);
                 g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -91,23 +83,19 @@ namespace MathApp.UI
                     g.DrawLine(axisPen, 50, topOffset, 50, Height - 50);
                 }
 
-                if (_values.Count > 1)
+                if (values.Count > 1)
                 {
                     int graphLeft = 60, graphRight = Width - 60, graphTop = topOffset, graphBottom = Height - 70;
-                    double min = _values.Min(), max = _values.Max(), range = max - min;
+                    double min = values.Min(), max = values.Max(), range = max - min;
                     if (range < 0.001) range = 1;
-
-                    int startIdx = 0;
-                    if (_values.Count > _maxPoints) startIdx = _values.Count - _maxPoints;
-                    int pointCount = _values.Count - startIdx;
 
                     using (var linePen = new Pen(Color.Cyan, 2))
                     {
                         Point? prev = null;
-                        for (int i = startIdx; i < _values.Count; i++)
+                        for (int i = 0; i < values.Count; i++)
                         {
-                            float x = graphLeft + (float)((i - startIdx) * (graphRight - graphLeft) / (pointCount - 1));
-                            float y = graphTop + (graphBottom - graphTop) - (float)((_values[i] - min) / range * (graphBottom - graphTop));
+                            float x = graphLeft + (float)(i * (graphRight - graphLeft) / (values.Count - 1));
+                            float y = graphTop + (graphBottom - graphTop) - (float)((values[i] - min) / range * (graphBottom - graphTop));
                             y = Math.Max(graphTop, Math.Min(graphBottom, y));
                             if (prev.HasValue) g.DrawLine(linePen, prev.Value.X, prev.Value.Y, x, y);
                             prev = new Point((int)x, (int)y);
@@ -120,16 +108,34 @@ namespace MathApp.UI
                         g.DrawString("Нет данных", new Font("Segoe UI", 14, FontStyle.Bold), Brushes.Gray, new Rectangle(0, topOffset, Width, Height - topOffset), sf);
                 }
 
-                if (_values.Count > 0)
+                if (values.Count > 0)
                 {
-                    string stats = $"Значений: {_values.Count} | Мин: {_values.Min():F2} | Макс: {_values.Max():F2} | Тек: {_values.Last():F2}";
+                    string stats = $"Значений: {values.Count} | Мин: {values.Min():F2} | Макс: {values.Max():F2} | Тек: {values.Last():F2}";
                     g.DrawString(stats, new Font("Segoe UI", 9), Brushes.LightGreen, 60, Height - 30);
                 }
             }
         }
 
-        protected override void OnPaint(PaintEventArgs e) => e.Graphics.DrawImage(_buffer, 0, 0);
-        protected override void OnResize(EventArgs e) { base.OnResize(e); CreateBuffer(); _needRedraw = true; }
-        protected override void Dispose(bool disposing) { if (disposing) _timer?.Dispose(); base.Dispose(disposing); }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            if (buffer != null)
+                e.Graphics.DrawImage(buffer, 0, 0);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            needRedraw = true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                renderTimer?.Dispose();
+                if (buffer != null) buffer.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 }

@@ -87,13 +87,11 @@ namespace MathApp.UI
                     break;
 
                 case ToolType.Antenna:
-                    AddBox("Усиление (дБ):", tool.Gain.ToString(), ref y);
                     AddBox("Эффективная площадь (м²):", tool.EffectiveArea.ToString(), ref y);
                     break;
 
                 case ToolType.Channel:
-                    AddBox("Расстояние (м):", tool.CustomValueA.ToString(), ref y);
-                    AddBox("Затухание (дБ/м):", tool.Attenuation.ToString(), ref y);
+                    AddBox("Расстояние (м):", tool.Distance.ToString(), ref y);
                     break;
 
                 case ToolType.Object:
@@ -101,14 +99,21 @@ namespace MathApp.UI
                     break;
 
                 case ToolType.ADC:
-                    AddBox("Разрядность (бит):", tool.BitResolution.ToString(), ref y);
-                    AddBox("Частота дискретизации (Гц):", tool.SamplingRate.ToString(), ref y);
-                    AddBox("Шаг квантования (В):", tool.QuantizationStep.ToString(), ref y);
-                    AddBox("Динамический диапазон (дБ):", tool.DynamicRange.ToString(), ref y);
+                    AddBox("Табличные данные (через ;):", tool.TableData, ref y);
                     break;
 
                 case ToolType.Chart:
-                    AddBox("Точек истории:", tool.MaxHistorySize.ToString(), ref y);
+                    Label infoLabel = new Label
+                    {
+                        Text = "Блок для отображения сигнала",
+                        Location = new Point(10, y),
+                        Size = new Size(240, 25),
+                        ForeColor = Color.LightGray,
+                        Font = new Font("Segoe UI", 9),
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    _workPanel.Controls.Add(infoLabel);
+                    y += 35;
                     break;
             }
 
@@ -157,24 +162,16 @@ namespace MathApp.UI
                         tool.Gain = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Antenna:
-                        tool.Gain = double.Parse(GetBox(idx++));
                         tool.EffectiveArea = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Channel:
-                        tool.CustomValueA = double.Parse(GetBox(idx++));
-                        tool.Attenuation = double.Parse(GetBox(idx++));
+                        tool.Distance = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.Object:
                         tool.RadarCrossSection = double.Parse(GetBox(idx++));
                         break;
                     case ToolType.ADC:
-                        tool.BitResolution = int.Parse(GetBox(idx++));
-                        tool.SamplingRate = double.Parse(GetBox(idx++));
-                        tool.QuantizationStep = double.Parse(GetBox(idx++));
-                        tool.DynamicRange = double.Parse(GetBox(idx++));
-                        break;
-                    case ToolType.Chart:
-                        tool.MaxHistorySize = int.Parse(GetBox(idx++));
+                        tool.TableData = GetBox(idx++);
                         break;
                 }
             }

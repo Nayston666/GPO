@@ -13,7 +13,6 @@ namespace MathApp
 {
     public partial class Form1 : Form
     {
-        // ============ КОМПОНЕНТЫ ИНТЕРФЕЙСА ============
         private Panel leftPanel;
         private Panel workArea;
         private Panel propertiesPanel;
@@ -23,15 +22,16 @@ namespace MathApp
         private TextBox durationInput;
         private Button runButton;
         private Button clearButton;
+        private Button allGraphsButton;
         private FlowLayoutPanel libraryPanel;
 
-        // ============ ДАННЫЕ ============
         private List<MathTool> tools = new List<MathTool>();
         private List<Connection> connections = new List<Connection>();
         private CalculationEngine calculator = new CalculationEngine();
         private ConnectionManager connectionManager;
 
         private MathTool selectedTool = null;
+        private Connection selectedConnection = null;
         private MathTool draggedTool = null;
         private bool isDragging = false;
         private Point dragStartPoint;
@@ -61,7 +61,6 @@ namespace MathApp
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(240, 242, 245);
 
-            // Левая панель
             leftPanel = new Panel
             {
                 Width = 280,
@@ -93,8 +92,22 @@ namespace MathApp
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
-            runButton.Click += RunSimulation;
+            runButton.Click += new EventHandler(RunSimulation);
             leftPanel.Controls.Add(runButton);
+            y += 55;
+
+            allGraphsButton = new Button
+            {
+                Text = "ВСЕ ГРАФИКИ",
+                Location = new Point(15, y),
+                Size = new Size(250, 40),
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            allGraphsButton.Click += new EventHandler(ShowAllGraphs);
+            leftPanel.Controls.Add(allGraphsButton);
             y += 55;
 
             leftPanel.Controls.Add(new Label
@@ -118,10 +131,10 @@ namespace MathApp
             {
                 Location = new Point(200, y),
                 Size = new Size(65, 23),
-                Text = "10000",
+                Text = "",
                 Font = new Font("Segoe UI", 9)
             };
-            samplingRateInput.KeyPress += (s, e) => FilterNumberInput(e);
+            samplingRateInput.KeyPress += new KeyPressEventHandler(FilterNumberInput);
             leftPanel.Controls.Add(samplingRateInput);
             y += 30;
 
@@ -136,10 +149,10 @@ namespace MathApp
             {
                 Location = new Point(200, y),
                 Size = new Size(65, 23),
-                Text = "0.01",
+                Text = "",
                 Font = new Font("Segoe UI", 9)
             };
-            durationInput.KeyPress += (s, e) => FilterNumberInput(e);
+            durationInput.KeyPress += new KeyPressEventHandler(FilterNumberInput);
             leftPanel.Controls.Add(durationInput);
             y += 45;
 
@@ -177,11 +190,7 @@ namespace MathApp
                     Padding = new Padding(10, 0, 0, 0)
                 };
                 btn.FlatAppearance.BorderSize = 0;
-                btn.MouseDown += (s, e) =>
-                {
-                    if (e.Button == MouseButtons.Left)
-                        DoDragDrop(new DataObject("ToolType", block), DragDropEffects.Copy);
-                };
+                btn.MouseDown += new MouseEventHandler(BlockMouseDown);
                 libraryPanel.Controls.Add(btn);
             }
             leftPanel.Controls.Add(libraryPanel);
@@ -197,10 +206,9 @@ namespace MathApp
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
-            clearButton.Click += ClearAll;
+            clearButton.Click += new EventHandler(ClearAll);
             leftPanel.Controls.Add(clearButton);
 
-            // Правая панель свойств
             propertiesPanel = new Panel
             {
                 Width = 320,
@@ -230,15 +238,11 @@ namespace MathApp
             };
             propertiesPanel.Controls.Add(propertiesContent);
 
-            propertiesPanel.Resize += (s, e) =>
-            {
-                propertiesContent.Height = propertiesPanel.ClientSize.Height - 55;
-            };
+            propertiesPanel.Resize += new EventHandler(PropertiesPanel_Resize);
 
             this.Controls.Add(propertiesPanel);
             this.Controls.Add(leftPanel);
 
-            // Рабочая область
             workArea = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -250,29 +254,66 @@ namespace MathApp
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 ?.SetValue(workArea, true);
 
-            workArea.Paint += WorkArea_Paint;
-            workArea.MouseDown += WorkArea_MouseDown;
-            workArea.MouseMove += WorkArea_MouseMove;
-            workArea.MouseUp += WorkArea_MouseUp;
-            workArea.MouseDoubleClick += WorkArea_MouseDoubleClick;
+            workArea.Paint += new PaintEventHandler(WorkArea_Paint);
+            workArea.MouseDown += new MouseEventHandler(WorkArea_MouseDown);
+            workArea.MouseMove += new MouseEventHandler(WorkArea_MouseMove);
+            workArea.MouseUp += new MouseEventHandler(WorkArea_MouseUp);
+            workArea.MouseDoubleClick += new MouseEventHandler(WorkArea_MouseDoubleClick);
             workArea.AllowDrop = true;
-            workArea.DragEnter += (s, e) => { if (e.Data.GetDataPresent("ToolType")) e.Effect = DragDropEffects.Copy; };
-            workArea.DragDrop += WorkArea_DragDrop;
+            workArea.DragEnter += new DragEventHandler(WorkArea_DragEnter);
+            workArea.DragDrop += new DragEventHandler(WorkArea_DragDrop);
 
             var contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add("🗑 Удалить блок", null, DeleteTool_Click);
-            contextMenu.Items.Add("🔗 Удалить соединения", null, DeleteConnections_Click);
+            contextMenu.Items.Add("🗑 Удалить блок", null, new EventHandler(DeleteTool_Click));
+            contextMenu.Items.Add("🔗 Удалить соединение", null, new EventHandler(DeleteConnection_Click));
+            contextMenu.Items.Add("🔗 Удалить все соединения блока", null, new EventHandler(DeleteAllConnections_Click));
             workArea.ContextMenuStrip = contextMenu;
 
             this.Controls.Add(workArea);
         }
 
-        private void FilterNumberInput(KeyPressEventArgs e)
+        private void PropertiesPanel_Resize(object sender, EventArgs e)
+        {
+            propertiesContent.Height = propertiesPanel.ClientSize.Height - 55;
+        }
+
+        private void BlockMouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Button btn = sender as Button;
+                if (btn != null)
+                {
+                    DoDragDrop(new DataObject("ToolType", btn.Text), DragDropEffects.Copy);
+                }
+            }
+        }
+
+        private void ShowAllGraphs(object sender, EventArgs e)
+        {
+            var charts = tools.Where(t => t.Type == ToolType.Chart).ToList();
+            if (charts.Count == 0)
+            {
+                MessageBox.Show("Нет графиков на схеме", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var graphsWindow = new AllGraphsWindow(charts, graphs);
+            graphsWindow.Show();
+        }
+
+        private void FilterNumberInput(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == ',')
             {
                 e.Handled = true;
             }
+        }
+
+        private void WorkArea_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("ToolType"))
+                e.Effect = DragDropEffects.Copy;
         }
 
         private void WorkArea_DragDrop(object sender, DragEventArgs e)
@@ -284,54 +325,55 @@ namespace MathApp
             var tool = new MathTool
             {
                 Position = mousePos,
-                Size = new Size(100, 60),
                 Name = toolType,
                 Id = Guid.NewGuid(),
                 Rotated = false
             };
 
+            if (toolType.Contains("Усилитель") || toolType.Contains("Антенна"))
+            {
+                tool.Size = new Size(80, 80);
+            }
+            else
+            {
+                tool.Size = new Size(100, 60);
+            }
+
             if (toolType.Contains("Генератор"))
             {
                 tool.Type = ToolType.Generator;
-                tool.Amplitude = 10;
-                tool.Frequency = 1000;
+                tool.Amplitude = 0;
+                tool.Frequency = 0;
                 tool.PhaseRad = 0;
             }
             else if (toolType.Contains("Усилитель"))
             {
                 tool.Type = ToolType.Amplifier;
-                tool.Gain = 10;
-                tool.Size = new Size(80, 80);
+                tool.Gain = 0;
             }
             else if (toolType.Contains("Антенна"))
             {
                 tool.Type = ToolType.Antenna;
-                tool.Gain = 10;
-                tool.EffectiveArea = 0.1;
+                tool.EffectiveArea = 0;
             }
             else if (toolType.Contains("Канал"))
             {
                 tool.Type = ToolType.Channel;
-                tool.Distance = 1000;
-                tool.Attenuation = 0.01;
+                tool.Distance = 0;
             }
             else if (toolType.Contains("Объект"))
             {
                 tool.Type = ToolType.Object;
-                tool.RadarCrossSection = 1;
+                tool.RadarCrossSection = 0;
             }
             else if (toolType.Contains("АЦП"))
             {
                 tool.Type = ToolType.ADC;
-                tool.BitResolution = 12;
-                tool.SamplingRate = 10000;
-                tool.QuantizationStep = 0.001;
-                tool.DynamicRange = 120;
+                tool.TableData = "";
             }
             else if (toolType.Contains("График"))
             {
                 tool.Type = ToolType.Chart;
-                tool.Size = new Size(120, 60);
             }
             else if (toolType.Contains("Сложение"))
             {
@@ -401,38 +443,43 @@ namespace MathApp
 
             if (tool.Type == ToolType.Generator)
             {
-                currentY = AddParameterRow(paramsPanel, "Амплитуда (В):", tool.Amplitude, v => tool.Amplitude = v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Частота (Гц):", tool.Frequency, v => tool.Frequency = v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Фаза (рад):", tool.PhaseRad, v => tool.PhaseRad = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Амплитуда (В):", tool.Amplitude, delegate (double v) { tool.Amplitude = v; }, currentY);
+                currentY = AddParameterRow(paramsPanel, "Частота (Гц):", tool.Frequency, delegate (double v) { tool.Frequency = v; }, currentY);
+                currentY = AddParameterRow(paramsPanel, "Фаза (рад):", tool.PhaseRad, delegate (double v) { tool.PhaseRad = v; }, currentY);
             }
             else if (tool.Type == ToolType.Amplifier)
             {
-                currentY = AddParameterRow(paramsPanel, "Коэфф. усиления:", tool.Gain, v => tool.Gain = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Коэфф. усиления:", tool.Gain, delegate (double v) { tool.Gain = v; }, currentY);
             }
             else if (tool.Type == ToolType.Antenna)
             {
-                currentY = AddParameterRow(paramsPanel, "Усиление (дБ):", tool.Gain, v => tool.Gain = v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Эфф. площадь (м²):", tool.EffectiveArea, v => tool.EffectiveArea = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Эфф. площадь (м²):", tool.EffectiveArea, delegate (double v) { tool.EffectiveArea = v; }, currentY);
             }
             else if (tool.Type == ToolType.Channel)
             {
-                currentY = AddParameterRow(paramsPanel, "Расстояние (м):", tool.Distance, v => tool.Distance = v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Затухание (дБ/м):", tool.Attenuation, v => tool.Attenuation = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Расстояние (м):", tool.Distance, delegate (double v) { tool.Distance = v; }, currentY);
             }
             else if (tool.Type == ToolType.Object)
             {
-                currentY = AddParameterRow(paramsPanel, "ЭПР (м²):", tool.RadarCrossSection, v => tool.RadarCrossSection = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "ЭПР (м²):", tool.RadarCrossSection, delegate (double v) { tool.RadarCrossSection = v; }, currentY);
             }
             else if (tool.Type == ToolType.ADC)
             {
-                currentY = AddParameterRow(paramsPanel, "Разрядность (бит):", tool.BitResolution, v => tool.BitResolution = (int)v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Частота дискр. (Гц):", tool.SamplingRate, v => tool.SamplingRate = v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Шаг квант. (В):", tool.QuantizationStep, v => tool.QuantizationStep = v, currentY);
-                currentY = AddParameterRow(paramsPanel, "Дин. диапазон (дБ):", tool.DynamicRange, v => tool.DynamicRange = v, currentY);
+                currentY = AddTableParameterRow(paramsPanel, "Табличные данные:", tool.TableData, delegate (string v) { tool.TableData = v; }, currentY);
             }
             else if (tool.Type == ToolType.Chart)
             {
-                currentY = AddParameterRow(paramsPanel, "Точек истории:", tool.MaxHistorySize, v => tool.MaxHistorySize = (int)v, currentY);
+                Label infoLabel = new Label
+                {
+                    Text = "Блок для отображения сигнала",
+                    Location = new Point(10, currentY),
+                    Size = new Size(260, 25),
+                    Font = new Font("Segoe UI", 9),
+                    ForeColor = Color.Gray,
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                paramsPanel.Controls.Add(infoLabel);
+                currentY += 35;
             }
 
             paramsPanel.Height = currentY + 10;
@@ -462,12 +509,12 @@ namespace MathApp
 
             TextBox txt = new TextBox
             {
-                Text = value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Text = value == 0 ? "" : value.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 Location = new Point(140, 4),
                 Width = row.Width - 150
             };
 
-            txt.KeyPress += (s, e) =>
+            txt.KeyPress += delegate (object s, KeyPressEventArgs e)
             {
                 if (e.KeyChar == ',')
                 {
@@ -475,13 +522,21 @@ namespace MathApp
                 }
             };
 
-            txt.TextChanged += (s, e) =>
+            txt.TextChanged += delegate (object s, EventArgs e)
             {
-                if (double.TryParse(txt.Text, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out double result))
+                if (string.IsNullOrWhiteSpace(txt.Text))
                 {
-                    setter(result);
-                    workArea.Invalidate();
+                    setter(0);
+                }
+                else
+                {
+                    double result;
+                    if (double.TryParse(txt.Text, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out result))
+                    {
+                        setter(result);
+                        workArea.Invalidate();
+                    }
                 }
             };
 
@@ -492,53 +547,45 @@ namespace MathApp
             return y + 34;
         }
 
-        private int AddParameterRow(Panel container, string labelText, int value, Action<int> setter, int y)
+        private int AddTableParameterRow(Panel container, string labelText, string value, Action<string> setter, int y)
         {
             Panel row = new Panel
             {
                 Width = container.Width - 10,
-                Height = 32,
+                Height = 60,
                 Location = new Point(5, y)
             };
 
             Label lbl = new Label
             {
                 Text = labelText,
-                Location = new Point(5, 7),
-                Width = 130,
+                Location = new Point(5, 5),
+                Width = 260,
                 Font = new Font("Segoe UI", 9),
                 ForeColor = Color.FromArgb(52, 58, 64)
             };
 
             TextBox txt = new TextBox
             {
-                Text = value.ToString(),
-                Location = new Point(140, 4),
-                Width = row.Width - 150
+                Text = value,
+                Location = new Point(5, 25),
+                Width = row.Width - 15,
+                Height = 30,
+                Multiline = true,
+                Font = new Font("Segoe UI", 9)
             };
 
-            txt.KeyPress += (s, e) =>
+            txt.TextChanged += delegate (object s, EventArgs e)
             {
-                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-                {
-                    e.Handled = true;
-                }
-            };
-
-            txt.TextChanged += (s, e) =>
-            {
-                if (int.TryParse(txt.Text, out int result))
-                {
-                    setter(result);
-                    workArea.Invalidate();
-                }
+                setter(txt.Text);
+                workArea.Invalidate();
             };
 
             row.Controls.Add(lbl);
             row.Controls.Add(txt);
             container.Controls.Add(row);
 
-            return y + 34;
+            return y + 65;
         }
 
         private void UpdateAllBlockIds()
@@ -558,12 +605,8 @@ namespace MathApp
             }
         }
 
-        private void WorkArea_Paint(object sender, PaintEventArgs e)
+        private Connection GetConnectionAtPoint(Point point)
         {
-            var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            // Отрисовка соединений
             foreach (var conn in connections)
             {
                 var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
@@ -572,39 +615,11 @@ namespace MathApp
                 {
                     Point start, end;
 
-                    // Определяем позицию выхода источника
-                    if (source.Type == ToolType.Generator)
-                    {
-                        // У генератора выход только с одной стороны
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
-                    else if (source.Type == ToolType.Operation)
-                    {
-                        // У операций выход справа или слева
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
-                    else if (source.Type == ToolType.Amplifier)
-                    {
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
+                    if (!source.Rotated)
+                        start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
                     else
-                    {
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
+                        start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
 
-                    // Определяем позицию входа цели
                     if (target.Type == ToolType.Operation)
                     {
                         if (!target.Rotated)
@@ -622,19 +637,78 @@ namespace MathApp
                                 end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + 2 * target.Size.Height / 3);
                         }
                     }
-                    else if (target.Type == ToolType.Chart)
+                    else
                     {
                         if (!target.Rotated)
                             end = new Point(target.Position.X - 5, target.Position.Y + target.Size.Height / 2);
                         else
                             end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + target.Size.Height / 2);
                     }
-                    else if (target.Type == ToolType.Amplifier)
+
+                    double minDist = double.MaxValue;
+                    for (double t = 0; t <= 1; t += 0.05)
+                    {
+                        int offset = Math.Min(40, Math.Abs(end.X - start.X) / 2);
+                        Point c1 = new Point(start.X + offset, start.Y);
+                        Point c2 = new Point(end.X - offset, end.Y);
+
+                        double t2 = t * t;
+                        double t3 = t2 * t;
+                        double mt = 1 - t;
+                        double mt2 = mt * mt;
+                        double mt3 = mt2 * mt;
+
+                        double x = mt3 * start.X + 3 * mt2 * t * c1.X + 3 * mt * t2 * c2.X + t3 * end.X;
+                        double y = mt3 * start.Y + 3 * mt2 * t * c1.Y + 3 * mt * t2 * c2.Y + t3 * end.Y;
+
+                        double dist = Math.Sqrt(Math.Pow(point.X - x, 2) + Math.Pow(point.Y - y, 2));
+                        if (dist < minDist)
+                            minDist = dist;
+                    }
+
+                    if (minDist < 10)
+                    {
+                        return conn;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private void WorkArea_Paint(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            foreach (var conn in connections)
+            {
+                var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                var target = tools.FirstOrDefault(t => t.Id == conn.TargetToolId);
+                if (source != null && target != null)
+                {
+                    Point start, end;
+
+                    if (!source.Rotated)
+                        start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
+                    else
+                        start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
+
+                    if (target.Type == ToolType.Operation)
                     {
                         if (!target.Rotated)
-                            end = new Point(target.Position.X - 5, target.Position.Y + target.Size.Height / 2);
+                        {
+                            if (conn.TargetInput == InputType.A)
+                                end = new Point(target.Position.X - 5, target.Position.Y + target.Size.Height / 3);
+                            else
+                                end = new Point(target.Position.X - 5, target.Position.Y + 2 * target.Size.Height / 3);
+                        }
                         else
-                            end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + target.Size.Height / 2);
+                        {
+                            if (conn.TargetInput == InputType.A)
+                                end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + target.Size.Height / 3);
+                            else
+                                end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + 2 * target.Size.Height / 3);
+                        }
                     }
                     else
                     {
@@ -644,7 +718,7 @@ namespace MathApp
                             end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + target.Size.Height / 2);
                     }
 
-                    using (var pen = new Pen(Color.FromArgb(0, 120, 215), 1.5f))
+                    using (var pen = new Pen(selectedConnection == conn ? Color.Red : Color.FromArgb(0, 120, 215), selectedConnection == conn ? 3f : 1.5f))
                     {
                         int offset = Math.Min(40, Math.Abs(end.X - start.X) / 2);
                         Point c1 = new Point(start.X + offset, start.Y);
@@ -652,7 +726,6 @@ namespace MathApp
                         g.DrawBezier(pen, start, c1, c2, end);
                     }
 
-                    // Рисуем значение на соединении
                     if (conn.CurrentValue.HasValue)
                     {
                         int midX = (start.X + end.X) / 2;
@@ -669,34 +742,16 @@ namespace MathApp
                 }
             }
 
-            // Временное соединение
             if (isConnecting && sourcePoint.HasValue)
             {
                 var source = tools.FirstOrDefault(t => t.Id == sourcePoint.Value.ToolId);
                 if (source != null)
                 {
                     Point start;
-                    if (source.Type == ToolType.Operation)
-                    {
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
-                    else if (source.Type == ToolType.Generator)
-                    {
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
+                    if (!source.Rotated)
+                        start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
                     else
-                    {
-                        if (!source.Rotated)
-                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
-                        else
-                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
-                    }
+                        start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
 
                     using (var pen = new Pen(Color.Gray, 1f) { DashStyle = DashStyle.Dash })
                     {
@@ -708,7 +763,6 @@ namespace MathApp
                 }
             }
 
-            // Отрисовка блоков
             var renderer = new BlockRenderer();
 
             foreach (var tool in tools)
@@ -765,48 +819,29 @@ namespace MathApp
         {
             if (e.Button == MouseButtons.Left)
             {
-                // Если мы НЕ в режиме соединения - проверяем нажатие на выходной пин (начало нового соединения)
+                // Проверяем клик по соединению
+                var hitConnection = GetConnectionAtPoint(e.Location);
+                if (hitConnection != null)
+                {
+                    selectedConnection = hitConnection;
+                    selectedTool = null;
+                    workArea.Invalidate();
+                    return;
+                }
+
+                selectedConnection = null;
+
                 if (!isConnecting)
                 {
                     foreach (var tool in tools)
                     {
+                        if (tool.Type == ToolType.Chart) continue;
+
                         Point output;
-
-                        // У графика нет выхода - пропускаем
-                        if (tool.Type == ToolType.Chart)
-                        {
-                            continue;
-                        }
-
-                        // Определяем выход для разных типов блоков
-                        if (tool.Type == ToolType.Operation)
-                        {
-                            if (!tool.Rotated)
-                                output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                            else
-                                output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                        }
-                        else if (tool.Type == ToolType.Generator)
-                        {
-                            if (!tool.Rotated)
-                                output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                            else
-                                output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                        }
-                        else if (tool.Type == ToolType.Amplifier)
-                        {
-                            if (!tool.Rotated)
-                                output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                            else
-                                output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                        }
+                        if (!tool.Rotated)
+                            output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
                         else
-                        {
-                            if (!tool.Rotated)
-                                output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                            else
-                                output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-                        }
+                            output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
 
                         if (Math.Sqrt(Math.Pow(e.X - output.X, 2) + Math.Pow(e.Y - output.Y, 2)) < 10)
                         {
@@ -819,22 +854,15 @@ namespace MathApp
                     }
                 }
 
-                // Если мы в режиме соединения - проверяем нажатие на входной пин (завершение соединения)
                 if (isConnecting && sourcePoint.HasValue)
                 {
                     foreach (var tool in tools)
                     {
-                        // У генератора нет входа - пропускаем
-                        if (tool.Type == ToolType.Generator)
-                        {
-                            continue;
-                        }
+                        if (tool.Type == ToolType.Generator) continue;
 
-                        // Для операций - два входа
                         if (tool.Type == ToolType.Operation)
                         {
                             Point inputA, inputB;
-
                             if (!tool.Rotated)
                             {
                                 inputA = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 3);
@@ -846,10 +874,8 @@ namespace MathApp
                                 inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 2 * tool.Size.Height / 3);
                             }
 
-                            // Проверка нажатия на вход A
                             if (Math.Sqrt(Math.Pow(e.X - inputA.X, 2) + Math.Pow(e.Y - inputA.Y, 2)) < 10)
                             {
-                                // Нельзя соединять блок сам с собой
                                 if (sourcePoint.Value.ToolId == tool.Id)
                                 {
                                     isConnecting = false;
@@ -857,17 +883,6 @@ namespace MathApp
                                     workArea.Invalidate();
                                     return;
                                 }
-
-                                // Источник должен иметь выход (не график)
-                                var sourceTool = tools.FirstOrDefault(t => t.Id == sourcePoint.Value.ToolId);
-                                if (sourceTool != null && sourceTool.Type == ToolType.Chart)
-                                {
-                                    isConnecting = false;
-                                    sourcePoint = null;
-                                    workArea.Invalidate();
-                                    return;
-                                }
-
                                 connectionManager.CreateConnection(sourcePoint.Value, new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.A));
                                 isConnecting = false;
                                 sourcePoint = null;
@@ -875,10 +890,8 @@ namespace MathApp
                                 return;
                             }
 
-                            // Проверка нажатия на вход B
                             if (Math.Sqrt(Math.Pow(e.X - inputB.X, 2) + Math.Pow(e.Y - inputB.Y, 2)) < 10)
                             {
-                                // Нельзя соединять блок сам с собой
                                 if (sourcePoint.Value.ToolId == tool.Id)
                                 {
                                     isConnecting = false;
@@ -886,17 +899,6 @@ namespace MathApp
                                     workArea.Invalidate();
                                     return;
                                 }
-
-                                // Источник должен иметь выход (не график)
-                                var sourceTool = tools.FirstOrDefault(t => t.Id == sourcePoint.Value.ToolId);
-                                if (sourceTool != null && sourceTool.Type == ToolType.Chart)
-                                {
-                                    isConnecting = false;
-                                    sourcePoint = null;
-                                    workArea.Invalidate();
-                                    return;
-                                }
-
                                 connectionManager.CreateConnection(sourcePoint.Value, new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.B));
                                 isConnecting = false;
                                 sourcePoint = null;
@@ -906,9 +908,7 @@ namespace MathApp
                         }
                         else
                         {
-                            // Для остальных блоков - один вход
                             Point input;
-
                             if (!tool.Rotated)
                                 input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
                             else
@@ -916,7 +916,6 @@ namespace MathApp
 
                             if (Math.Sqrt(Math.Pow(e.X - input.X, 2) + Math.Pow(e.Y - input.Y, 2)) < 10)
                             {
-                                // Нельзя соединять блок сам с собой
                                 if (sourcePoint.Value.ToolId == tool.Id)
                                 {
                                     isConnecting = false;
@@ -924,17 +923,6 @@ namespace MathApp
                                     workArea.Invalidate();
                                     return;
                                 }
-
-                                // Источник должен иметь выход (не график)
-                                var sourceTool = tools.FirstOrDefault(t => t.Id == sourcePoint.Value.ToolId);
-                                if (sourceTool != null && sourceTool.Type == ToolType.Chart)
-                                {
-                                    isConnecting = false;
-                                    sourcePoint = null;
-                                    workArea.Invalidate();
-                                    return;
-                                }
-
                                 connectionManager.CreateConnection(sourcePoint.Value, new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.A));
                                 isConnecting = false;
                                 sourcePoint = null;
@@ -945,7 +933,6 @@ namespace MathApp
                     }
                 }
 
-                // Если не нажали на пины - проверяем нажатие на блок
                 var hitTool = GetToolAtPosition(e.Location);
                 if (hitTool != null)
                 {
@@ -963,9 +950,26 @@ namespace MathApp
             }
             else if (e.Button == MouseButtons.Right)
             {
-                // Отмена соединения
-                isConnecting = false;
-                sourcePoint = null;
+                // При правом клике сначала проверяем соединение
+                var hitConnection = GetConnectionAtPoint(e.Location);
+                if (hitConnection != null)
+                {
+                    selectedConnection = hitConnection;
+                    selectedTool = null;
+                }
+                else
+                {
+                    selectedConnection = null;
+                    var hitTool = GetToolAtPosition(e.Location);
+                    if (hitTool != null)
+                    {
+                        selectedTool = hitTool;
+                    }
+                    else
+                    {
+                        selectedTool = null;
+                    }
+                }
                 workArea.Invalidate();
             }
         }
@@ -1011,8 +1015,6 @@ namespace MathApp
                         var graph = new GraphForm(tool.Name);
                         graph.Show();
                         graphs[tool.Id] = graph;
-                        foreach (var val in tool.ValueHistory)
-                            graph.AddValue(val);
                     }
                 }
                 else
@@ -1043,36 +1045,122 @@ namespace MathApp
                     blockContainers.Remove(selectedTool.Id);
                 }
 
-                if (selectedTool.Type == ToolType.Chart && graphs.ContainsKey(selectedTool.Id))
+                if (selectedTool.Type == ToolType.Chart)
                 {
-                    if (!graphs[selectedTool.Id].IsDisposed) graphs[selectedTool.Id].Close();
-                    graphs.Remove(selectedTool.Id);
+                    selectedTool.Values.Clear();
+                    if (graphs.ContainsKey(selectedTool.Id))
+                    {
+                        if (!graphs[selectedTool.Id].IsDisposed) graphs[selectedTool.Id].Close();
+                        graphs.Remove(selectedTool.Id);
+                    }
                 }
+
+                connections.RemoveAll(c => c.SourceToolId == selectedTool.Id || c.TargetToolId == selectedTool.Id);
 
                 tools.Remove(selectedTool);
                 selectedTool = null;
+                selectedConnection = null;
                 UpdateAllBlockIds();
                 workArea.Invalidate();
             }
         }
 
-        private void DeleteConnections_Click(object sender, EventArgs e)
+        private void DeleteConnection_Click(object sender, EventArgs e)
+        {
+            if (selectedConnection != null)
+            {
+                connections.Remove(selectedConnection);
+                selectedConnection = null;
+                workArea.Invalidate();
+            }
+        }
+
+        private void DeleteAllConnections_Click(object sender, EventArgs e)
         {
             if (selectedTool != null)
             {
-                connections.RemoveAll(c => c.TargetToolId == selectedTool.Id);
+                connections.RemoveAll(c => c.SourceToolId == selectedTool.Id || c.TargetToolId == selectedTool.Id);
                 workArea.Invalidate();
             }
         }
 
         private void SetupTimer()
         {
-            simulationTimer = new Timer { Interval = 50 };
-            simulationTimer.Tick += SimulationTick;
+            simulationTimer = new Timer();
+            simulationTimer.Interval = 50;
+            simulationTimer.Tick += new EventHandler(SimulationTick);
         }
 
         private void RunSimulation(object sender, EventArgs e)
         {
+            double samplingRate, duration;
+            if (!double.TryParse(samplingRateInput.Text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out samplingRate) || samplingRate <= 0)
+            {
+                MessageBox.Show("Введите корректную частоту дискретизации!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (!double.TryParse(durationInput.Text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out duration) || duration <= 0)
+            {
+                MessageBox.Show("Введите корректную длительность сигнала!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            bool hasEmptyParams = false;
+            foreach (var tool in tools)
+            {
+                if (tool.Type == ToolType.Generator)
+                {
+                    if (tool.Amplitude == 0 && tool.Frequency == 0)
+                        hasEmptyParams = true;
+                }
+                else if (tool.Type == ToolType.Amplifier)
+                {
+                    if (tool.Gain == 0)
+                        hasEmptyParams = true;
+                }
+                else if (tool.Type == ToolType.Antenna)
+                {
+                    if (tool.EffectiveArea == 0)
+                        hasEmptyParams = true;
+                }
+                else if (tool.Type == ToolType.Channel)
+                {
+                    if (tool.Distance == 0)
+                        hasEmptyParams = true;
+                }
+                else if (tool.Type == ToolType.Object)
+                {
+                    if (tool.RadarCrossSection == 0)
+                        hasEmptyParams = true;
+                }
+                else if (tool.Type == ToolType.ADC)
+                {
+                    if (string.IsNullOrWhiteSpace(tool.TableData))
+                        hasEmptyParams = true;
+                }
+            }
+
+            if (hasEmptyParams)
+            {
+                MessageBox.Show("Заполните все параметры блоков перед запуском моделирования!", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            foreach (var tool in tools)
+            {
+                if (tool.Type == ToolType.Chart)
+                {
+                    tool.Values.Clear();
+                    if (graphs.ContainsKey(tool.Id) && !graphs[tool.Id].IsDisposed)
+                    {
+                        graphs[tool.Id].Close();
+                        graphs.Remove(tool.Id);
+                    }
+                }
+            }
+
             isSimulating = true;
             simulationTime = 0;
             simulationTimer.Start();
@@ -1083,9 +1171,17 @@ namespace MathApp
             foreach (var graph in graphs.Values)
                 if (!graph.IsDisposed) graph.Close();
             graphs.Clear();
+
+            foreach (var tool in tools)
+            {
+                if (tool.Type == ToolType.Chart)
+                    tool.Values.Clear();
+            }
+
             tools.Clear();
             connections.Clear();
             selectedTool = null;
+            selectedConnection = null;
             propertiesContent.Controls.Clear();
             blockContainers.Clear();
             workArea.Invalidate();
@@ -1095,74 +1191,180 @@ namespace MathApp
         {
             if (!isSimulating) return;
 
-            simulationTime += 0.001;
+            double samplingRate, duration;
+            if (!double.TryParse(samplingRateInput.Text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out samplingRate))
+                samplingRate = 10000;
+            if (!double.TryParse(durationInput.Text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out duration))
+                duration = 0.01;
 
-            foreach (var tool in tools.Where(t => t.Type == ToolType.Generator))
+            double dt = 1.0 / samplingRate;
+            simulationTime += dt;
+
+            if (simulationTime > duration)
             {
-                double value = tool.Amplitude * Math.Sin(2 * Math.PI * tool.Frequency * simulationTime + tool.PhaseRad);
-                tool.LastResult = value;
+                simulationTimer.Stop();
+                isSimulating = false;
+                MessageBox.Show($"Моделирование завершено. Длительность: {duration} с",
+                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
 
-            foreach (var tool in tools.Where(t => t.Type == ToolType.Amplifier))
+            foreach (var gen in tools.Where(t => t.Type == ToolType.Generator))
             {
-                var conn = connections.FirstOrDefault(c => c.TargetToolId == tool.Id);
+                gen.LastResult = gen.Amplitude * Math.Sin(2 * Math.PI * gen.Frequency * simulationTime + gen.PhaseRad);
+            }
+
+            foreach (var amp in tools.Where(t => t.Type == ToolType.Amplifier))
+            {
+                var conn = connections.FirstOrDefault(c => c.TargetToolId == amp.Id);
                 if (conn != null)
                 {
                     var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
                     if (source != null && source.LastResult.HasValue)
-                        tool.LastResult = source.LastResult.Value * tool.Gain;
+                    {
+                        amp.LastResult = source.LastResult.Value * amp.Gain;
+                        foreach (var c in connections.Where(cn => cn.SourceToolId == amp.Id))
+                            c.CurrentValue = amp.LastResult;
+                    }
                 }
             }
 
-            // Для операций - вычисляем результат
-            foreach (var tool in tools.Where(t => t.Type == ToolType.Operation))
+            foreach (var antenna in tools.Where(t => t.Type == ToolType.Antenna))
             {
-                var connA = connections.FirstOrDefault(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
-                var connB = connections.FirstOrDefault(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
+                var conn = connections.FirstOrDefault(c => c.TargetToolId == antenna.Id);
+                if (conn != null)
+                {
+                    var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                    if (source != null && source.LastResult.HasValue)
+                    {
+                        antenna.LastResult = source.LastResult.Value * antenna.EffectiveArea;
+                        foreach (var c in connections.Where(cn => cn.SourceToolId == antenna.Id))
+                            c.CurrentValue = antenna.LastResult;
+                    }
+                }
+            }
 
-                double valueA = 0, valueB = 0;
+            foreach (var channel in tools.Where(t => t.Type == ToolType.Channel))
+            {
+                var conn = connections.FirstOrDefault(c => c.TargetToolId == channel.Id);
+                if (conn != null)
+                {
+                    var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                    if (source != null && source.LastResult.HasValue)
+                    {
+                        double attenuation = 1.0 / (1 + channel.Distance / 1000);
+                        Random rand = new Random();
+                        double noise = (rand.NextDouble() - 0.5) * 0.05;
+                        channel.LastResult = source.LastResult.Value * attenuation + noise;
+                        foreach (var c in connections.Where(cn => cn.SourceToolId == channel.Id))
+                            c.CurrentValue = channel.LastResult;
+                    }
+                }
+            }
+
+            foreach (var obj in tools.Where(t => t.Type == ToolType.Object))
+            {
+                var conn = connections.FirstOrDefault(c => c.TargetToolId == obj.Id);
+                if (conn != null)
+                {
+                    var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                    if (source != null && source.LastResult.HasValue)
+                    {
+                        obj.LastResult = source.LastResult.Value * obj.RadarCrossSection;
+                        foreach (var c in connections.Where(cn => cn.SourceToolId == obj.Id))
+                            c.CurrentValue = obj.LastResult;
+                    }
+                }
+            }
+
+            foreach (var adc in tools.Where(t => t.Type == ToolType.ADC))
+            {
+                var conn = connections.FirstOrDefault(c => c.TargetToolId == adc.Id);
+                if (conn != null)
+                {
+                    var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                    if (source != null && source.LastResult.HasValue)
+                    {
+                        if (!string.IsNullOrWhiteSpace(adc.TableData))
+                        {
+                            string[] parts = adc.TableData.Split(';');
+                            if (parts.Length > 0)
+                            {
+                                int index = Math.Abs((int)source.LastResult.Value) % parts.Length;
+                                if (double.TryParse(parts[index], System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out double tableValue))
+                                {
+                                    adc.LastResult = tableValue;
+                                }
+                                else
+                                {
+                                    adc.LastResult = source.LastResult.Value;
+                                }
+                            }
+                            else
+                            {
+                                adc.LastResult = source.LastResult.Value;
+                            }
+                        }
+                        else
+                        {
+                            adc.LastResult = source.LastResult.Value;
+                        }
+                        foreach (var c in connections.Where(cn => cn.SourceToolId == adc.Id))
+                            c.CurrentValue = adc.LastResult;
+                    }
+                }
+            }
+
+            foreach (var op in tools.Where(t => t.Type == ToolType.Operation))
+            {
+                var connA = connections.FirstOrDefault(c => c.TargetToolId == op.Id && c.TargetInput == InputType.A);
+                var connB = connections.FirstOrDefault(c => c.TargetToolId == op.Id && c.TargetInput == InputType.B);
+
+                double valA = 0, valB = 0;
                 bool hasA = false, hasB = false;
 
                 if (connA != null)
                 {
-                    var sourceA = tools.FirstOrDefault(t => t.Id == connA.SourceToolId);
-                    if (sourceA != null && sourceA.LastResult.HasValue)
+                    var srcA = tools.FirstOrDefault(t => t.Id == connA.SourceToolId);
+                    if (srcA != null && srcA.LastResult.HasValue)
                     {
-                        valueA = sourceA.LastResult.Value;
+                        valA = srcA.LastResult.Value;
                         hasA = true;
                     }
                 }
 
                 if (connB != null)
                 {
-                    var sourceB = tools.FirstOrDefault(t => t.Id == connB.SourceToolId);
-                    if (sourceB != null && sourceB.LastResult.HasValue)
+                    var srcB = tools.FirstOrDefault(t => t.Id == connB.SourceToolId);
+                    if (srcB != null && srcB.LastResult.HasValue)
                     {
-                        valueB = sourceB.LastResult.Value;
+                        valB = srcB.LastResult.Value;
                         hasB = true;
                     }
                 }
 
                 if (hasA && hasB)
                 {
-                    switch (tool.Operation)
+                    switch (op.Operation)
                     {
                         case MathOperation.Addition:
-                            tool.LastResult = valueA + valueB;
+                            op.LastResult = valA + valB;
                             break;
                         case MathOperation.Subtraction:
-                            tool.LastResult = valueA - valueB;
+                            op.LastResult = valA - valB;
                             break;
                         case MathOperation.Multiplication:
-                            tool.LastResult = valueA * valueB;
+                            op.LastResult = valA * valB;
                             break;
                         case MathOperation.Division:
-                            tool.LastResult = valueB != 0 ? valueA / valueB : 0;
+                            op.LastResult = valB != 0 ? valA / valB : 0;
                             break;
                     }
-
-                    foreach (var conn in connections.Where(c => c.SourceToolId == tool.Id))
-                        conn.CurrentValue = tool.LastResult;
+                    foreach (var c in connections.Where(cn => cn.SourceToolId == op.Id))
+                        c.CurrentValue = op.LastResult;
                 }
             }
 
@@ -1174,7 +1376,9 @@ namespace MathApp
                     var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
                     if (source != null && source.LastResult.HasValue)
                     {
-                        chart.AddToHistory(source.LastResult.Value);
+                        chart.CurrentValue = source.LastResult.Value;
+                        chart.Values.Add(source.LastResult.Value);
+
                         if (graphs.ContainsKey(chart.Id) && !graphs[chart.Id].IsDisposed)
                             graphs[chart.Id].AddValue(source.LastResult.Value);
                     }

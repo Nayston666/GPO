@@ -14,10 +14,8 @@ namespace MathApp.Core
         {
             _time += 0.05;
 
-            // ИСПРАВЛЕНО: убран SineGenerator, используем только Generator
             foreach (var gen in tools.Where(t => t.Type == ToolType.Generator))
             {
-                // ИСПРАВЛЕНО: gen.PhaseRad вместо gen.Phase
                 double radians = (_time * gen.Frequency * 2 * Math.PI) + gen.PhaseRad;
                 gen.LastResult = gen.Amplitude * Math.Sin(radians);
             }
@@ -33,7 +31,6 @@ namespace MathApp.Core
             if (conn != null)
             {
                 var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                // ИСПРАВЛЕНО: убран SineGenerator
                 if (source != null && source.Type == ToolType.Generator && source.LastResult.HasValue)
                     return source.LastResult.Value;
                 if (calculatedValues.ContainsKey(conn.SourceToolId))
@@ -64,14 +61,21 @@ namespace MathApp.Core
                     return input * tool.Gain;
                 case ToolType.Channel:
                     double noise = (_random.NextDouble() - 0.5) * 0.05;
-                    return input * tool.Attenuation + noise;
+                    return input * (1.0 / (1 + tool.Distance / 1000)) + noise;
                 case ToolType.Object:
                     if (!tool.LastResult.HasValue) return input;
-                    return tool.LastResult.Value + (input - tool.LastResult.Value) * 0.1 / tool.TimeConstant;
+                    return tool.LastResult.Value + (input - tool.LastResult.Value) * 0.1;
+                case ToolType.Antenna:
+                    return input * tool.EffectiveArea;
                 case ToolType.ADC:
-                    int levels = (int)Math.Pow(2, tool.BitResolution);
-                    double quantized = Math.Round(input / tool.ReferenceVoltage * (levels - 1)) / (levels - 1) * tool.ReferenceVoltage;
-                    return quantized;
+                    string[] parts = tool.TableData.Split(';');
+                    if (parts.Length > 0 && double.TryParse(parts[0], out double result))
+                    {
+                        int index = (int)(Math.Abs(input) % parts.Length);
+                        if (double.TryParse(parts[index], out double tableValue))
+                            return tableValue;
+                    }
+                    return input;
                 default:
                     return input;
             }
@@ -102,7 +106,7 @@ namespace MathApp.Core
                 }
 
                 var specialTools = tools.Where(t => t.Type == ToolType.Amplifier || t.Type == ToolType.Channel ||
-                                                     t.Type == ToolType.Object || t.Type == ToolType.ADC);
+                                                     t.Type == ToolType.Object || t.Type == ToolType.Antenna || t.Type == ToolType.ADC);
                 foreach (var tool in specialTools)
                 {
                     if (results.ContainsKey(tool.Id)) continue;
@@ -123,7 +127,6 @@ namespace MathApp.Core
         public double GetSourceValue(Guid id, List<MathTool> tools, Dictionary<Guid, double> values)
         {
             var source = tools.FirstOrDefault(t => t.Id == id);
-            // ИСПРАВЛЕНО: убран SineGenerator
             if (source != null && source.Type == ToolType.Generator && source.LastResult.HasValue)
                 return source.LastResult.Value;
             return values.ContainsKey(id) ? values[id] : 0;
