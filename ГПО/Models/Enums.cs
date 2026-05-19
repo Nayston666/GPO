@@ -7,19 +7,19 @@ namespace MathApp.Models
         Addition,
         Subtraction,
         Multiplication,
-        Division,
-        Integrator,
-        Differentiator,
-        Interpolator,
-        FileIO
+        Division
     }
 
     public enum ToolType
     {
         Operation,
         Chart,
-        SineGenerator,
-        FileIO
+        Generator,
+        Amplifier,
+        Antenna,
+        Channel,
+        Object,
+        ADC
     }
 
     public enum InputType
@@ -36,8 +36,15 @@ namespace MathApp.Models
 
     public struct ConnectionPoint
     {
-        public Guid ToolId { get; set; }
-        public ConnectionPointType Type { get; set; }
-        public InputType? InputType { get; set; }
+        public Guid ToolId;
+        public ConnectionPointType Type;
+        public InputType? InputType;
+
+        public ConnectionPoint(Guid toolId, ConnectionPointType type, InputType? inputType = null)
+        {
+            ToolId = toolId;
+            Type = type;
+            InputType = inputType;
+        }
     }
 }

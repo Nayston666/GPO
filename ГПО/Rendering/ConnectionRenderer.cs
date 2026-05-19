@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
@@ -8,65 +9,62 @@ namespace MathApp.Rendering
 {
     public static class ConnectionRenderer
     {
-        private static readonly Font _valueFont = new Font("Segoe UI", 9, FontStyle.Bold);
-        private static readonly Pen _shadowPen = new Pen(Color.FromArgb(30, 0, 0, 0), 4);
-        private static readonly Pen _connectionPen = new Pen(Color.Cyan, 3);
-        private static readonly Pen _tempConnectionPen = new Pen(Color.White, 2);
+        private static Font _valueFont = new Font("Segoe UI", 8, FontStyle.Bold);
+        private static Pen _connectionPen = new Pen(Color.Cyan, 2.5f);
+        private static Pen _tempPen = new Pen(Color.White, 2) { DashStyle = DashStyle.Dash };
 
-        public static void Draw(Graphics g, Connection conn, MathTool source, MathTool target)
+        public static void DrawAll(Graphics g, IEnumerable<Connection> connections, IEnumerable<MathTool> tools)
         {
-            if (source == null || target == null) return;
-            Point start = GetOutputPoint(source);
-            Point end = GetInputPoint(target, conn.TargetInput);
-
-            Point shadowStart = new Point(start.X + 2, start.Y + 2);
-            Point shadowEnd = new Point(end.X + 2, end.Y + 2);
-            _shadowPen.StartCap = LineCap.Round;
-            _shadowPen.EndCap = LineCap.Round;
-            DrawCurve(g, _shadowPen, shadowStart, shadowEnd);
-
-            _connectionPen.StartCap = LineCap.Round;
-            _connectionPen.EndCap = LineCap.ArrowAnchor;
-            DrawCurve(g, _connectionPen, start, end);
-
-            if (conn.CurrentValue.HasValue)
-                DrawValue(g, conn.CurrentValue.Value, start, end);
+            foreach (var conn in connections)
+            {
+                var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                var target = tools.FirstOrDefault(t => t.Id == conn.TargetToolId);
+                if (source != null && target != null)
+                    DrawConnection(g, source, target, conn.TargetInput, conn.CurrentValue);
+            }
         }
 
         public static void DrawTemp(Graphics g, MathTool source, Point endPoint)
         {
-            if (source == null) return;
-            Point start = GetOutputPoint(source);
-            _tempConnectionPen.DashStyle = DashStyle.Dash;
-            _tempConnectionPen.StartCap = LineCap.Round;
-            DrawCurve(g, _tempConnectionPen, start, endPoint);
+            Point start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
+            DrawCurve(g, _tempPen, start, endPoint);
+        }
+
+        private static void DrawConnection(Graphics g, MathTool source, MathTool target, InputType input, double? value)
+        {
+            Point start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
+            Point end;
+
+            if (target.Type == ToolType.Operation)
+            {
+                end = (input == InputType.A) ?
+                    new Point(target.Position.X - 5, target.Position.Y + 20) :
+                    new Point(target.Position.X - 5, target.Position.Y + target.Size.Height - 20);
+            }
+            else
+            {
+                end = new Point(target.Position.X - 5, target.Position.Y + target.Size.Height / 2);
+            }
+
+            DrawCurve(g, _connectionPen, start, end);
+
+            if (value.HasValue)
+            {
+                Point mid = new Point((start.X + end.X) / 2, (start.Y + end.Y) / 2 - 15);
+                string text = value.Value.ToString("F2");
+                SizeF size = g.MeasureString(text, _valueFont);
+                using (var bg = new SolidBrush(Color.FromArgb(180, 30, 30, 35)))
+                    g.FillRectangle(bg, mid.X - size.Width / 2 - 2, mid.Y - 8, size.Width + 4, size.Height + 4);
+                g.DrawString(text, _valueFont, Brushes.Yellow, mid.X - size.Width / 2, mid.Y - 6);
+            }
         }
 
         private static void DrawCurve(Graphics g, Pen pen, Point start, Point end)
         {
-            Point mid1 = new Point(start.X + 50, start.Y);
-            Point mid2 = new Point(end.X - 50, end.Y);
+            int offset = Math.Min(50, Math.Abs(end.X - start.X) / 2);
+            Point mid1 = new Point(start.X + offset, start.Y);
+            Point mid2 = new Point(end.X - offset, end.Y);
             g.DrawBezier(pen, start, mid1, mid2, end);
-        }
-
-        private static void DrawValue(Graphics g, double value, Point start, Point end)
-        {
-            Point mid = new Point((start.X + end.X) / 2, (start.Y + end.Y) / 2 - 20);
-            string valueText = value.ToString("F2");
-            SizeF textSize = g.MeasureString(valueText, _valueFont);
-            RectangleF textBg = new RectangleF(mid.X - textSize.Width / 2 - 3, mid.Y - 2, textSize.Width + 6, textSize.Height + 4);
-            using (var bgBrush = new SolidBrush(Color.FromArgb(200, 30, 30, 35)))
-                g.FillRectangle(bgBrush, textBg);
-            g.DrawString(valueText, _valueFont, Brushes.Yellow, mid.X - textSize.Width / 2, mid.Y);
-        }
-
-        private static Point GetOutputPoint(MathTool tool) => new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-
-        private static Point GetInputPoint(MathTool tool, InputType input)
-        {
-            if (tool.Type == ToolType.SineGenerator) return Point.Empty;
-            if (tool.Type == ToolType.Chart) return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-            return input == InputType.A ? new Point(tool.Position.X - 5, tool.Position.Y + 20) : new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
         }
     }
 }

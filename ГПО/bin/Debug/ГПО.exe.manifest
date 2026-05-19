@@ -42,24 +42,24 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="ГПО.exe" size="70128">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="ГПО.exe" size="89072">
       <assemblyIdentity name="ГПО" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>TGSrfpxmv3hWfIFtun43Ek182HI+OB/AiEjnJfLgti0=</dsig:DigestValue>
+        <dsig:DigestValue>u+CLtlOefbFsluxqijmnyEb37Vrim8KvKtku6XpVH+E=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
-  <file name="ГПО.exe.config" size="184">
+  <file name="ГПО.exe.config" size="178">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>nxJ/Lo79mxoPYSZ8U/K6/s0rkBEHk+cM7lxPpMRjp2M=</dsig:DigestValue>
+      <dsig:DigestValue>KkjaC6OZsOeDyfnYaQAZfL+JzEgQbWmq2wjnKx32O3k=</dsig:DigestValue>
     </hash>
   </file>
 </asmv1:assembly>

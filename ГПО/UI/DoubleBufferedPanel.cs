@@ -8,13 +8,11 @@ namespace MathApp.UI
         public DoubleBufferedPanel()
         {
             DoubleBuffered = true;
-            SetStyle(ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.UserPaint |
-                     ControlStyles.OptimizedDoubleBuffer |
-                     ControlStyles.ResizeRedraw, true);
-
+            AllowDrop = true;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             AutoScroll = true;
-            AutoScrollMinSize = new Size(2000, 2000);
+            AutoScrollMinSize = new Size(3000, 3000);
             BackColor = Color.FromArgb(30, 30, 35);
         }
 

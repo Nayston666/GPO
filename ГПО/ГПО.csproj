@@ -108,9 +108,7 @@
     <Compile Include="UI\PropertyPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="UI\ResultForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="UI\ResultForm.cs" />
     <Compile Include="UI\ToolboxControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

@@ -17,7 +17,6 @@ namespace MathApp.Core
         public bool CreateConnection(ConnectionPoint source, ConnectionPoint target)
         {
             if (source.ToolId == target.ToolId) return false;
-
             _connections.RemoveAll(c => c.TargetToolId == target.ToolId && c.TargetInput == target.InputType);
             _connections.Add(new Connection
             {

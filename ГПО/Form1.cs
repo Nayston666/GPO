@@ -6,669 +6,1079 @@ using System.Linq;
 using System.Windows.Forms;
 using MathApp.Models;
 using MathApp.Core;
-using MathApp.Rendering;
 using MathApp.UI;
-using MathApp.Helpers;
+using MathApp.Rendering;
 
 namespace MathApp
 {
-
     public partial class Form1 : Form
     {
-        private DoubleBufferedPanel whiteboardPanel;
-        private Panel sidePanel;
-        private Label resultLabel;
-        private ToolboxControl toolboxControl;
-        private PropertyPanel propertyPanel;
+        // ============ КОМПОНЕНТЫ ИНТЕРФЕЙСА ============
+        private Panel leftPanel;
+        private Panel workArea;
+        private Panel propertiesPanel;
+        private FlowLayoutPanel propertiesContent;
 
-        private List<MathTool> whiteboardTools = new List<MathTool>();
+        private TextBox samplingRateInput;
+        private TextBox durationInput;
+        private Button runButton;
+        private Button clearButton;
+        private FlowLayoutPanel libraryPanel;
+
+        // ============ ДАННЫЕ ============
+        private List<MathTool> tools = new List<MathTool>();
         private List<Connection> connections = new List<Connection>();
-
         private CalculationEngine calculator = new CalculationEngine();
         private ConnectionManager connectionManager;
-        private BlockRenderer blockRenderer = new BlockRenderer();
 
         private MathTool selectedTool = null;
         private MathTool draggedTool = null;
         private bool isDragging = false;
         private Point dragStartPoint;
-        private Point lastMousePosition;
 
         private bool isConnecting = false;
-        private ConnectionPoint? sourceConnectionPoint = null;
-        private Point tempConnectionEnd;
+        private ConnectionPoint? sourcePoint = null;
+        private Point tempEnd;
 
-        private Timer renderTimer;
-        private bool needsRedraw = true;
+        private bool isSimulating = false;
 
-        private Color primaryColor = Color.FromArgb(0, 120, 212);
-        private Color accentColor = Color.FromArgb(0, 200, 255);
-        private Color backgroundColor = Color.FromArgb(28, 28, 30);
-        private Color panelColor = Color.FromArgb(38, 38, 40);
-        private Color textColor = Color.White;
-
-        private Dictionary<Guid, GraphForm> graphWindows = new Dictionary<Guid, GraphForm>();
-        private ResultForm _resultForm;
-        /// <summary>
-        /// Публичный метод для обновления графиков (вызывается из PropertyPanel)
-        /// </summary>
-        public void RefreshGraphs()
-        {
-            UpdateGraphsBatch();
-        }
+        private Dictionary<Guid, GraphForm> graphs = new Dictionary<Guid, GraphForm>();
+        private Dictionary<Guid, Panel> blockContainers = new Dictionary<Guid, Panel>();
 
         public Form1()
         {
-            this.Text = "Математический конструктор";
-            this.Size = new Size(1400, 800);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = backgroundColor;
-            this.DoubleBuffered = true;
-
-            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
-                         ControlStyles.UserPaint |
-                         ControlStyles.OptimizedDoubleBuffer |
-                         ControlStyles.ResizeRedraw, true);
-
-            InitializeComponent();
-
             connectionManager = new ConnectionManager(connections);
-            _resultForm = new ResultForm();
-
-            renderTimer = new Timer();
-            renderTimer.Interval = 16;
-            renderTimer.Tick += (s, e) =>
-            {
-                needsRedraw = true;
-                whiteboardPanel.Invalidate();
-            };
-            renderTimer.Start();
+            InitializeForm();
         }
 
-        private void InitializeComponent()
+        private void InitializeForm()
         {
-            sidePanel = new Panel
-            {
-                Width = 300,
-                Dock = DockStyle.Left,
-                BackColor = panelColor,
-                BorderStyle = BorderStyle.None
-            };
+            this.Text = "САПР структурного моделирования РТС";
+            this.Size = new Size(1300, 750);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(240, 242, 245);
 
-            var contentPanel = new Panel
+            // Левая панель
+            leftPanel = new Panel
             {
                 Width = 280,
-                Height = 800,
-                Location = new Point(10, 0),
-                BackColor = Color.Transparent,
+                Dock = DockStyle.Left,
+                BackColor = Color.FromArgb(248, 249, 250),
+                BorderStyle = BorderStyle.FixedSingle,
                 AutoScroll = true
             };
 
-            // Панель инструментов - компактная
-            toolboxControl = new ToolboxControl
+            int y = 15;
+
+            leftPanel.Controls.Add(new Label
             {
-                Location = new Point(0, 10),
-                Width = 280
-            };
-            toolboxControl.ItemMouseDown += ToolboxControl_ItemMouseDown;
-
-            // Панель свойств
-            propertyPanel = new PropertyPanel
-            {
-                Location = new Point(0, 80),
-                Width = 280
-            };
-            propertyPanel.ApplyClicked += PropertyPanel_ApplyClicked;
-
-            // Информационная панель
-            var infoPanel = new Panel
-            {
-                Location = new Point(0, 400),
-                Size = new Size(260, 120),
-                BackColor = Color.FromArgb(45, 45, 50)
-            };
-
-            var infoTitle = new Label
-            {
-                Text = "ℹ️ ИНФОРМАЦИЯ",
-                Location = new Point(10, 5),
-                Size = new Size(240, 20),
-                ForeColor = accentColor,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                BackColor = Color.Transparent
-            };
-
-            var infoLabel = new Label
-            {
-                Text = "• Клик на блок - редактирование\r\n• Оранж. точка - выход\r\n• Зел. точка - вход\r\n• Для соединения: выход → вход\r\n• ПКМ на блоке - удалить",
-                Location = new Point(10, 30),
-                Size = new Size(240, 85),
-                ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 8),
-                BackColor = Color.Transparent
-            };
-
-            infoPanel.Controls.AddRange(new Control[] { infoTitle, infoLabel });
-
-            // Панель результата
-            var resultPanel = new Panel
-            {
-                Location = new Point(0, 530),
-                Size = new Size(260, 100),
-                BackColor = Color.FromArgb(45, 45, 50)
-            };
-
-            var resultTitle = new Label
-            {
-                Text = "ТЕКУЩИЙ РЕЗУЛЬТАТ",
-                Location = new Point(10, 5),
-                Size = new Size(240, 20),
-                ForeColor = accentColor,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                BackColor = Color.Transparent
-            };
-
-            resultLabel = new Label
-            {
-                Text = "0.00",
-                Location = new Point(10, 28),
-                Size = new Size(240, 35),
-                ForeColor = Color.FromArgb(0, 255, 128),
-                Font = new Font("Segoe UI", 24, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleRight,
-                BackColor = Color.Transparent
-            };
-
-            var btnCalculate = new Button
-            {
-                Text = "🧮 ВЫЧИСЛИТЬ",
-                Location = new Point(10, 68),
-                Size = new Size(150, 28),
-                BackColor = primaryColor,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnCalculate.Click += BtnCalculate_Click;
-
-            var btnShowResult = new Button
-            {
-                Text = "📊 ОКНО",
-                Location = new Point(165, 68),
-                Size = new Size(85, 28),
-                BackColor = Color.FromArgb(100, 100, 100),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnShowResult.Click += (s, e) => ShowResultWindow();
-
-            resultPanel.Controls.AddRange(new Control[] { resultTitle, resultLabel, btnCalculate, btnShowResult });
-
-            contentPanel.Controls.AddRange(new Control[] {
-                toolboxControl, propertyPanel, infoPanel, resultPanel
+                Text = "УПРАВЛЕНИЕ СИСТЕМОЙ",
+                Location = new Point(15, y),
+                Size = new Size(250, 25),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 58, 64)
             });
-            sidePanel.Controls.Add(contentPanel);
+            y += 35;
+
+            runButton = new Button
+            {
+                Text = "ЗАПУСТИТЬ СИСТЕМУ",
+                Location = new Point(15, y),
+                Size = new Size(250, 40),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            runButton.Click += RunSimulation;
+            leftPanel.Controls.Add(runButton);
+            y += 55;
+
+            leftPanel.Controls.Add(new Label
+            {
+                Text = "Глобальные параметры системы",
+                Location = new Point(15, y),
+                Size = new Size(250, 25),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 58, 64)
+            });
+            y += 30;
+
+            leftPanel.Controls.Add(new Label
+            {
+                Text = "Частота дискретизации, Гц:",
+                Location = new Point(15, y),
+                Size = new Size(180, 23),
+                Font = new Font("Segoe UI", 9)
+            });
+            samplingRateInput = new TextBox
+            {
+                Location = new Point(200, y),
+                Size = new Size(65, 23),
+                Text = "10000",
+                Font = new Font("Segoe UI", 9)
+            };
+            leftPanel.Controls.Add(samplingRateInput);
+            y += 30;
+
+            leftPanel.Controls.Add(new Label
+            {
+                Text = "Длительность сигнала, с:",
+                Location = new Point(15, y),
+                Size = new Size(180, 23),
+                Font = new Font("Segoe UI", 9)
+            });
+            durationInput = new TextBox
+            {
+                Location = new Point(200, y),
+                Size = new Size(65, 23),
+                Text = "0.01",
+                Font = new Font("Segoe UI", 9)
+            };
+            leftPanel.Controls.Add(durationInput);
+            y += 45;
+
+            leftPanel.Controls.Add(new Label
+            {
+                Text = "Библиотека блоков",
+                Location = new Point(15, y),
+                Size = new Size(250, 25),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 58, 64)
+            });
+            y += 30;
+
+            libraryPanel = new FlowLayoutPanel
+            {
+                Location = new Point(15, y),
+                Size = new Size(250, 300),
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true
+            };
+
+            string[] blocks = { "Генератор", "Усилитель", "Антенна", "Канал", "Объект", "АЦП", "График", "Сложение", "Вычитание", "Умножение", "Деление" };
+            foreach (var block in blocks)
+            {
+                var btn = new Button
+                {
+                    Text = block,
+                    Size = new Size(235, 32),
+                    BackColor = Color.FromArgb(108, 117, 125),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(10, 0, 0, 0)
+                };
+                btn.FlatAppearance.BorderSize = 0;
+                btn.MouseDown += (s, e) =>
+                {
+                    if (e.Button == MouseButtons.Left)
+                        DoDragDrop(new DataObject("ToolType", block), DragDropEffects.Copy);
+                };
+                libraryPanel.Controls.Add(btn);
+            }
+            leftPanel.Controls.Add(libraryPanel);
+            y += 310;
+
+            clearButton = new Button
+            {
+                Text = "ОЧИСТИТЬ ВСЁ",
+                Location = new Point(15, y),
+                Size = new Size(250, 35),
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+            };
+            clearButton.Click += ClearAll;
+            leftPanel.Controls.Add(clearButton);
+
+            // Правая панель свойств
+            propertiesPanel = new Panel
+            {
+                Width = 320,
+                Dock = DockStyle.Right,
+                BackColor = Color.FromArgb(248, 249, 250),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            propertiesPanel.Controls.Add(new Label
+            {
+                Text = "ПАРАМЕТРЫ БЛОКОВ",
+                Location = new Point(10, 10),
+                Size = new Size(300, 30),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 58, 64)
+            });
+
+            propertiesContent = new FlowLayoutPanel
+            {
+                Location = new Point(10, 45),
+                Width = 300,
+                Height = propertiesPanel.ClientSize.Height - 55,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+            };
+            propertiesPanel.Controls.Add(propertiesContent);
+
+            propertiesPanel.Resize += (s, e) =>
+            {
+                propertiesContent.Height = propertiesPanel.ClientSize.Height - 55;
+            };
+
+            this.Controls.Add(propertiesPanel);
+            this.Controls.Add(leftPanel);
 
             // Рабочая область
-            whiteboardPanel = new DoubleBufferedPanel
+            workArea = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(30, 30, 35),
-                BorderStyle = BorderStyle.None,
-                AllowDrop = true
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
             };
 
-            whiteboardPanel.Paint += WhiteboardPanel_Paint;
-            whiteboardPanel.MouseDown += WhiteboardPanel_MouseDown;
-            whiteboardPanel.MouseMove += WhiteboardPanel_MouseMove;
-            whiteboardPanel.MouseUp += WhiteboardPanel_MouseUp;
-            whiteboardPanel.DragEnter += (s, e) => { if (e.Data.GetDataPresent("MathTool")) e.Effect = DragDropEffects.Copy; };
-            whiteboardPanel.DragDrop += WhiteboardPanel_DragDrop;
-            whiteboardPanel.Scroll += (s, e) => needsRedraw = true;
+            workArea.GetType().GetProperty("DoubleBuffered",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.SetValue(workArea, true);
+
+            workArea.Paint += WorkArea_Paint;
+            workArea.MouseDown += WorkArea_MouseDown;
+            workArea.MouseMove += WorkArea_MouseMove;
+            workArea.MouseUp += WorkArea_MouseUp;
+            workArea.MouseDoubleClick += WorkArea_MouseDoubleClick;
+            workArea.AllowDrop = true;
+            workArea.DragEnter += (s, e) => { if (e.Data.GetDataPresent("ToolType")) e.Effect = DragDropEffects.Copy; };
+            workArea.DragDrop += WorkArea_DragDrop;
 
             var contextMenu = new ContextMenuStrip();
-            contextMenu.BackColor = Color.FromArgb(45, 45, 50);
-            contextMenu.ForeColor = textColor;
-            contextMenu.Items.Add("🗑️ Удалить блок", null, DeleteTool_Click);
+            contextMenu.Items.Add("🗑 Удалить блок", null, DeleteTool_Click);
             contextMenu.Items.Add("🔗 Удалить соединения", null, DeleteConnections_Click);
-            contextMenu.Items.Add("🧹 Очистить всё", null, ClearAll_Click);
-            whiteboardPanel.ContextMenuStrip = contextMenu;
+            workArea.ContextMenuStrip = contextMenu;
 
-            this.Controls.Add(whiteboardPanel);
-            this.Controls.Add(sidePanel);
+            this.Controls.Add(workArea);
         }
 
-        private void ToolboxControl_ItemMouseDown(object sender, MouseEventArgs e)
+        private void WorkArea_DragDrop(object sender, DragEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && toolboxControl.GetSelectedItem() != null)
-                DoDragDrop(new DataObject("MathTool", toolboxControl.GetSelectedItem()), DragDropEffects.Copy);
-        }
+            var mousePos = workArea.PointToClient(new Point(e.X, e.Y));
+            string toolType = e.Data.GetData("ToolType") as string;
+            if (string.IsNullOrEmpty(toolType)) return;
 
-        private void WhiteboardPanel_DragDrop(object sender, DragEventArgs e)
-        {
-            var mousePos = whiteboardPanel.PointToClient(new Point(e.X, e.Y));
-            var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
-            var type = e.Data.GetData("MathTool") as string;
+            var tool = new MathTool
+            {
+                Position = mousePos,
+                Size = new Size(100, 60),
+                Name = toolType,
+                Id = Guid.NewGuid(),
+                Rotated = false
+            };
 
-            var tool = new MathTool { Position = realPos };
-
-            if (type.Contains("График"))
+            if (toolType.Contains("Генератор"))
+            {
+                tool.Type = ToolType.Generator;
+                tool.Amplitude = 10;
+                tool.Frequency = 1000;
+                tool.PhaseRad = 0;
+            }
+            else if (toolType.Contains("Усилитель"))
+            {
+                tool.Type = ToolType.Amplifier;
+                tool.Gain = 10;
+                tool.Size = new Size(80, 80);
+            }
+            else if (toolType.Contains("Антенна"))
+            {
+                tool.Type = ToolType.Antenna;
+                tool.Gain = 10;
+                tool.EffectiveArea = 0.1;
+            }
+            else if (toolType.Contains("Канал"))
+            {
+                tool.Type = ToolType.Channel;
+                tool.Distance = 1000;
+                tool.Attenuation = 0.01;
+            }
+            else if (toolType.Contains("Объект"))
+            {
+                tool.Type = ToolType.Object;
+                tool.RadarCrossSection = 1;
+            }
+            else if (toolType.Contains("АЦП"))
+            {
+                tool.Type = ToolType.ADC;
+                tool.BitResolution = 12;
+                tool.SamplingRate = 10000;
+                tool.QuantizationStep = 0.001;
+                tool.DynamicRange = 120;
+            }
+            else if (toolType.Contains("График"))
             {
                 tool.Type = ToolType.Chart;
-                tool.Size = new Size(160, 80);
-                tool.Name = $"График {whiteboardTools.Count + 1}";
-
-                // Создаём окно графика сразу
-                var graphForm = new GraphForm(tool.Name);
-                graphForm.Show();
-                graphWindows[tool.Id] = graphForm;
+                tool.Size = new Size(120, 60);
             }
-            else if (type.Contains("Синусоида"))
-            {
-                tool.Type = ToolType.SineGenerator;
-                tool.Size = new Size(160, 100);
-                tool.Name = "Синусоида";
-                tool.Frequency = 1.0;
-                tool.Amplitude = 1.0;
-                tool.Phase = 0;
-            }
-            else if (type.Contains("Интегратор"))
+            else if (toolType.Contains("Сложение"))
             {
                 tool.Type = ToolType.Operation;
-                tool.Operation = MathOperation.Integrator;
-                tool.Size = new Size(140, 100);
-                tool.Name = "Интегратор";
-                tool.IntegralValue = 0;
-                tool.PreviousInput = 0;
-                tool.StepSize = 0.01;
+                tool.Operation = MathOperation.Addition;
             }
-            else if (type.Contains("Дифференциатор"))
+            else if (toolType.Contains("Вычитание"))
             {
                 tool.Type = ToolType.Operation;
-                tool.Operation = MathOperation.Differentiator;
-                tool.Size = new Size(140, 100);
-                tool.Name = "Дифференциатор";
-                tool.PreviousTime = 0;
-                tool.PreviousOutput = 0;
+                tool.Operation = MathOperation.Subtraction;
             }
-            else if (type.Contains("Интерполятор"))
+            else if (toolType.Contains("Умножение"))
             {
                 tool.Type = ToolType.Operation;
-                tool.Operation = MathOperation.Interpolator;
-                tool.Size = new Size(140, 100);
-                tool.Name = "Интерполятор";
-                tool.InterpolationPoints = new List<PointF>();
-                for (int i = 0; i <= 10; i++)
-                {
-                    float x = i / 2f;
-                    float y = (float)Math.Sin(x);
-                    tool.InterpolationPoints.Add(new PointF(x, y));
-                }
+                tool.Operation = MathOperation.Multiplication;
             }
-            else if (type.Contains("Файловый"))
+            else if (toolType.Contains("Деление"))
             {
                 tool.Type = ToolType.Operation;
-                tool.Operation = MathOperation.FileIO;
-                tool.Size = new Size(160, 100);
-                tool.Name = "Файловый ввод/вывод";
-                tool.IsReading = true;
-                tool.FileData = new List<double>();
-            }
-            else
-            {
-                tool.Type = ToolType.Operation;
-                tool.Size = new Size(140, 80);
-                if (type.Contains("Сложение")) tool.Operation = MathOperation.Addition;
-                else if (type.Contains("Вычитание")) tool.Operation = MathOperation.Subtraction;
-                else if (type.Contains("Умножение")) tool.Operation = MathOperation.Multiplication;
-                else if (type.Contains("Деление")) tool.Operation = MathOperation.Division;
+                tool.Operation = MathOperation.Division;
             }
 
-            whiteboardTools.Add(tool);
-            needsRedraw = true;
+            tools.Add(tool);
+            workArea.Invalidate();
+            CreateBlockParameterPanel(tool);
         }
 
-        private void WhiteboardPanel_Paint(object sender, PaintEventArgs e)
+        private void CreateBlockParameterPanel(MathTool tool)
+        {
+            int idNumber = tools.IndexOf(tool) + 1;
+
+            Panel blockPanel = new Panel
+            {
+                Width = 280,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 5),
+                Tag = tool.Id
+            };
+
+            Panel headerPanel = new Panel
+            {
+                Width = blockPanel.Width - 2,
+                Height = 35,
+                BackColor = Color.FromArgb(52, 58, 64)
+            };
+            Label headerLabel = new Label
+            {
+                Text = $"{tool.Name}  ID: {idNumber}",
+                Location = new Point(8, 8),
+                Size = new Size(270, 25),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.White
+            };
+            headerPanel.Controls.Add(headerLabel);
+            blockPanel.Controls.Add(headerPanel);
+
+            Panel paramsPanel = new Panel
+            {
+                Width = blockPanel.Width - 2,
+                Height = 10,
+                AutoSize = true,
+                Location = new Point(0, 35)
+            };
+
+            int currentY = 5;
+
+            if (tool.Type == ToolType.Generator)
+            {
+                currentY = AddParameterRow(paramsPanel, "Амплитуда (В):", tool.Amplitude, v => tool.Amplitude = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Частота (Гц):", tool.Frequency, v => tool.Frequency = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Фаза (рад):", tool.PhaseRad, v => tool.PhaseRad = v, currentY);
+            }
+            else if (tool.Type == ToolType.Amplifier)
+            {
+                currentY = AddParameterRow(paramsPanel, "Коэфф. усиления:", tool.Gain, v => tool.Gain = v, currentY);
+            }
+            else if (tool.Type == ToolType.Antenna)
+            {
+                currentY = AddParameterRow(paramsPanel, "Усиление (дБ):", tool.Gain, v => tool.Gain = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Эфф. площадь (м²):", tool.EffectiveArea, v => tool.EffectiveArea = v, currentY);
+            }
+            else if (tool.Type == ToolType.Channel)
+            {
+                currentY = AddParameterRow(paramsPanel, "Расстояние (м):", tool.Distance, v => tool.Distance = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Затухание (дБ/м):", tool.Attenuation, v => tool.Attenuation = v, currentY);
+            }
+            else if (tool.Type == ToolType.Object)
+            {
+                currentY = AddParameterRow(paramsPanel, "ЭПР (м²):", tool.RadarCrossSection, v => tool.RadarCrossSection = v, currentY);
+            }
+            else if (tool.Type == ToolType.ADC)
+            {
+                currentY = AddParameterRow(paramsPanel, "Разрядность (бит):", tool.BitResolution, v => tool.BitResolution = (int)v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Частота дискр. (Гц):", tool.SamplingRate, v => tool.SamplingRate = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Шаг квант. (В):", tool.QuantizationStep, v => tool.QuantizationStep = v, currentY);
+                currentY = AddParameterRow(paramsPanel, "Дин. диапазон (дБ):", tool.DynamicRange, v => tool.DynamicRange = v, currentY);
+            }
+            else if (tool.Type == ToolType.Chart)
+            {
+                currentY = AddParameterRow(paramsPanel, "Точек истории:", tool.MaxHistorySize, v => tool.MaxHistorySize = (int)v, currentY);
+            }
+
+            paramsPanel.Height = currentY + 10;
+            blockPanel.Height = headerPanel.Height + paramsPanel.Height;
+            blockPanel.Controls.Add(paramsPanel);
+            propertiesContent.Controls.Add(blockPanel);
+            blockContainers[tool.Id] = blockPanel;
+        }
+
+        private int AddParameterRow(Panel container, string labelText, double value, Action<double> setter, int y)
+        {
+            Panel row = new Panel
+            {
+                Width = container.Width - 10,
+                Height = 32,
+                Location = new Point(5, y)
+            };
+
+            Label lbl = new Label
+            {
+                Text = labelText,
+                Location = new Point(5, 7),
+                Width = 130,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(52, 58, 64)
+            };
+
+            TextBox txt = new TextBox
+            {
+                Text = value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Location = new Point(140, 4),
+                Width = row.Width - 150
+            };
+
+            txt.TextChanged += (s, e) =>
+            {
+                if (double.TryParse(txt.Text, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double result))
+                {
+                    setter(result);
+                    workArea.Invalidate();
+                }
+            };
+
+            row.Controls.Add(lbl);
+            row.Controls.Add(txt);
+            container.Controls.Add(row);
+
+            return y + 34;
+        }
+
+        private int AddParameterRow(Panel container, string labelText, int value, Action<int> setter, int y)
+        {
+            Panel row = new Panel
+            {
+                Width = container.Width - 10,
+                Height = 32,
+                Location = new Point(5, y)
+            };
+
+            Label lbl = new Label
+            {
+                Text = labelText,
+                Location = new Point(5, 7),
+                Width = 130,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(52, 58, 64)
+            };
+
+            TextBox txt = new TextBox
+            {
+                Text = value.ToString(),
+                Location = new Point(140, 4),
+                Width = row.Width - 150
+            };
+
+            txt.TextChanged += (s, e) =>
+            {
+                if (int.TryParse(txt.Text, out int result))
+                {
+                    setter(result);
+                    workArea.Invalidate();
+                }
+            };
+
+            row.Controls.Add(lbl);
+            row.Controls.Add(txt);
+            container.Controls.Add(row);
+
+            return y + 34;
+        }
+
+        private void UpdateAllBlockIds()
+        {
+            int index = 0;
+            foreach (var tool in tools)
+            {
+                index++;
+                if (blockContainers.ContainsKey(tool.Id))
+                {
+                    Panel blockPanel = blockContainers[tool.Id];
+                    if (blockPanel.Controls[0] is Panel headerPanel && headerPanel.Controls[0] is Label headerLabel)
+                    {
+                        headerLabel.Text = $"{tool.Name}  ID: {index}";
+                    }
+                }
+            }
+        }
+
+        private void WorkArea_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            GridRenderer.Draw(g, whiteboardPanel);
-
+            // Отрисовка соединений
             foreach (var conn in connections)
             {
-                var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                var target = whiteboardTools.FirstOrDefault(t => t.Id == conn.TargetToolId);
+                var source = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                var target = tools.FirstOrDefault(t => t.Id == conn.TargetToolId);
                 if (source != null && target != null)
-                    ConnectionRenderer.Draw(g, conn, source, target);
+                {
+                    Point start, end;
+
+                    if (source.Type == ToolType.Operation)
+                    {
+                        if (!source.Rotated)
+                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
+                        else
+                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
+                    }
+                    else
+                    {
+                        if (!source.Rotated)
+                            start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
+                        else
+                            start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
+                    }
+
+                    if (target.Type == ToolType.Operation)
+                    {
+                        if (!target.Rotated)
+                        {
+                            if (conn.TargetInput == InputType.A)
+                                end = new Point(target.Position.X - 5, target.Position.Y + target.Size.Height / 3);
+                            else
+                                end = new Point(target.Position.X - 5, target.Position.Y + 2 * target.Size.Height / 3);
+                        }
+                        else
+                        {
+                            if (conn.TargetInput == InputType.A)
+                                end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + target.Size.Height / 3);
+                            else
+                                end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + 2 * target.Size.Height / 3);
+                        }
+                    }
+                    else
+                    {
+                        if (!target.Rotated)
+                            end = new Point(target.Position.X - 5, target.Position.Y + target.Size.Height / 2);
+                        else
+                            end = new Point(target.Position.X + target.Size.Width + 5, target.Position.Y + target.Size.Height / 2);
+                    }
+
+                    using (var pen = new Pen(Color.FromArgb(0, 120, 215), 1.5f))
+                    {
+                        int offset = Math.Min(40, Math.Abs(end.X - start.X) / 2);
+                        Point c1 = new Point(start.X + offset, start.Y);
+                        Point c2 = new Point(end.X - offset, end.Y);
+                        g.DrawBezier(pen, start, c1, c2, end);
+                    }
+
+                    if (conn.CurrentValue.HasValue)
+                    {
+                        int midX = (start.X + end.X) / 2;
+                        int midY = (start.Y + end.Y) / 2 - 15;
+                        string valueStr = conn.CurrentValue.Value.ToString("F2");
+                        using (var font = new Font("Segoe UI", 8, FontStyle.Bold))
+                        {
+                            SizeF textSize = g.MeasureString(valueStr, font);
+                            using (var bgBrush = new SolidBrush(Color.FromArgb(180, 0, 0, 0)))
+                                g.FillRectangle(bgBrush, midX - textSize.Width / 2 - 2, midY - 6, textSize.Width + 4, textSize.Height + 2);
+                            g.DrawString(valueStr, font, Brushes.Yellow, midX - textSize.Width / 2, midY - 6);
+                        }
+                    }
+                }
             }
 
-            if (isConnecting && sourceConnectionPoint.HasValue)
+            // Временное соединение
+            if (isConnecting && sourcePoint.HasValue)
             {
-                var sourceTool = whiteboardTools.FirstOrDefault(t => t.Id == sourceConnectionPoint.Value.ToolId);
-                if (sourceTool != null)
-                    ConnectionRenderer.DrawTemp(g, sourceTool, tempConnectionEnd);
+                var source = tools.FirstOrDefault(t => t.Id == sourcePoint.Value.ToolId);
+                if (source != null)
+                {
+                    Point start;
+                    if (!source.Rotated)
+                        start = new Point(source.Position.X + source.Size.Width + 5, source.Position.Y + source.Size.Height / 2);
+                    else
+                        start = new Point(source.Position.X - 5, source.Position.Y + source.Size.Height / 2);
+
+                    using (var pen = new Pen(Color.Gray, 1f) { DashStyle = DashStyle.Dash })
+                    {
+                        int offset = Math.Min(40, Math.Abs(tempEnd.X - start.X) / 2);
+                        Point c1 = new Point(start.X + offset, start.Y);
+                        Point c2 = new Point(tempEnd.X - offset, tempEnd.Y);
+                        g.DrawBezier(pen, start, c1, c2, tempEnd);
+                    }
+                }
             }
 
-            foreach (var tool in whiteboardTools)
-            {
-                if (tool.Type == ToolType.Chart)
-                    blockRenderer.DrawChartTool(g, tool, selectedTool);
-                else if (tool.Type == ToolType.SineGenerator)
-                    blockRenderer.DrawSineTool(g, tool, selectedTool, 0);
-                else
-                    blockRenderer.DrawMathTool(g, tool, selectedTool);
+            // Отрисовка блоков
+            var renderer = new BlockRenderer();
 
-                blockRenderer.DrawConnectionPoints(g, tool, connections);
+            foreach (var tool in tools)
+            {
+                int idNumber = tools.IndexOf(tool) + 1;
+
+                switch (tool.Type)
+                {
+                    case ToolType.Generator:
+                        renderer.DrawGeneratorTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.Amplifier:
+                        renderer.DrawAmplifierTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.Antenna:
+                        renderer.DrawAntennaTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.Channel:
+                        renderer.DrawChannelTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.Object:
+                        renderer.DrawObjectTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.ADC:
+                        renderer.DrawADCTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.Chart:
+                        renderer.DrawChartTool(g, tool, selectedTool, idNumber);
+                        break;
+                    case ToolType.Operation:
+                        switch (tool.Operation)
+                        {
+                            case MathOperation.Addition:
+                                renderer.DrawAdditionTool(g, tool, selectedTool, idNumber);
+                                break;
+                            case MathOperation.Subtraction:
+                                renderer.DrawSubtractionTool(g, tool, selectedTool, idNumber);
+                                break;
+                            case MathOperation.Multiplication:
+                                renderer.DrawMultiplicationTool(g, tool, selectedTool, idNumber);
+                                break;
+                            case MathOperation.Division:
+                                renderer.DrawDivisionTool(g, tool, selectedTool, idNumber);
+                                break;
+                        }
+                        break;
+                }
+
+                renderer.DrawConnectionPoints(g, tool, connections, tools);
             }
         }
 
-        private void WhiteboardPanel_MouseDown(object sender, MouseEventArgs e)
+        private void WorkArea_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
-                var realMousePos = whiteboardPanel.GetRealMouseLocation(e.Location);
-                var hitPoint = HitTestConnectionPoint(e.Location);
-
-                if (hitPoint.HasValue)
+                if (!isConnecting)
                 {
-                    var hit = hitPoint.Value;
-                    if (hit.Type == ConnectionPointType.Output)
+                    foreach (var tool in tools)
                     {
-                        isConnecting = true;
-                        sourceConnectionPoint = hit;
-                        tempConnectionEnd = e.Location;
-                        needsRedraw = true;
+                        if (tool.Type == ToolType.Chart) continue;
+
+                        Point output;
+                        if (!tool.Rotated)
+                            output = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+                        else
+                            output = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+
+                        if (Math.Sqrt(Math.Pow(e.X - output.X, 2) + Math.Pow(e.Y - output.Y, 2)) < 10)
+                        {
+                            isConnecting = true;
+                            sourcePoint = new ConnectionPoint(tool.Id, ConnectionPointType.Output);
+                            tempEnd = e.Location;
+                            workArea.Invalidate();
+                            return;
+                        }
                     }
-                    else if (hit.Type == ConnectionPointType.Input && isConnecting && sourceConnectionPoint.HasValue)
+                }
+
+                if (isConnecting && sourcePoint.HasValue)
+                {
+                    foreach (var tool in tools)
                     {
-                        connectionManager.CreateConnection(sourceConnectionPoint.Value, hit);
-                        isConnecting = false;
-                        sourceConnectionPoint = null;
-                        needsRedraw = true;
+                        if (tool.Type == ToolType.Generator) continue;
+
+                        if (tool.Type == ToolType.Operation)
+                        {
+                            Point inputA, inputB;
+                            if (!tool.Rotated)
+                            {
+                                inputA = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 3);
+                                inputB = new Point(tool.Position.X - 5, tool.Position.Y + 2 * tool.Size.Height / 3);
+                            }
+                            else
+                            {
+                                inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 3);
+                                inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 2 * tool.Size.Height / 3);
+                            }
+
+                            if (Math.Sqrt(Math.Pow(e.X - inputA.X, 2) + Math.Pow(e.Y - inputA.Y, 2)) < 10)
+                            {
+                                if (sourcePoint.Value.ToolId == tool.Id)
+                                {
+                                    isConnecting = false;
+                                    sourcePoint = null;
+                                    workArea.Invalidate();
+                                    return;
+                                }
+                                connectionManager.CreateConnection(sourcePoint.Value, new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.A));
+                                isConnecting = false;
+                                sourcePoint = null;
+                                workArea.Invalidate();
+                                return;
+                            }
+
+                            if (Math.Sqrt(Math.Pow(e.X - inputB.X, 2) + Math.Pow(e.Y - inputB.Y, 2)) < 10)
+                            {
+                                if (sourcePoint.Value.ToolId == tool.Id)
+                                {
+                                    isConnecting = false;
+                                    sourcePoint = null;
+                                    workArea.Invalidate();
+                                    return;
+                                }
+                                connectionManager.CreateConnection(sourcePoint.Value, new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.B));
+                                isConnecting = false;
+                                sourcePoint = null;
+                                workArea.Invalidate();
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            Point input;
+                            if (!tool.Rotated)
+                                input = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
+                            else
+                                input = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
+
+                            if (Math.Sqrt(Math.Pow(e.X - input.X, 2) + Math.Pow(e.Y - input.Y, 2)) < 10)
+                            {
+                                if (sourcePoint.Value.ToolId == tool.Id)
+                                {
+                                    isConnecting = false;
+                                    sourcePoint = null;
+                                    workArea.Invalidate();
+                                    return;
+                                }
+                                connectionManager.CreateConnection(sourcePoint.Value, new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.A));
+                                isConnecting = false;
+                                sourcePoint = null;
+                                workArea.Invalidate();
+                                return;
+                            }
+                        }
                     }
+                }
+
+                var hitTool = GetToolAtPosition(e.Location);
+                if (hitTool != null)
+                {
+                    selectedTool = hitTool;
+                    workArea.Invalidate();
+                    isDragging = true;
+                    draggedTool = hitTool;
+                    dragStartPoint = new Point(e.Location.X - hitTool.Position.X, e.Location.Y - hitTool.Position.Y);
                 }
                 else
                 {
-                    draggedTool = GetToolAtPosition(realMousePos);
-                    if (draggedTool != null)
-                    {
-                        SelectTool(draggedTool);
-                        isDragging = true;
-                        dragStartPoint = new Point(realMousePos.X - draggedTool.Position.X, realMousePos.Y - draggedTool.Position.Y);
-                        lastMousePosition = realMousePos;
-                        needsRedraw = true;
-                    }
-                    else SelectTool(null);
+                    selectedTool = null;
+                    workArea.Invalidate();
                 }
             }
             else if (e.Button == MouseButtons.Right)
             {
                 isConnecting = false;
-                sourceConnectionPoint = null;
-                needsRedraw = true;
+                sourcePoint = null;
+                workArea.Invalidate();
             }
         }
 
-        private void WhiteboardPanel_MouseMove(object sender, MouseEventArgs e)
+        private void WorkArea_MouseMove(object sender, MouseEventArgs e)
         {
-            var realMousePos = whiteboardPanel.GetRealMouseLocation(e.Location);
-
             if (isDragging && draggedTool != null)
             {
-                lastMousePosition = realMousePos;
-                draggedTool.Position = new Point(realMousePos.X - dragStartPoint.X, realMousePos.Y - dragStartPoint.Y);
-                needsRedraw = true;
+                draggedTool.Position = new Point(e.Location.X - dragStartPoint.X, e.Location.Y - dragStartPoint.Y);
+                workArea.Invalidate();
             }
             else if (isConnecting)
             {
-                tempConnectionEnd = e.Location;
-                needsRedraw = true;
+                tempEnd = e.Location;
+                workArea.Invalidate();
             }
         }
 
-        private void WhiteboardPanel_MouseUp(object sender, MouseEventArgs e)
+        private void WorkArea_MouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && isDragging)
+            if (isDragging)
             {
                 isDragging = false;
                 draggedTool = null;
-                needsRedraw = true;
+                workArea.Invalidate();
             }
         }
 
-        private ConnectionPoint? HitTestConnectionPoint(Point mousePos)
+        private void WorkArea_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            var realPoint = whiteboardPanel.GetRealMouseLocation(mousePos);
-
-            foreach (var tool in whiteboardTools)
+            var tool = GetToolAtPosition(e.Location);
+            if (tool != null)
             {
-                if (tool.Type != ToolType.Chart)
+                if (tool.Type == ToolType.Chart)
                 {
-                    var output = GetOutputPoint(tool);
-                    if (Distance(realPoint, output) < 10)
-                        return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };
+                    if (graphs.ContainsKey(tool.Id) && !graphs[tool.Id].IsDisposed)
+                    {
+                        graphs[tool.Id].WindowState = FormWindowState.Normal;
+                        graphs[tool.Id].BringToFront();
+                        if (tool.ValueHistory.Count > 0)
+                        {
+                            var times = new List<double>();
+                            double dt = 1.0 / double.Parse(samplingRateInput.Text, System.Globalization.CultureInfo.InvariantCulture);
+                            for (int i = 0; i < tool.ValueHistory.Count; i++)
+                                times.Add(i * dt);
+                            graphs[tool.Id].SetDataDirectly(times, tool.ValueHistory);
+                        }
+                    }
+                    else
+                    {
+                        var graph = new GraphForm(tool.Name);
+                        graph.Show();
+                        graphs[tool.Id] = graph;
+                        if (tool.ValueHistory.Count > 0)
+                        {
+                            var times = new List<double>();
+                            double dt = 1.0 / double.Parse(samplingRateInput.Text, System.Globalization.CultureInfo.InvariantCulture);
+                            for (int i = 0; i < tool.ValueHistory.Count; i++)
+                                times.Add(i * dt);
+                            graph.SetDataDirectly(times, tool.ValueHistory);
+                        }
+                    }
                 }
-
-                if (tool.Type == ToolType.Operation)
+                else
                 {
-                    var inputA = GetInputPoint(tool, InputType.A);
-                    if (Distance(realPoint, inputA) < 10)
-                        return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.A };
-
-                    var inputB = GetInputPoint(tool, InputType.B);
-                    if (Distance(realPoint, inputB) < 10)
-                        return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.B };
-                }
-                else if (tool.Type == ToolType.Chart)
-                {
-                    var input = GetInputPoint(tool, InputType.A);
-                    if (Distance(realPoint, input) < 10)
-                        return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.A };
+                    tool.Rotated = !tool.Rotated;
+                    workArea.Invalidate();
                 }
             }
-            return null;
-        }
-
-        private double Distance(Point p1, Point p2) => Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
-
-        private Point GetOutputPoint(MathTool tool) => new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-
-        private Point GetInputPoint(MathTool tool, InputType input)
-        {
-            if (tool.Type == ToolType.SineGenerator) return Point.Empty;
-            if (tool.Type == ToolType.Chart) return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
-            return input == InputType.A ? new Point(tool.Position.X - 5, tool.Position.Y + 20) : new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
         }
 
         private MathTool GetToolAtPosition(Point point)
         {
-            foreach (var tool in whiteboardTools)
+            foreach (var tool in tools)
+            {
                 if (new Rectangle(tool.Position, tool.Size).Contains(point))
                     return tool;
+            }
             return null;
-        }
-
-        private void SelectTool(MathTool tool)
-        {
-            selectedTool = tool;
-            propertyPanel.SetSelectedTool(tool);
-            needsRedraw = true;
-        }
-
-        private void PropertyPanel_ApplyClicked(object sender, EventArgs e)
-        {
-            propertyPanel.ApplyChanges(selectedTool);
-            needsRedraw = true;
-        }
-
-        private void BtnCalculate_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var results = calculator.CalculateAll(whiteboardTools, connections);
-
-                var lastTool = whiteboardTools.Where(t => t.Type == ToolType.Operation).OrderByDescending(t => t.Position.X).FirstOrDefault();
-
-                if (lastTool != null && lastTool.LastResult.HasValue)
-                {
-                    double value = lastTool.LastResult.Value;
-                    resultLabel.Text = value.ToString("F2");
-                    if (_resultForm != null && _resultForm.Visible) _resultForm.SetValueImmediate(value);
-                }
-
-                UpdateGraphsBatch();
-                needsRedraw = true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void UpdateGraphsBatch()
-        {
-            foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
-            {
-                var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
-
-                GraphForm graphForm;
-                if (graphWindows.ContainsKey(chart.Id) && !graphWindows[chart.Id].IsDisposed)
-                {
-                    graphForm = graphWindows[chart.Id];
-                }
-                else
-                {
-                    graphForm = new GraphForm(chart.Name);
-                    graphWindows[chart.Id] = graphForm;
-                }
-
-                if (conn != null)
-                {
-                    var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                    if (source != null)
-                    {
-                        // Если источник - файловый блок в режиме чтения
-                        if (source.Type == ToolType.Operation && source.Operation == MathOperation.FileIO && source.IsReading)
-                        {
-                            // Создаём временные ряды для графика
-                            var timeValues = new List<double>();
-                            var dataValues = new List<double>();
-
-                            for (int i = 0; i < source.FileData.Count; i++)
-                            {
-                                timeValues.Add(i); // Индекс как время
-                                dataValues.Add(source.FileData[i]);
-                            }
-
-                            graphForm.SetDataDirectly(timeValues, dataValues);
-                        }
-                        // Для синусоиды и других блоков
-                        else
-                        {
-                            double start = 0, end = 10;
-                            int points = 5000;
-
-                            if (source.Type == ToolType.SineGenerator)
-                            {
-                                double period = 2 * Math.PI / source.Frequency;
-                                end = 5 * period;
-                                points = 5000;
-                            }
-
-                            Func<double, double> calcFunc = (x) =>
-                            {
-                                if (source.Type == ToolType.SineGenerator)
-                                    return source.Amplitude * Math.Sin(2 * Math.PI * source.Frequency * x + source.Phase * Math.PI / 180.0);
-                                return source.LastResult ?? 0;
-                            };
-
-                            graphForm.SetCalculationFunction(calcFunc, start, end, points);
-                        }
-                    }
-                }
-
-                graphForm.Show();
-            }
-        }
-
-        private void ShowResultWindow()
-        {
-            if (_resultForm == null || _resultForm.IsDisposed) _resultForm = new ResultForm();
-            _resultForm.Show();
-            _resultForm.Focus();
-
-            var lastTool = whiteboardTools.Where(t => t.Type == ToolType.Operation).OrderByDescending(t => t.Position.X).FirstOrDefault();
-            if (lastTool != null && lastTool.LastResult.HasValue) _resultForm.SetValueImmediate(lastTool.LastResult.Value);
         }
 
         private void DeleteTool_Click(object sender, EventArgs e)
         {
-            var mousePos = whiteboardPanel.PointToClient(MousePosition);
-            var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
-            var tool = GetToolAtPosition(realPos);
-
-            if (tool != null)
+            if (selectedTool != null)
             {
-                if (selectedTool == tool) SelectTool(null);
-                if (tool.Type == ToolType.Chart && graphWindows.ContainsKey(tool.Id))
+                if (blockContainers.ContainsKey(selectedTool.Id))
                 {
-                    if (!graphWindows[tool.Id].IsDisposed) graphWindows[tool.Id].Close();
-                    graphWindows.Remove(tool.Id);
+                    propertiesContent.Controls.Remove(blockContainers[selectedTool.Id]);
+                    blockContainers.Remove(selectedTool.Id);
                 }
-                connectionManager.RemoveConnectionsForTool(tool.Id);
-                whiteboardTools.Remove(tool);
-                needsRedraw = true;
+
+                if (selectedTool.Type == ToolType.Chart && graphs.ContainsKey(selectedTool.Id))
+                {
+                    if (!graphs[selectedTool.Id].IsDisposed) graphs[selectedTool.Id].Close();
+                    graphs.Remove(selectedTool.Id);
+                }
+
+                tools.Remove(selectedTool);
+                selectedTool = null;
+                UpdateAllBlockIds();
+                workArea.Invalidate();
             }
         }
 
         private void DeleteConnections_Click(object sender, EventArgs e)
         {
-            var mousePos = whiteboardPanel.PointToClient(MousePosition);
-            var realPos = whiteboardPanel.GetRealMouseLocation(mousePos);
-            var tool = GetToolAtPosition(realPos);
-            if (tool != null)
+            if (selectedTool != null)
             {
-                connectionManager.RemoveIncomingConnections(tool.Id);
-                needsRedraw = true;
+                connections.RemoveAll(c => c.TargetToolId == selectedTool.Id);
+                workArea.Invalidate();
             }
         }
 
-        private void ClearAll_Click(object sender, EventArgs e)
+        private void RunSimulation(object sender, EventArgs e)
         {
-            foreach (var graph in graphWindows.Values) if (!graph.IsDisposed) graph.Close();
-            graphWindows.Clear();
-            whiteboardTools.Clear();
+            RunBatchSimulation();
+        }
+
+        private void ClearAll(object sender, EventArgs e)
+        {
+            foreach (var graph in graphs.Values)
+                if (!graph.IsDisposed) graph.Close();
+            graphs.Clear();
+            tools.Clear();
             connections.Clear();
-            SelectTool(null);
-            resultLabel.Text = "0.00";
-            needsRedraw = true;
+            selectedTool = null;
+            propertiesContent.Controls.Clear();
+            blockContainers.Clear();
+            workArea.Invalidate();
         }
 
-        protected override void OnResize(EventArgs e)
+        // ПАКЕТНЫЙ РАСЧЁТ
+        private void RunBatchSimulation()
         {
-            base.OnResize(e);
-            if (whiteboardPanel != null)
-            {
-                whiteboardPanel.Size = new Size(this.ClientSize.Width - 300, this.ClientSize.Height - 20);
-                needsRedraw = true;
-            }
-        }
+            if (isSimulating) return;
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
+            var charts = tools.Where(t => t.Type == ToolType.Chart).ToList();
+            var generators = tools.Where(t => t.Type == ToolType.Generator).ToList();
+
+            if (charts.Count == 0)
             {
-                renderTimer?.Stop();
-                renderTimer?.Dispose();
-                foreach (var graph in graphWindows.Values) if (!graph.IsDisposed) graph.Close();
-                _resultForm?.Close();
-                _resultForm?.Dispose();
+                MessageBox.Show("Нет блоков 'График' на схеме!", "Информация",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
-            base.Dispose(disposing);
+
+            isSimulating = true;
+            Cursor = Cursors.WaitCursor;
+
+            try
+            {
+                double sampleRate = double.Parse(samplingRateInput.Text, System.Globalization.CultureInfo.InvariantCulture);
+                double duration = double.Parse(durationInput.Text, System.Globalization.CultureInfo.InvariantCulture);
+                double dt = 1.0 / sampleRate;
+                int steps = (int)(duration / dt);
+
+                if (steps <= 0) steps = 100;
+
+                foreach (var tool in tools)
+                {
+                    tool.ClearHistory();
+                    tool.LastResult = null;
+                }
+
+                var chartData = new Dictionary<Guid, List<double>>();
+                var chartTimes = new Dictionary<Guid, List<double>>();
+
+                foreach (var chart in charts)
+                {
+                    chartData[chart.Id] = new List<double>(steps + 1);
+                    chartTimes[chart.Id] = new List<double>(steps + 1);
+
+                    if (!graphs.ContainsKey(chart.Id) || graphs[chart.Id].IsDisposed)
+                    {
+                        var graph = new GraphForm(chart.Name);
+                        graph.Show();
+                        graphs[chart.Id] = graph;
+                    }
+                }
+
+                for (int step = 0; step <= steps; step++)
+                {
+                    double t = step * dt;
+
+                    foreach (var gen in generators)
+                    {
+                        double value = gen.Amplitude * Math.Sin(2 * Math.PI * gen.Frequency * t + gen.PhaseRad);
+                        gen.LastResult = value;
+                    }
+
+                    foreach (var amp in tools.Where(tool => tool.Type == ToolType.Amplifier))
+                    {
+                        var conn = connections.FirstOrDefault(c => c.TargetToolId == amp.Id);
+                        if (conn != null)
+                        {
+                            var source = tools.FirstOrDefault(s => s.Id == conn.SourceToolId);
+                            if (source?.LastResult != null)
+                                amp.LastResult = source.LastResult.Value * amp.Gain;
+                        }
+                    }
+
+                    foreach (var op in tools.Where(tool => tool.Type == ToolType.Operation))
+                    {
+                        var connA = connections.FirstOrDefault(c => c.TargetToolId == op.Id && c.TargetInput == InputType.A);
+                        var connB = connections.FirstOrDefault(c => c.TargetToolId == op.Id && c.TargetInput == InputType.B);
+
+                        double valA = 0, valB = 0;
+                        bool hasA = false, hasB = false;
+
+                        if (connA != null)
+                        {
+                            var srcA = tools.FirstOrDefault(s => s.Id == connA.SourceToolId);
+                            if (srcA?.LastResult != null) { valA = srcA.LastResult.Value; hasA = true; }
+                        }
+                        if (connB != null)
+                        {
+                            var srcB = tools.FirstOrDefault(s => s.Id == connB.SourceToolId);
+                            if (srcB?.LastResult != null) { valB = srcB.LastResult.Value; hasB = true; }
+                        }
+
+                        if (hasA && hasB)
+                        {
+                            switch (op.Operation)
+                            {
+                                case MathOperation.Addition: op.LastResult = valA + valB; break;
+                                case MathOperation.Subtraction: op.LastResult = valA - valB; break;
+                                case MathOperation.Multiplication: op.LastResult = valA * valB; break;
+                                case MathOperation.Division: op.LastResult = valB != 0 ? valA / valB : 0; break;
+                            }
+                        }
+                    }
+
+                    foreach (var chart in charts)
+                    {
+                        var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
+                        if (conn != null)
+                        {
+                            var source = tools.FirstOrDefault(s => s.Id == conn.SourceToolId);
+                            if (source?.LastResult != null)
+                            {
+                                chartData[chart.Id].Add(source.LastResult.Value);
+                                chartTimes[chart.Id].Add(t);
+                            }
+                        }
+                    }
+                }
+
+                foreach (var chart in charts)
+                {
+                    if (chartData.ContainsKey(chart.Id) && chartData[chart.Id].Count > 0)
+                    {
+                        chart.ValueHistory = new List<double>(chartData[chart.Id]);
+
+                        if (graphs.ContainsKey(chart.Id) && !graphs[chart.Id].IsDisposed)
+                        {
+                            graphs[chart.Id].SetDataDirectly(chartTimes[chart.Id], chartData[chart.Id]);
+                        }
+                    }
+                }
+
+                workArea.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при расчёте: {ex.Message}", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                isSimulating = false;
+                Cursor = Cursors.Default;
+            }
         }
     }
 }

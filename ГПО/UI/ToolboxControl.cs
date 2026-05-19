@@ -8,8 +8,7 @@ namespace MathApp.UI
 {
     public class ToolboxControl : UserControl
     {
-        private ComboBox _comboBox;
-        private Label _titleLabel;
+        private ListBox _listBox;
         public event MouseEventHandler ItemMouseDown;
 
         public ToolboxControl()
@@ -19,67 +18,81 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 60);
+            this.Size = new Size(260, 320);
             this.BackColor = Color.Transparent;
 
-            _titleLabel = new Label
+            var titleLabel = new Label
             {
                 Text = "📦 ИНСТРУМЕНТЫ",
-                Location = new Point(0, 5),
-                Size = new Size(260, 25),
+                Location = new Point(0, 0),
+                Size = new Size(260, 35),
                 ForeColor = Color.FromArgb(0, 200, 255),
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft,
-                BackColor = Color.Transparent
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _comboBox = new ComboBox
+            _listBox = new ListBox
             {
-                Location = new Point(0, 35),
-                Size = new Size(260, 30),
-                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(0, 40),
+                Size = new Size(260, 270),
                 BackColor = Color.FromArgb(45, 45, 50),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
+                BorderStyle = BorderStyle.None,
+                ItemHeight = 30,
+                DrawMode = DrawMode.OwnerDrawFixed
             };
 
-            _comboBox.Items.AddRange(new object[]
+            _listBox.DrawItem += ListBox_DrawItem;
+            _listBox.MouseDown += (s, e) => ItemMouseDown?.Invoke(s, e);
+
+            _listBox.Items.AddRange(new object[]
             {
                 "➕ Сложение",
                 "➖ Вычитание",
                 "✖️ Умножение",
                 "➗ Деление",
-                "∫ Интегратор (трапеции)",
-                "d/dt Дифференциатор",
-                "f(x) Интерполятор",
-                "📁 Файловый ввод/вывод",
-                "[ ] График",
-                "~ Синусоида"
+                "📊 График",
+                "📈 Синусоида",
+                "⚡ Генератор",
+                "▲ Усилитель",
+                "📡 Антенна",
+                "〰️ Канал",
+                "◻️ Объект",
+                "🔢 АЦП"
             });
-            _comboBox.SelectedIndex = 0;
 
-            _comboBox.SelectedIndexChanged += (s, e) =>
+            this.Controls.AddRange(new Control[] { titleLabel, _listBox });
+        }
+
+        public string GetSelectedItem() => _listBox.SelectedItem?.ToString();
+
+        private void ListBox_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            if (e.Index < 0) return;
+            e.DrawBackground();
+
+            var rect = e.Bounds;
+            rect.Inflate(-2, -2);
+
+            using (var path = GraphicsExtensions.CreateRoundedRectangle(rect, 5))
             {
-                if (_comboBox.SelectedIndex >= 0 && ItemMouseDown != null)
+                if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
                 {
-                    ItemMouseDown(_comboBox, new MouseEventArgs(MouseButtons.Left, 1, 0, 0, 0));
+                    using (var brush = new SolidBrush(Color.FromArgb(0, 120, 212)))
+                        e.Graphics.FillPath(brush, path);
                 }
-            };
+                else if ((e.State & DrawItemState.HotLight) == DrawItemState.HotLight)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(60, 60, 65)))
+                        e.Graphics.FillPath(brush, path);
+                }
 
-            this.Controls.AddRange(new Control[] { _titleLabel, _comboBox });
-        }
-
-        public string GetSelectedItem()
-        {
-            return _comboBox.SelectedItem?.ToString();
-        }
-
-        public void SetSelectedIndex(int index)
-        {
-            if (index >= 0 && index < _comboBox.Items.Count)
-                _comboBox.SelectedIndex = index;
+                var text = _listBox.Items[e.Index].ToString();
+                using (var sf = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center })
+                    e.Graphics.DrawString(text, e.Font, Brushes.White, rect, sf);
+            }
+            e.DrawFocusRectangle();
         }
     }
 }
