@@ -12,7 +12,6 @@ using MathApp.Helpers;
 
 namespace MathApp
 {
-
     public partial class Form1 : Form
     {
         private DoubleBufferedPanel whiteboardPanel;
@@ -27,6 +26,7 @@ namespace MathApp
         private CalculationEngine calculator = new CalculationEngine();
         private ConnectionManager connectionManager;
         private BlockRenderer blockRenderer = new BlockRenderer();
+        private BatchProcessor _batchProcessor;
 
         private MathTool selectedTool = null;
         private MathTool draggedTool = null;
@@ -49,13 +49,6 @@ namespace MathApp
 
         private Dictionary<Guid, GraphForm> graphWindows = new Dictionary<Guid, GraphForm>();
         private ResultForm _resultForm;
-        /// <summary>
-        /// Публичный метод для обновления графиков (вызывается из PropertyPanel)
-        /// </summary>
-        public void RefreshGraphs()
-        {
-            UpdateGraphsBatch();
-        }
 
         public Form1()
         {
@@ -74,6 +67,7 @@ namespace MathApp
 
             connectionManager = new ConnectionManager(connections);
             _resultForm = new ResultForm();
+            _batchProcessor = new BatchProcessor(calculator, whiteboardTools, connections);
 
             renderTimer = new Timer();
             renderTimer.Interval = 16;
@@ -104,7 +98,6 @@ namespace MathApp
                 AutoScroll = true
             };
 
-            // Панель инструментов - компактная
             toolboxControl = new ToolboxControl
             {
                 Location = new Point(0, 10),
@@ -112,7 +105,6 @@ namespace MathApp
             };
             toolboxControl.ItemMouseDown += ToolboxControl_ItemMouseDown;
 
-            // Панель свойств
             propertyPanel = new PropertyPanel
             {
                 Location = new Point(0, 80),
@@ -120,7 +112,6 @@ namespace MathApp
             };
             propertyPanel.ApplyClicked += PropertyPanel_ApplyClicked;
 
-            // Информационная панель
             var infoPanel = new Panel
             {
                 Location = new Point(0, 400),
@@ -150,7 +141,6 @@ namespace MathApp
 
             infoPanel.Controls.AddRange(new Control[] { infoTitle, infoLabel });
 
-            // Панель результата
             var resultPanel = new Panel
             {
                 Location = new Point(0, 530),
@@ -212,7 +202,6 @@ namespace MathApp
             });
             sidePanel.Controls.Add(contentPanel);
 
-            // Рабочая область
             whiteboardPanel = new DoubleBufferedPanel
             {
                 Dock = DockStyle.Fill,
@@ -261,7 +250,6 @@ namespace MathApp
                 tool.Size = new Size(160, 80);
                 tool.Name = $"График {whiteboardTools.Count + 1}";
 
-                // Создаём окно графика сразу
                 var graphForm = new GraphForm(tool.Name);
                 graphForm.Show();
                 graphWindows[tool.Id] = graphForm;
@@ -317,6 +305,20 @@ namespace MathApp
                 tool.IsReading = true;
                 tool.FileData = new List<double>();
             }
+            else if (type.Contains("Ступенька"))
+            {
+                tool.Type = ToolType.StepGenerator;
+                tool.Operation = MathOperation.StepGenerator;
+                tool.Size = new Size(160, 100);
+                tool.Name = "Ступенька";
+                tool.StepAmplitude = 0.1;           // Амплитуда 0.1
+                tool.StepDelay = 0.0;               // Без задержки
+                tool.StepRiseTime = 0.0;            // Мгновенный фронт
+                tool.StepDuration = 5e-7;           // 500 наносекунд = 0.0000005
+                tool.StepOffset = 0.0;              // Смещение 0
+                tool.StepPoints = 160;              // 160 точек
+                tool.StepTimeEnd = 1e-6;            // 1 микросекунда = 0.000001
+            }
             else
             {
                 tool.Type = ToolType.Operation;
@@ -359,6 +361,8 @@ namespace MathApp
                     blockRenderer.DrawChartTool(g, tool, selectedTool);
                 else if (tool.Type == ToolType.SineGenerator)
                     blockRenderer.DrawSineTool(g, tool, selectedTool, 0);
+                else if (tool.Type == ToolType.StepGenerator)
+                    blockRenderer.DrawMathTool(g, tool, selectedTool);
                 else
                     blockRenderer.DrawMathTool(g, tool, selectedTool);
 
@@ -505,28 +509,30 @@ namespace MathApp
             needsRedraw = true;
         }
 
-        private void BtnCalculate_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Вычисляет значение ступенчатого генератора в заданный момент времени
+        /// </summary>
+        private double CalculateStepValue(MathTool tool, double time)
         {
-            try
+            double offset = tool.StepOffset;
+            double amplitude = tool.StepAmplitude;
+            double delay = tool.StepDelay;
+            double riseTime = tool.StepRiseTime;
+            double duration = tool.StepDuration;
+
+            if (time < delay)
+                return offset;
+
+            if (riseTime > 0 && time < delay + riseTime)
             {
-                var results = calculator.CalculateAll(whiteboardTools, connections);
-
-                var lastTool = whiteboardTools.Where(t => t.Type == ToolType.Operation).OrderByDescending(t => t.Position.X).FirstOrDefault();
-
-                if (lastTool != null && lastTool.LastResult.HasValue)
-                {
-                    double value = lastTool.LastResult.Value;
-                    resultLabel.Text = value.ToString("F2");
-                    if (_resultForm != null && _resultForm.Visible) _resultForm.SetValueImmediate(value);
-                }
-
-                UpdateGraphsBatch();
-                needsRedraw = true;
+                double ratio = (time - delay) / riseTime;
+                return offset + amplitude * ratio;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+
+            if (duration <= 0 || time < delay + riseTime + duration)
+                return offset + amplitude;
+
+            return offset;
         }
 
         private void UpdateGraphsBatch()
@@ -551,38 +557,59 @@ namespace MathApp
                     var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
                     if (source != null)
                     {
-                        // Если источник - файловый блок в режиме чтения
-                        if (source.Type == ToolType.Operation && source.Operation == MathOperation.FileIO && source.IsReading)
+                        // Для ступенчатого генератора
+                        if (source.Type == ToolType.StepGenerator)
                         {
-                            // Создаём временные ряды для графика
+                            var timeValues = new List<double>();
+                            var dataValues = new List<double>();
+
+                            int points = source.StepPoints;
+                            double endTime = source.StepTimeEnd;
+                            double step = endTime / points;
+
+                            for (int i = 0; i <= points; i++)
+                            {
+                                double t = i * step;
+                                timeValues.Add(t);
+                                dataValues.Add(CalculateStepValue(source, t));
+                            }
+
+                            graphForm.SetDataDirectly(timeValues, dataValues);
+                        }
+                        else if (source.Type == ToolType.Operation && source.Operation == MathOperation.FileIO && source.IsReading)
+                        {
                             var timeValues = new List<double>();
                             var dataValues = new List<double>();
 
                             for (int i = 0; i < source.FileData.Count; i++)
                             {
-                                timeValues.Add(i); // Индекс как время
+                                timeValues.Add(i);
                                 dataValues.Add(source.FileData[i]);
                             }
 
                             graphForm.SetDataDirectly(timeValues, dataValues);
                         }
-                        // Для синусоиды и других блоков
+                        else if (source.Type == ToolType.SineGenerator)
+                        {
+                            double start = 0;
+                            double period = 2 * Math.PI / source.Frequency;
+                            double end = 5 * period;
+                            int points = 5000;
+
+                            Func<double, double> calcFunc = (x) =>
+                            {
+                                return source.Amplitude * Math.Sin(2 * Math.PI * source.Frequency * x + source.Phase * Math.PI / 180.0);
+                            };
+
+                            graphForm.SetCalculationFunction(calcFunc, start, end, points);
+                        }
                         else
                         {
                             double start = 0, end = 10;
                             int points = 5000;
 
-                            if (source.Type == ToolType.SineGenerator)
-                            {
-                                double period = 2 * Math.PI / source.Frequency;
-                                end = 5 * period;
-                                points = 5000;
-                            }
-
                             Func<double, double> calcFunc = (x) =>
                             {
-                                if (source.Type == ToolType.SineGenerator)
-                                    return source.Amplitude * Math.Sin(2 * Math.PI * source.Frequency * x + source.Phase * Math.PI / 180.0);
                                 return source.LastResult ?? 0;
                             };
 
@@ -595,6 +622,98 @@ namespace MathApp
             }
         }
 
+        private void UpdateGraphsFromBatch()
+        {
+            var results = _batchProcessor.GetResults();
+
+            foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
+            {
+                var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
+                if (conn != null && graphWindows.ContainsKey(chart.Id) && !graphWindows[chart.Id].IsDisposed)
+                {
+                    var timeValues = new List<double>();
+                    for (int i = 0; i < results.Count; i++)
+                        timeValues.Add(i * 0.01);
+
+                    graphWindows[chart.Id].SetDataDirectly(timeValues, results);
+                }
+            }
+        }
+
+        private void BtnCalculate_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Проверяем наличие файловых блоков или генератора ступеньки
+                var fileSources = whiteboardTools.Where(t =>
+                    t.Type == ToolType.Operation && t.Operation == MathOperation.FileIO && t.IsReading && t.FileData.Count > 0)
+                    .ToList();
+
+                var stepGenerator = whiteboardTools.FirstOrDefault(t =>
+                    t.Type == ToolType.StepGenerator);
+
+                if (fileSources.Count > 0 || stepGenerator != null)
+                {
+                    // Пакетная обработка
+                    _batchProcessor.ProcessBatch();
+                    var results = _batchProcessor.GetResults();
+
+                    // Обновляем графики
+                    foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
+                    {
+                        var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
+                        if (conn != null && graphWindows.ContainsKey(chart.Id) && !graphWindows[chart.Id].IsDisposed)
+                        {
+                            var timeValues = new List<double>();
+                            double timeStep = 0.01;
+
+                            if (stepGenerator != null)
+                            {
+                                timeStep = stepGenerator.StepTimeEnd / stepGenerator.StepPoints;
+                            }
+
+                            for (int i = 0; i < results.Count; i++)
+                                timeValues.Add(i * timeStep);
+
+                            graphWindows[chart.Id].SetDataDirectly(timeValues, results);
+                        }
+                    }
+
+                    if (results.Count > 0)
+                    {
+                        resultLabel.Text = $"Обработано {results.Count} значений. Последнее: {results.Last():E4}";
+                        if (_resultForm != null && _resultForm.Visible)
+                            _resultForm.SetValueImmediate(results.Last());
+                    }
+                }
+                else
+                {
+                    // Обычный разовый расчёт
+                    var results = calculator.CalculateAll(whiteboardTools, connections);
+
+                    var lastTool = whiteboardTools.Where(t => t.Type == ToolType.Operation)
+                                                  .OrderByDescending(t => t.Position.X)
+                                                  .FirstOrDefault();
+
+                    if (lastTool != null && lastTool.LastResult.HasValue)
+                    {
+                        resultLabel.Text = lastTool.LastResult.Value.ToString("F2");
+                        if (_resultForm != null && _resultForm.Visible)
+                            _resultForm.SetValueImmediate(lastTool.LastResult.Value);
+                    }
+
+                    UpdateGraphsBatch();
+                }
+
+                needsRedraw = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void ShowResultWindow()
         {
             if (_resultForm == null || _resultForm.IsDisposed) _resultForm = new ResultForm();
@@ -603,6 +722,11 @@ namespace MathApp
 
             var lastTool = whiteboardTools.Where(t => t.Type == ToolType.Operation).OrderByDescending(t => t.Position.X).FirstOrDefault();
             if (lastTool != null && lastTool.LastResult.HasValue) _resultForm.SetValueImmediate(lastTool.LastResult.Value);
+        }
+
+        public void RefreshGraphs()
+        {
+            UpdateGraphsBatch();
         }
 
         private void DeleteTool_Click(object sender, EventArgs e)

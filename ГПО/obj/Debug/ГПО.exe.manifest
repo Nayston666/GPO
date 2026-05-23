@@ -42,14 +42,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="ГПО.exe" size="69104">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="ГПО.exe" size="87024">
       <assemblyIdentity name="ГПО" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>Vx+iNCqwFMehWVuUWExrxjgS4SGYrdcBykpFwpqFa/0=</dsig:DigestValue>
+        <dsig:DigestValue>Qath2g4jD+/URBAIqMuV03Jp7H8nL09B98xXMvTIS64=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

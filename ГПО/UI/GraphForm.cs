@@ -4,14 +4,11 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
+using System.Globalization;
 using MathApp.Helpers;
 
 namespace MathApp.UI
 {
-    /// <summary>
-    /// Устанавливает данные напрямую (для файлового блока)
-    /// </summary>
-    
     public class GraphForm : Form
     {
         private List<double> _values = new List<double>();
@@ -39,13 +36,8 @@ namespace MathApp.UI
         private Func<double, double> _calcFunction;
         private double _calcStart = 0, _calcEnd = 10;
         private int _calcPoints = 200;
-        public void SetDataDirectly(List<double> timeValues, List<double> values)
-        {
-            _timeValues = new List<double>(timeValues);
-            _values = new List<double>(values);
-            if (_autoScale) AutoScale();
-            _needsRedraw = true;
-        }
+
+        private CultureInfo _culture = CultureInfo.InvariantCulture;
 
         public GraphForm(string source)
         {
@@ -91,38 +83,41 @@ namespace MathApp.UI
             };
 
             var lblPoints = new Label { Text = "Точек:", Location = new Point(360, 15), Size = new Size(45, 20), ForeColor = Color.White };
-            _numPoints = new NumericUpDown
-            {
-                Location = new Point(405, 12),
-                Size = new Size(100, 25),
-                Minimum = 100,        // Минимум 100 точек
-                Maximum = 10000,      // Максимум 10000 точек
-                Value = 1000,         // По умолчанию 1000
-                Increment = 500,      // Шаг 500
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.White
-            };
+            _numPoints = new NumericUpDown { Location = new Point(405, 12), Size = new Size(70, 25), Minimum = 50, Maximum = 10000, Value = 1000, Increment = 500, BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White };
 
-            _btnCalculate = new Button { Text = "⟳ Пересчитать", Location = new Point(515, 12), Size = new Size(100, 25), BackColor = Color.FromArgb(0, 120, 215), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnCalculate = new Button { Text = "⟳ Пересчитать", Location = new Point(485, 12), Size = new Size(100, 25), BackColor = Color.FromArgb(0, 120, 215), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnCalculate.Click += (s, e) => Recalculate();
 
-            _btnResetView = new Button { Text = "Сброс масштаба", Location = new Point(625, 12), Size = new Size(100, 25), BackColor = Color.FromArgb(100, 100, 100), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnResetView = new Button { Text = "Сброс масштаба", Location = new Point(595, 12), Size = new Size(100, 25), BackColor = Color.FromArgb(100, 100, 100), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnResetView.Click += (s, e) => ResetView();
 
-            _btnExport = new Button { Text = "💾 Экспорт", Location = new Point(735, 12), Size = new Size(80, 25), BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnExport = new Button { Text = "💾 Экспорт", Location = new Point(705, 12), Size = new Size(80, 25), BackColor = Color.FromArgb(60, 60, 65), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnExport.Click += (s, e) => ExportData();
 
-            _lblCoordinates = new Label { Text = "x: --  y: --", Location = new Point(825, 15), Size = new Size(150, 20), ForeColor = Color.LightGray, Font = new Font("Segoe UI", 8) };
+            _lblCoordinates = new Label { Text = "x: --  y: --", Location = new Point(795, 15), Size = new Size(150, 20), ForeColor = Color.LightGray, Font = new Font("Segoe UI", 8) };
 
             topPanel.Controls.AddRange(new Control[] { _chkAutoScale, _chkShowGrid, lblColor, _cmbLineColor, lblPoints, _numPoints, _btnCalculate, _btnResetView, _btnExport, _lblCoordinates });
             Controls.Add(topPanel);
 
             MouseWheel += (s, e) => { if (_values.Count > 0) Zoom(e.Delta > 0 ? 0.9 : 1.1, PointToClient(Cursor.Position)); };
             MouseDown += (s, e) => { if (e.Button == MouseButtons.Middle || e.Button == MouseButtons.Left) { _isPanning = true; _dragStart = e.Location; } };
-            MouseMove += (s, e) => { double x = ScreenToGraphX(e.X), y = ScreenToGraphY(e.Y); _lblCoordinates.Text = $"x: {x:F3}  y: {y:F3}"; if (_isPanning) Pan(e.Location); };
+            MouseMove += (s, e) => { double x = ScreenToGraphX(e.X), y = ScreenToGraphY(e.Y); _lblCoordinates.Text = $"x: {FormatNumber(x)}  y: {FormatNumber(y)}"; if (_isPanning) Pan(e.Location); };
             MouseUp += (s, e) => _isPanning = false;
         }
 
+        /// <summary>
+        /// Форматирует число для отображения (экспоненциальная форма для маленьких значений)
+        /// </summary>
+        private string FormatNumber(double value)
+        {
+            if (Math.Abs(value) < 0.0001 && value != 0)
+                return value.ToString("E3", _culture);
+            return value.ToString("F4", _culture);
+        }
+
+        /// <summary>
+        /// Устанавливает функцию для расчета
+        /// </summary>
         public void SetCalculationFunction(Func<double, double> func, double start, double end, int points)
         {
             _calcFunction = func;
@@ -132,7 +127,24 @@ namespace MathApp.UI
             Recalculate();
         }
 
-       
+        /// <summary>
+        /// Устанавливает данные напрямую (для файлового блока)
+        /// </summary>
+        public void SetDataDirectly(List<double> timeValues, List<double> values)
+        {
+            if (timeValues == null || values == null || timeValues.Count == 0 || values.Count == 0)
+                return;
+
+            _timeValues = new List<double>(timeValues);
+            _values = new List<double>(values);
+
+            if (_autoScale)
+                AutoScale();
+
+            _needsRedraw = true;
+            this.Invalidate();
+        }
+
         private void Recalculate()
         {
             if (_calcFunction == null) return;
@@ -169,7 +181,14 @@ namespace MathApp.UI
             _viewYMax = _yMax;
         }
 
-        private void ResetView() { _viewXMin = _xMin; _viewXMax = _xMax; _viewYMin = _yMin; _viewYMax = _yMax; _needsRedraw = true; }
+        private void ResetView()
+        {
+            _viewXMin = _xMin;
+            _viewXMax = _xMax;
+            _viewYMin = _yMin;
+            _viewYMax = _yMax;
+            _needsRedraw = true;
+        }
 
         private void Zoom(double factor, Point mouse)
         {
@@ -197,8 +216,15 @@ namespace MathApp.UI
             _needsRedraw = true;
         }
 
-        private double ScreenToGraphX(int screenX) => _viewXMin + (screenX - 70) / (double)(Width - 120) * (_viewXMax - _viewXMin);
-        private double ScreenToGraphY(int screenY) => _viewYMax - (screenY - 60) / (double)(Height - 130) * (_viewYMax - _viewYMin);
+        private double ScreenToGraphX(int screenX)
+        {
+            return _viewXMin + (screenX - 70) / (double)(Width - 120) * (_viewXMax - _viewXMin);
+        }
+
+        private double ScreenToGraphY(int screenY)
+        {
+            return _viewYMax - (screenY - 60) / (double)(Height - 130) * (_viewYMax - _viewYMin);
+        }
 
         private void CreateBackBuffer()
         {
@@ -215,12 +241,18 @@ namespace MathApp.UI
             if (_backGraphics == null) return;
             _backGraphics.Clear(BackColor);
             int left = 70, right = Width - 50, top = 60, bottom = Height - 70;
+
             using (var pen = new Pen(Color.FromArgb(80, 80, 85), 1))
                 _backGraphics.DrawRectangle(pen, left, top, right - left, bottom - top);
+
             if (_chkShowGrid.Checked) DrawGrid(left, right, top, bottom);
             DrawAxes(left, right, top, bottom);
-            if (_values.Count > 1) DrawGraph(left, right, top, bottom);
-            else _backGraphics.DrawString("Нет данных", new Font("Segoe UI", 14), Brushes.Gray, left, top + (bottom - top) / 2);
+
+            if (_values.Count > 1)
+                DrawGraph(left, right, top, bottom);
+            else
+                _backGraphics.DrawString("Нет данных", new Font("Segoe UI", 14), Brushes.Gray, left, top + (bottom - top) / 2);
+
             if (_values.Count > 0) DrawStats();
         }
 
@@ -229,31 +261,35 @@ namespace MathApp.UI
             using (var pen = new Pen(Color.FromArgb(60, 60, 65), 1))
             {
                 // Автоматический шаг сетки в зависимости от масштаба
-                double xStep = Math.Pow(10, Math.Floor(Math.Log10(_viewXMax - _viewXMin))) / 2;
-                if (xStep < 0.1) xStep = 0.1;
+                double xRange = _viewXMax - _viewXMin;
+                double xStep = Math.Pow(10, Math.Floor(Math.Log10(xRange))) / 2;
+                if (xStep < 0.001) xStep = 0.001;
 
                 for (double x = Math.Ceiling(_viewXMin / xStep) * xStep; x <= _viewXMax; x += xStep)
                 {
                     if (x < _viewXMin) continue;
-                    int sx = left + (int)((x - _viewXMin) / (_viewXMax - _viewXMin) * (right - left));
+                    int sx = left + (int)((x - _viewXMin) / xRange * (right - left));
                     if (sx >= left && sx <= right)
                     {
                         _backGraphics.DrawLine(pen, sx, top, sx, bottom);
-                        _backGraphics.DrawString(x.ToString("F2"), new Font("Segoe UI", 7), Brushes.Gray, sx - 15, bottom + 5);
+                        string xText = FormatNumber(x);
+                        _backGraphics.DrawString(xText, new Font("Segoe UI", 7), Brushes.Gray, sx - 15, bottom + 5);
                     }
                 }
 
-                double yStep = Math.Pow(10, Math.Floor(Math.Log10(_viewYMax - _viewYMin))) / 2;
-                if (yStep < 0.1) yStep = 0.1;
+                double yRange = _viewYMax - _viewYMin;
+                double yStep = Math.Pow(10, Math.Floor(Math.Log10(yRange))) / 2;
+                if (yStep < 0.001) yStep = 0.001;
 
                 for (double y = Math.Ceiling(_viewYMin / yStep) * yStep; y <= _viewYMax; y += yStep)
                 {
                     if (y < _viewYMin) continue;
-                    int sy = bottom - (int)((y - _viewYMin) / (_viewYMax - _viewYMin) * (bottom - top));
+                    int sy = bottom - (int)((y - _viewYMin) / yRange * (bottom - top));
                     if (sy >= top && sy <= bottom)
                     {
                         _backGraphics.DrawLine(pen, left, sy, right, sy);
-                        _backGraphics.DrawString(y.ToString("F2"), new Font("Segoe UI", 7), Brushes.Gray, left - 35, sy - 7);
+                        string yText = FormatNumber(y);
+                        _backGraphics.DrawString(yText, new Font("Segoe UI", 7), Brushes.Gray, left - 35, sy - 7);
                     }
                 }
             }
@@ -263,11 +299,14 @@ namespace MathApp.UI
         {
             using (var pen = new Pen(Color.White, 2))
             {
+                // Ось X (y=0)
                 if (_viewYMin <= 0 && _viewYMax >= 0)
                 {
                     int yZero = bottom - (int)((0 - _viewYMin) / (_viewYMax - _viewYMin) * (bottom - top));
                     _backGraphics.DrawLine(pen, left, yZero, right, yZero);
                 }
+
+                // Ось Y (x=0)
                 if (_viewXMin <= 0 && _viewXMax >= 0)
                 {
                     int xZero = left + (int)((0 - _viewXMin) / (_viewXMax - _viewXMin) * (right - left));
@@ -279,16 +318,21 @@ namespace MathApp.UI
         private void DrawGraph(int left, int right, int top, int bottom)
         {
             var points = new List<PointF>();
-            int step = Math.Max(1, _values.Count / 2000); // Оптимизация: не рисуем каждую точку при >2000
+
+            // Оптимизация: при большом количестве точек рисуем не все
+            int step = Math.Max(1, _values.Count / 3000);
 
             for (int i = 0; i < _values.Count; i += step)
             {
                 double x = _timeValues[i], y = _values[i];
-                if (x < _viewXMin || x > _viewXMax || y < _viewYMin || y > _viewYMax) continue;
+                if (x < _viewXMin || x > _viewXMax || y < _viewYMin || y > _viewYMax)
+                    continue;
+
                 float sx = left + (float)((x - _viewXMin) / (_viewXMax - _viewXMin) * (right - left));
                 float sy = bottom - (float)((y - _viewYMin) / (_viewYMax - _viewYMin) * (bottom - top));
                 points.Add(new PointF(sx, sy));
             }
+
             if (points.Count < 2) return;
 
             using (var pen = new Pen(_lineColor, 2))
@@ -307,26 +351,56 @@ namespace MathApp.UI
 
         private void DrawStats()
         {
-            string stats = $"Значений: {_values.Count} | Мин: {_values.Min():F3} | Макс: {_values.Max():F3} | Среднее: {_values.Average():F3}";
+            string stats = $"Значений: {_values.Count} | " +
+                          $"Мин: {FormatNumber(_values.Min())} | " +
+                          $"Макс: {FormatNumber(_values.Max())} | " +
+                          $"Среднее: {FormatNumber(_values.Average())}";
             _backGraphics.DrawString(stats, new Font("Segoe UI", 9), Brushes.LightGreen, 70, Height - 25);
         }
 
         private void ExportData()
         {
             if (_values.Count == 0) return;
-            var dlg = new SaveFileDialog { Filter = "CSV файлы (*.csv)|*.csv", FileName = $"graph_{_sourceName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
+
+            var dlg = new SaveFileDialog
+            {
+                Filter = "CSV файлы (*.csv)|*.csv",
+                FileName = $"graph_{_sourceName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+
             if (dlg.ShowDialog() == DialogResult.OK)
+            {
                 using (var w = new System.IO.StreamWriter(dlg.FileName))
                 {
                     w.WriteLine("Time,Value");
                     for (int i = 0; i < _values.Count; i++)
-                        w.WriteLine($"{_timeValues[i]:F6},{_values[i]:F6}");
+                        w.WriteLine($"{_timeValues[i].ToString("E10", _culture)},{_values[i].ToString("E10", _culture)}");
                     MessageBox.Show($"Сохранено {_values.Count} точек!", "Успех");
                 }
+            }
         }
 
-        protected override void OnPaint(PaintEventArgs e) { if (_backBuffer != null) e.Graphics.DrawImage(_backBuffer, 0, 0); }
-        protected override void OnResize(EventArgs e) { base.OnResize(e); CreateBackBuffer(); _needsRedraw = true; }
-        protected override void Dispose(bool disposing) { if (disposing) { _backGraphics?.Dispose(); _backBuffer?.Dispose(); } base.Dispose(disposing); }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            if (_backBuffer != null)
+                e.Graphics.DrawImage(_backBuffer, 0, 0);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            CreateBackBuffer();
+            _needsRedraw = true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _backGraphics?.Dispose();
+                _backBuffer?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 }

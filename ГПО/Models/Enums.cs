@@ -11,7 +11,8 @@ namespace MathApp.Models
         Integrator,
         Differentiator,
         Interpolator,
-        FileIO
+        FileIO,
+        StepGenerator  // Новый тип: генератор ступенчатого сигнала
     }
 
     public enum ToolType
@@ -19,7 +20,8 @@ namespace MathApp.Models
         Operation,
         Chart,
         SineGenerator,
-        FileIO
+        FileIO,
+        StepGenerator  // Новый тип блока
     }
 
     public enum InputType
