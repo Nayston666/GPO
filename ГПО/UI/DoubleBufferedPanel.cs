@@ -20,12 +20,16 @@ namespace MathApp.UI
             // Настройки прокрутки
             this.AutoScroll = true;
             this.AutoScrollMinSize = new Size(2000, 2000);
-            this.BackColor = Color.FromArgb(30, 30, 35);
+            this.BackColor = Color.White;
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            // Отключаем фон для предотвращения мерцания
+            // Рисуем фон явно белым
+            using (var brush = new SolidBrush(Color.White))
+            {
+                e.Graphics.FillRectangle(brush, this.ClientRectangle);
+            }
         }
 
         /// <summary>

@@ -1,62 +1,36 @@
-﻿using System;
+﻿using MathApp.Helpers;
+using MathApp.Models;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using MathApp.Models;
 
 namespace MathApp.UI
 {
     public class PropertyPanel : UserControl
     {
         private MathTool _selectedTool;
+        private FlowLayoutPanel _mainPanel;
 
-        // Элементы управления для значений A и B
+        // ВСЕ ПОЛЯ - ТЕПЕРЬ TextBox (вместо NumericUpDown)
         private TextBox _txtValueA;
         private TextBox _txtValueB;
-        private Label _lblValueA;
-        private Label _lblValueB;
+        private TextBox _txtChartPoints;
+        private TextBox _txtFrequency;
+        private TextBox _txtAmplitude;
+        private TextBox _txtPhase;
+        private TextBox _txtGain;
+        private TextBox _txtEffectiveArea;
+        private TextBox _txtDistance;
+        private TextBox _txtAttenuation;
+        private TextBox _txtRadarCrossSection;
+        private TextBox _txtTimeConstant;
+        private TextBox _txtBitResolution;
+        private TextBox _txtSamplingRate;
+        private TextBox _txtReferenceVoltage;
+        private TextBox _txtStepSize;
 
-        // Для графика
-        private NumericUpDown _numChartPoints;
-        private Label _lblChartPoints;
-
-        // Для генератора синусоиды
-        private NumericUpDown _numFrequency;
-        private NumericUpDown _numAmplitude;
-        private NumericUpDown _numPhase;
-        private Label _lblFrequency;
-        private Label _lblAmplitude;
-        private Label _lblPhase;
-
-        // Для усилителя
-        private NumericUpDown _numGain;
-        private Label _lblGain;
-
-        // Для антенны
-        private NumericUpDown _numEffectiveArea;
-        private Label _lblEffectiveArea;
-
-        // Для канала
-        private NumericUpDown _numDistance;
-        private NumericUpDown _numAttenuation;
-        private Label _lblDistance;
-        private Label _lblAttenuation;
-
-        // Для объекта
-        private NumericUpDown _numRadarCrossSection;
-        private NumericUpDown _numTimeConstant;
-        private Label _lblRadarCrossSection;
-        private Label _lblTimeConstant;
-
-        // Для АЦП
-        private NumericUpDown _numBitResolution;
-        private NumericUpDown _numSamplingRate;
-        private NumericUpDown _numReferenceVoltage;
-        private Label _lblBitResolution;
-        private Label _lblSamplingRate;
-        private Label _lblReferenceVoltage;
-
-        // Для файлового блока
         private ComboBox _cmbFileMode;
         private Button _btnSelectInputFile;
         private Button _btnSelectOutputFile;
@@ -65,9 +39,7 @@ namespace MathApp.UI
         private Label _lblOutputFile;
         private Label _lblPointsCount;
 
-        private Button _btnApply;
-
-        public event EventHandler ApplyClicked;
+        public event EventHandler ParametersChanged;
 
         public PropertyPanel()
         {
@@ -77,394 +49,626 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 700);
-            this.BackColor = Color.Transparent;
+            this.Size = new Size(340, 700);
+            this.BackColor = Color.FromArgb(248, 249, 250);
             this.AutoScroll = true;
+
+            _mainPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Padding = new Padding(5, 5, 5, 5),
+                BackColor = Color.FromArgb(248, 249, 250)
+            };
+            this.Controls.Add(_mainPanel);
+
+            // Создаём все TextBox с поддержкой инженерного ввода
+            _txtValueA = CreateEngineeringTextBox("0");
+            _txtValueB = CreateEngineeringTextBox("0");
+            _txtChartPoints = CreateNumericTextBox("200", 10, 5000);
+            _txtFrequency = CreateEngineeringTextBox("1", "Hz");
+            _txtAmplitude = CreateEngineeringTextBox("1", "V");
+            _txtPhase = CreateNumericTextBox("0", 0, 360);
+            _txtGain = CreateEngineeringTextBox("10");
+            _txtEffectiveArea = CreateEngineeringTextBox("0.1", "m²");
+            _txtDistance = CreateEngineeringTextBox("1000", "m");
+            _txtAttenuation = CreateEngineeringTextBox("0.01", "dB/m");
+            _txtRadarCrossSection = CreateEngineeringTextBox("1", "m²");
+            _txtTimeConstant = CreateEngineeringTextBox("1", "s");
+            _txtBitResolution = CreateNumericTextBox("12", 1, 24);
+            _txtSamplingRate = CreateEngineeringTextBox("10000", "Hz");
+            _txtReferenceVoltage = CreateEngineeringTextBox("5", "V");
+            _txtStepSize = CreateEngineeringTextBox("0.01", "s");
+
+            _cmbFileMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.White, ForeColor = Color.Black };
+            _cmbFileMode.Items.AddRange(new object[] { "Режим чтения", "Режим записи" });
+            _cmbFileMode.SelectedIndex = 0;
+            _btnSelectInputFile = new Button { Text = "Выбрать файл", BackColor = Color.FromArgb(240, 240, 240), ForeColor = Color.Black, FlatStyle = FlatStyle.Flat };
+            _btnSelectOutputFile = new Button { Text = "Выбрать файл", BackColor = Color.FromArgb(240, 240, 240), ForeColor = Color.Black, FlatStyle = FlatStyle.Flat };
+            _btnExportResult = new Button { Text = "Сохранить", BackColor = Color.FromArgb(240, 240, 240), ForeColor = Color.Black, FlatStyle = FlatStyle.Flat };
+            _lblInputFile = new Label { Text = "Файл: не выбран", ForeColor = Color.Black, Font = new Font("Segoe UI", 8) };
+            _lblOutputFile = new Label { Text = "Файл: не выбран", ForeColor = Color.Black, Font = new Font("Segoe UI", 8) };
+            _lblPointsCount = new Label { Text = "Данных: 0", ForeColor = Color.Black, Font = new Font("Segoe UI", 8) };
+
+            _cmbFileMode.SelectedIndexChanged += (s, e) => UpdateFileModeVisibility();
+            _btnSelectInputFile.Click += (s, e) => SelectInputFile();
+            _btnSelectOutputFile.Click += (s, e) => SelectOutputFile();
+            _btnExportResult.Click += (s, e) => ExportResult();
+
+            // Подписка на события
+            _txtValueA.Leave += (s, e) => ApplyValueA();
+            _txtValueB.Leave += (s, e) => ApplyValueB();
+            _txtChartPoints.Leave += (s, e) => ApplyChartPoints();
+            _txtFrequency.Leave += (s, e) => ApplyFrequency();
+            _txtAmplitude.Leave += (s, e) => ApplyAmplitude();
+            _txtPhase.Leave += (s, e) => ApplyPhase();
+            _txtGain.Leave += (s, e) => ApplyGain();
+            _txtEffectiveArea.Leave += (s, e) => ApplyEffectiveArea();
+            _txtDistance.Leave += (s, e) => ApplyDistance();
+            _txtAttenuation.Leave += (s, e) => ApplyAttenuation();
+            _txtRadarCrossSection.Leave += (s, e) => ApplyRadarCrossSection();
+            _txtTimeConstant.Leave += (s, e) => ApplyTimeConstant();
+            _txtBitResolution.Leave += (s, e) => ApplyBitResolution();
+            _txtSamplingRate.Leave += (s, e) => ApplySamplingRate();
+            _txtReferenceVoltage.Leave += (s, e) => ApplyReferenceVoltage();
+            _txtStepSize.Leave += (s, e) => ApplyStepSize();
+        }
+
+        // ============ СОЗДАНИЕ КОНТРОЛОВ ============
+
+        private TextBox CreateEngineeringTextBox(string defaultValue, string unit = "")
+        {
+            var tb = new TextBox
+            {
+                Text = defaultValue,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                BorderStyle = BorderStyle.FixedSingle,
+                Width = 100,
+                Tag = unit
+            };
+            return tb;
+        }
+
+        private TextBox CreateNumericTextBox(string defaultValue, double min, double max)
+        {
+            var tb = new TextBox
+            {
+                Text = defaultValue,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                BorderStyle = BorderStyle.FixedSingle,
+                Width = 100,
+                Tag = new { min, max }
+            };
+            return tb;
+        }
+
+        // ============ ИНЖЕНЕРНЫЙ ПАРСИНГ ============
+
+        private double ParseEngineering(string text, double defaultValue = 0)
+        {
+            if (EngineeringParser.TryParse(text, out double result))
+                return result;
+            return defaultValue;
+        }
+
+        private string FormatEngineering(double value, string unit = "")
+        {
+            return EngineeringParser.ToEngineeringString(value, unit);
+        }
+
+        private int ParseInt(string text, int defaultValue = 0, int min = 1, int max = 10000)
+        {
+            if (int.TryParse(text, out int result))
+                return Math.Max(min, Math.Min(max, result));
+            return defaultValue;
+        }
+
+        // ============ ПРИМЕНЕНИЕ ЗНАЧЕНИЙ ============
+
+        private void ApplyValueA()
+        {
+            if (_selectedTool != null)
+            {
+                double v = ParseEngineering(_txtValueA.Text, _selectedTool.CustomValueA);
+                _selectedTool.CustomValueA = v;
+                _txtValueA.Text = FormatEngineering(v);
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyValueB()
+        {
+            if (_selectedTool != null)
+            {
+                double v = ParseEngineering(_txtValueB.Text, _selectedTool.CustomValueB);
+                _selectedTool.CustomValueB = v;
+                _txtValueB.Text = FormatEngineering(v);
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyChartPoints()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.MaxHistorySize = ParseInt(_txtChartPoints.Text, 200, 10, 5000);
+                _txtChartPoints.Text = _selectedTool.MaxHistorySize.ToString();
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyFrequency()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.Frequency = ParseEngineering(_txtFrequency.Text, _selectedTool.Frequency);
+                _txtFrequency.Text = FormatEngineering(_selectedTool.Frequency, "Hz");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyAmplitude()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.Amplitude = ParseEngineering(_txtAmplitude.Text, _selectedTool.Amplitude);
+                _txtAmplitude.Text = FormatEngineering(_selectedTool.Amplitude, "V");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyPhase()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.Phase = ParseEngineering(_txtPhase.Text, _selectedTool.Phase);
+                _txtPhase.Text = FormatEngineering(_selectedTool.Phase, "°");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyGain()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.Gain = ParseEngineering(_txtGain.Text, _selectedTool.Gain);
+                _txtGain.Text = FormatEngineering(_selectedTool.Gain);
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyEffectiveArea()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.EffectiveArea = ParseEngineering(_txtEffectiveArea.Text, _selectedTool.EffectiveArea);
+                _txtEffectiveArea.Text = FormatEngineering(_selectedTool.EffectiveArea, "m²");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyDistance()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.Distance = ParseEngineering(_txtDistance.Text, _selectedTool.Distance);
+                _txtDistance.Text = FormatEngineering(_selectedTool.Distance, "m");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyAttenuation()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.Attenuation = ParseEngineering(_txtAttenuation.Text, _selectedTool.Attenuation);
+                _txtAttenuation.Text = FormatEngineering(_selectedTool.Attenuation, "dB/m");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyRadarCrossSection()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.RadarCrossSection = ParseEngineering(_txtRadarCrossSection.Text, _selectedTool.RadarCrossSection);
+                _txtRadarCrossSection.Text = FormatEngineering(_selectedTool.RadarCrossSection, "m²");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyTimeConstant()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.TimeConstant = ParseEngineering(_txtTimeConstant.Text, _selectedTool.TimeConstant);
+                _txtTimeConstant.Text = FormatEngineering(_selectedTool.TimeConstant, "s");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyStepSize()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.StepSize = ParseEngineering(_txtStepSize.Text, _selectedTool.StepSize);
+                _txtStepSize.Text = FormatEngineering(_selectedTool.StepSize, "s");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyBitResolution()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.BitResolution = ParseInt(_txtBitResolution.Text, 12, 1, 24);
+                _txtBitResolution.Text = _selectedTool.BitResolution.ToString();
+                _selectedTool.QuantizationStep = _selectedTool.ReferenceVoltage / Math.Pow(2, _selectedTool.BitResolution);
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplySamplingRate()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.SamplingRate = ParseEngineering(_txtSamplingRate.Text, _selectedTool.SamplingRate);
+                _txtSamplingRate.Text = FormatEngineering(_selectedTool.SamplingRate, "Hz");
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void ApplyReferenceVoltage()
+        {
+            if (_selectedTool != null)
+            {
+                _selectedTool.ReferenceVoltage = ParseEngineering(_txtReferenceVoltage.Text, _selectedTool.ReferenceVoltage);
+                _txtReferenceVoltage.Text = FormatEngineering(_selectedTool.ReferenceVoltage, "V");
+                _selectedTool.QuantizationStep = _selectedTool.ReferenceVoltage / Math.Pow(2, _selectedTool.BitResolution);
+                ParametersChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        // ============ UI ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
+
+        private Panel CreateBlockPanel(string title, int blockId)
+        {
+            var panel = new Panel
+            {
+                Width = 270,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 10),
+                Padding = new Padding(0)
+            };
+
+            var headerPanel = new Panel
+            {
+                Width = panel.Width - 2,
+                Height = 40,
+                BackColor = Color.FromArgb(52, 58, 64),
+                Location = new Point(0, 0)
+            };
 
             var titleLabel = new Label
             {
-                Text = "✏️ РЕДАКТИРОВАНИЕ",
-                Location = new Point(5, 0),
-                Size = new Size(250, 20),
-                ForeColor = Color.FromArgb(0, 200, 255),
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
-            };
-
-            int currentY = 30;
-            int labelX = 15;
-            int controlX = 100;
-            int controlWidth = 150;
-
-            // ---- Значение A ----
-            _lblValueA = CreateLabel("Значение A:", new Point(labelX, currentY));
-            _txtValueA = CreateTextBox("0", new Point(controlX, currentY - 3));
-            currentY += 35;
-
-            // ---- Значение B ----
-            _lblValueB = CreateLabel("Значение B:", new Point(labelX, currentY));
-            _txtValueB = CreateTextBox("0", new Point(controlX, currentY - 3));
-            currentY += 35;
-
-            // ---- Точки на графике ----
-            _lblChartPoints = CreateLabel("Точек:", new Point(labelX, currentY));
-            _numChartPoints = CreateNumericUpDown(200, 10, 500, new Point(controlX, currentY - 3), 10);
-            currentY += 40;
-
-            // ---- Частота (генератор) ----
-            _lblFrequency = CreateLabel("Частота (Гц):", new Point(labelX, currentY));
-            _numFrequency = CreateNumericUpDown(1.0m, 0.1m, 100.0m, new Point(controlX, currentY - 3), 0.1m);
-            currentY += 35;
-
-            // ---- Амплитуда (генератор) ----
-            _lblAmplitude = CreateLabel("Амплитуда:", new Point(labelX, currentY));
-            _numAmplitude = CreateNumericUpDown(1.0m, 0.1m, 10.0m, new Point(controlX, currentY - 3), 0.1m);
-            currentY += 35;
-
-            // ---- Фаза (генератор) ----
-            _lblPhase = CreateLabel("Фаза (град):", new Point(labelX, currentY));
-            _numPhase = CreateNumericUpDown(0, 0, 360, new Point(controlX, currentY - 3), 15);
-            currentY += 45;
-
-            // ---- Усилитель (Gain) ----
-            _lblGain = CreateLabel("Коэфф. усиления:", new Point(labelX, currentY));
-            _numGain = CreateNumericUpDown(10.0m, 0.1m, 1000.0m, new Point(controlX, currentY - 3), 1.0m);
-            currentY += 35;
-
-            // ---- Антенна (Effective Area) ----
-            _lblEffectiveArea = CreateLabel("Эфф. площадь (м²):", new Point(labelX, currentY));
-            _numEffectiveArea = CreateNumericUpDown(0.1m, 0.01m, 100.0m, new Point(controlX, currentY - 3), 0.1m);
-            currentY += 35;
-
-            // ---- Канал (Distance) ----
-            _lblDistance = CreateLabel("Расстояние (м):", new Point(labelX, currentY));
-            _numDistance = CreateNumericUpDown(1000m, 0, 100000m, new Point(controlX, currentY - 3), 100m);
-            currentY += 35;
-
-            // ---- Канал (Attenuation) ----
-            _lblAttenuation = CreateLabel("Затухание (дБ/м):", new Point(labelX, currentY));
-            _numAttenuation = CreateNumericUpDown(0.01m, 0, 1.0m, new Point(controlX, currentY - 3), 0.01m);
-            currentY += 35;
-
-            // ---- Объект (Radar Cross Section) ----
-            _lblRadarCrossSection = CreateLabel("ЭПР (м²):", new Point(labelX, currentY));
-            _numRadarCrossSection = CreateNumericUpDown(1.0m, 0.01m, 1000.0m, new Point(controlX, currentY - 3), 0.1m);
-            currentY += 35;
-
-            // ---- Объект (Time Constant) ----
-            _lblTimeConstant = CreateLabel("Пост. времени (с):", new Point(labelX, currentY));
-            _numTimeConstant = CreateNumericUpDown(1.0m, 0.01m, 10.0m, new Point(controlX, currentY - 3), 0.1m);
-            currentY += 35;
-
-            // ---- АЦП (Bit Resolution) ----
-            _lblBitResolution = CreateLabel("Разрядность (бит):", new Point(labelX, currentY));
-            _numBitResolution = CreateNumericUpDown(12, 1, 24, new Point(controlX, currentY - 3), 1);
-            currentY += 35;
-
-            // ---- АЦП (Sampling Rate) ----
-            _lblSamplingRate = CreateLabel("Частота (Гц):", new Point(labelX, currentY));
-            _numSamplingRate = CreateNumericUpDown(10000m, 100m, 1000000m, new Point(controlX, currentY - 3), 1000m);
-            currentY += 35;
-
-            // ---- АЦП (Reference Voltage) ----
-            _lblReferenceVoltage = CreateLabel("Опорное напр. (В):", new Point(labelX, currentY));
-            _numReferenceVoltage = CreateNumericUpDown(5.0m, 1.0m, 10.0m, new Point(controlX, currentY - 3), 0.5m);
-            currentY += 45;
-
-            // ---- Файловый блок ----
-            _cmbFileMode = new ComboBox
-            {
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.Black,
-                Visible = false
-            };
-            _cmbFileMode.Items.AddRange(new object[] { "Режим чтения", "Режим записи" });
-            _cmbFileMode.SelectedIndex = 0;
-            _cmbFileMode.SelectedIndexChanged += (s, e) => UpdateFileModeVisibility();
-            currentY += 30;
-
-            _btnSelectInputFile = new Button
-            {
-                Text = "Выбрать файл для чтения",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 30),
-                BackColor = Color.FromArgb(0, 120, 212),
-                ForeColor = Color.Black,
-                FlatStyle = FlatStyle.Flat,
-                Visible = false
-            };
-            _btnSelectInputFile.Click += (s, e) => SelectInputFile();
-            currentY += 35;
-
-            _btnSelectOutputFile = new Button
-            {
-                Text = "Выбрать файл для записи",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 30),
-                BackColor = Color.FromArgb(0, 120, 212),
-                ForeColor = Color.Black,
-                FlatStyle = FlatStyle.Flat,
-                Visible = false
-            };
-            _btnSelectOutputFile.Click += (s, e) => SelectOutputFile();
-            currentY += 35;
-
-            _btnExportResult = new Button
-            {
-                Text = "💾 Сохранить результат",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 30),
-                BackColor = Color.FromArgb(100, 100, 100),
-                ForeColor = Color.Black,
-                FlatStyle = FlatStyle.Flat,
-                Visible = false
-            };
-            _btnExportResult.Click += (s, e) => ExportResult();
-            currentY += 35;
-
-            _lblInputFile = new Label
-            {
-                Text = "Файл чтения: не выбран",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 25),
-                ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 8),
-                Visible = false
-            };
-            currentY += 30;
-
-            _lblOutputFile = new Label
-            {
-                Text = "Файл записи: не выбран",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 25),
-                ForeColor = Color.LightGray,
-                Font = new Font("Segoe UI", 8),
-                Visible = false
-            };
-            currentY += 30;
-
-            _lblPointsCount = new Label
-            {
-                Text = "Данных: 0",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 25),
-                ForeColor = Color.LightGreen,
-                Font = new Font("Segoe UI", 8),
-                Visible = false
-            };
-            currentY += 45;
-
-            // ---- Кнопка применения ----
-            _btnApply = new Button
-            {
-                Text = "✓ ПРИМЕНИТЬ",
-                Location = new Point(labelX, currentY),
-                Size = new Size(controlWidth, 35),
-                BackColor = Color.FromArgb(0, 120, 212),
-                ForeColor = Color.Black,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
-            };
-            _btnApply.Click += (s, e) => ApplyClicked?.Invoke(s, e);
-
-            // Добавляем все контролы
-            this.Controls.AddRange(new Control[] {
-                titleLabel,
-                _lblValueA, _txtValueA,
-                _lblValueB, _txtValueB,
-                _lblChartPoints, _numChartPoints,
-                _lblFrequency, _numFrequency,
-                _lblAmplitude, _numAmplitude,
-                _lblPhase, _numPhase,
-                _lblGain, _numGain,
-                _lblEffectiveArea, _numEffectiveArea,
-                _lblDistance, _numDistance,
-                _lblAttenuation, _numAttenuation,
-                _lblRadarCrossSection, _numRadarCrossSection,
-                _lblTimeConstant, _numTimeConstant,
-                _lblBitResolution, _numBitResolution,
-                _lblSamplingRate, _numSamplingRate,
-                _lblReferenceVoltage, _numReferenceVoltage,
-                _cmbFileMode,
-                _btnSelectInputFile, _btnSelectOutputFile, _btnExportResult,
-                _lblInputFile, _lblOutputFile, _lblPointsCount,
-                _btnApply
-            });
-
-            HideAllControls();
-        }
-
-        private Label CreateLabel(string text, Point location)
-        {
-            return new Label
-            {
-                Text = text,
-                Location = location,
-                Size = new Size(120, 20),
-                ForeColor = Color.Black,  // Белый цвет для читаемости на тёмном фоне
-                Font = new Font("Segoe UI", 9),
+                Text = title,
+                Location = new Point(8, 10),
+                Size = new Size(140, 22),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.White,
                 BackColor = Color.Transparent
             };
-        }
 
-        private TextBox CreateTextBox(string defaultValue, Point location)
-        {
-            return new TextBox
+            var idLabel = new Label
             {
-                Location = location,
-                Size = new Size(150, 25),
-                Text = defaultValue,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.Black,
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 9)
+                Text = $"ID: {blockId}",
+                Location = new Point(155, 12),
+                Size = new Size(105, 20),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                ForeColor = Color.FromArgb(255, 200, 100),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleRight
             };
+
+            headerPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(idLabel);
+            panel.Controls.Add(headerPanel);
+            return panel;
         }
 
-        private NumericUpDown CreateNumericUpDown(decimal value, decimal min, decimal max, Point location, decimal increment)
+        private void AddParameter(Panel panel, string labelText, Control control, ref int yPosition)
         {
-            return new NumericUpDown
+            var label = new Label
             {
-                Location = location,
-                Size = new Size(150, 25),
-                Minimum = min,
-                Maximum = max,
-                Value = value,
-                Increment = increment,
-                DecimalPlaces = 3,
-                BackColor = Color.FromArgb(60, 60, 65),
-                ForeColor = Color.Black,
-                BorderStyle = BorderStyle.FixedSingle
+                Text = labelText,
+                Location = new Point(10, yPosition),
+                Size = new Size(170, 28),
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(52, 58, 64),
+                BackColor = Color.White
             };
+            control.Location = new Point(185, yPosition);
+            control.Width = 75;
+            control.Visible = true;
+            panel.Controls.Add(label);
+            panel.Controls.Add(control);
+            yPosition += 35;
         }
 
-        private void HideAllControls()
+        private void AddLabel(Panel panel, Label label, ref int yPosition)
         {
-            var allControls = new Control[] {
-                _txtValueA, _txtValueB, _lblValueA, _lblValueB,
-                _numChartPoints, _lblChartPoints,
-                _numFrequency, _numAmplitude, _numPhase,
-                _lblFrequency, _lblAmplitude, _lblPhase,
-                _numGain, _lblGain,
-                _numEffectiveArea, _lblEffectiveArea,
-                _numDistance, _lblDistance,
-                _numAttenuation, _lblAttenuation,
-                _numRadarCrossSection, _lblRadarCrossSection,
-                _numTimeConstant, _lblTimeConstant,
-                _numBitResolution, _lblBitResolution,
-                _numSamplingRate, _lblSamplingRate,
-                _numReferenceVoltage, _lblReferenceVoltage,
-                _cmbFileMode, _btnSelectInputFile, _btnSelectOutputFile,
-                _btnExportResult, _lblInputFile, _lblOutputFile, _lblPointsCount
-            };
-            foreach (var c in allControls)
-                if (c != null) c.Visible = false;
+            label.Location = new Point(10, yPosition);
+            label.Width = 250;
+            label.Visible = true;
+            panel.Controls.Add(label);
+            yPosition += 25;
+        }
+
+        private void AddButton(Panel panel, Button button, ref int yPosition)
+        {
+            button.Location = new Point(10, yPosition);
+            button.Width = 250;
+            button.Height = 30;
+            button.Visible = true;
+            panel.Controls.Add(button);
+            yPosition += 38;
+        }
+
+        private void ClearAllBlocks()
+        {
+            _mainPanel.Controls.Clear();
+        }
+
+        private string GetBlockTitle(MathTool tool)
+        {
+            if (tool.Type == ToolType.Operation)
+            {
+                switch (tool.Operation)
+                {
+                    case MathOperation.Addition: return "➕ Сложение";
+                    case MathOperation.Subtraction: return "➖ Вычитание";
+                    case MathOperation.Multiplication: return "✖️ Умножение";
+                    case MathOperation.Division: return "➗ Деление";
+                    case MathOperation.Integrator: return "∫ Интегратор";
+                    case MathOperation.Differentiator: return "d/dt Дифференциатор";
+                    case MathOperation.Interpolator: return "f(x) Интерполятор";
+                    case MathOperation.FileIO: return "📁 Файловый ввод/вывод";
+                    default: return "Математическая операция";
+                }
+            }
+            switch (tool.Type)
+            {
+                case ToolType.Generator: return "📈 Генератор синусоиды";
+                case ToolType.Chart: return "📊 График";
+                case ToolType.Amplifier: return "🔊 Усилитель";
+                case ToolType.Antenna: return "📡 Антенна";
+                case ToolType.Channel: return "🌐 Канал связи";
+                case ToolType.Object: return "🎯 Объект (РЛС)";
+                case ToolType.ADC: return "🔢 АЦП";
+                case ToolType.SubSystem: return "🧩 Подсистема";
+                default: return "Блок";
+            }
         }
 
         public void SetSelectedTool(MathTool tool)
         {
             _selectedTool = tool;
-            HideAllControls();
-
-            if (tool == null)
-            {
-                this.Visible = false;
-                return;
-            }
-
+            ClearAllBlocks();
+            if (tool == null) { this.Visible = false; return; }
             this.Visible = true;
 
-            // ---- Блок операции (сложение, вычитание и т.д.) ----
-            if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.FileIO)
+            string title = GetBlockTitle(tool);
+            var blockPanel = CreateBlockPanel(title, tool.BlockId);
+            int yPos = 50;
+
+            if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.FileIO &&
+                tool.Operation != MathOperation.Integrator && tool.Operation != MathOperation.Differentiator &&
+                tool.Operation != MathOperation.Interpolator)
             {
-                _txtValueA.Visible = true;
-                _txtValueB.Visible = true;
-                _lblValueA.Visible = true;
-                _lblValueB.Visible = true;
-                _txtValueA.Text = tool.CustomValueA.ToString("F3");
-                _txtValueB.Text = tool.CustomValueB.ToString("F3");
+                _txtValueA.Text = FormatEngineering(tool.CustomValueA);
+                _txtValueB.Text = FormatEngineering(tool.CustomValueB);
+                AddParameter(blockPanel, "Значение A:", _txtValueA, ref yPos);
+                AddParameter(blockPanel, "Значение B:", _txtValueB, ref yPos);
             }
-            // ---- График ----
+
+            // Дифференциатор
+            else if (tool.Type == ToolType.Operation && (tool.Operation == MathOperation.Integrator || tool.Operation == MathOperation.Differentiator))
+            {
+                _txtValueA.Text = FormatEngineering(tool.CustomValueA);
+                _txtValueB.Text = FormatEngineering(tool.CustomValueB);
+                _txtStepSize.Text = FormatEngineering(tool.StepSize, "s");
+                AddParameter(blockPanel, "Значение A:", _txtValueA, ref yPos);
+                AddParameter(blockPanel, "Значение B:", _txtValueB, ref yPos);
+                AddParameter(blockPanel, "Шаг (с):", _txtStepSize, ref yPos);
+            }
+
+            // Интерполятор
+            else if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.Interpolator)
+            {
+                _txtValueA.Text = FormatEngineering(tool.CustomValueA);
+                _txtValueB.Text = FormatEngineering(tool.CustomValueB);
+                AddParameter(blockPanel, "Значение A:", _txtValueA, ref yPos);
+                AddParameter(blockPanel, "Значение B:", _txtValueB, ref yPos);
+
+                // Поле для количества точек (простое и понятное)
+                var txtPointsCount = new TextBox
+                {
+                    Text = (tool.InterpolationPoints?.Count ?? 0).ToString(),
+                    Location = new Point(185, yPos),
+                    Width = 75,
+                    BackColor = Color.White,
+                    ForeColor = Color.Black,
+                    BorderStyle = BorderStyle.FixedSingle
+                };
+
+                var lblPoints = new Label
+                {
+                    Text = "Количество точек:",
+                    Location = new Point(10, yPos),
+                    Size = new Size(170, 28),
+                    Font = new Font("Segoe UI", 9),
+                    ForeColor = Color.FromArgb(52, 58, 64),
+                    BackColor = Color.White
+                };
+
+                txtPointsCount.Leave += (s, e) =>
+                {
+                    if (int.TryParse(txtPointsCount.Text, out int newCount) && newCount >= 0 && newCount <= 1000)
+                    {
+                        var points = tool.InterpolationPoints;
+                        if (points == null)
+                        {
+                            tool.InterpolationPoints = new List<System.Drawing.PointF>();
+                            points = tool.InterpolationPoints;
+                        }
+
+                        if (newCount > points.Count)
+                        {
+                            // Генерируем равномерно распределённые точки (синусоида по умолчанию)
+                            Random rand = new Random();
+                            while (points.Count < newCount)
+                            {
+                                if (points.Count == 0)
+                                {
+                                    points.Add(new System.Drawing.PointF(0, 0));
+                                }
+                                else
+                                {
+                                    float lastX = points.Last().X;
+                                    points.Add(new System.Drawing.PointF(lastX + 0.5f, (float)Math.Sin(lastX + 0.5f)));
+                                }
+                            }
+                        }
+                        else if (newCount < points.Count)
+                        {
+                            points.RemoveRange(newCount, points.Count - newCount);
+                        }
+                        txtPointsCount.Text = points.Count.ToString();
+                        ParametersChanged?.Invoke(this, EventArgs.Empty);
+                    }
+                    else
+                    {
+                        txtPointsCount.Text = tool.InterpolationPoints?.Count.ToString() ?? "0";
+                    }
+                };
+
+                blockPanel.Controls.Add(lblPoints);
+                blockPanel.Controls.Add(txtPointsCount);
+                yPos += 35;
+
+                // Подсказка для пользователя
+                var hintLabel = new Label
+                {
+                    Text = "Точки генерируются автоматически\n(синусоида)",
+                    Location = new Point(10, yPos),
+                    Width = 250,
+                    Height = 35,
+                    Font = new Font("Segoe UI", 7, FontStyle.Italic),
+                    ForeColor = Color.FromArgb(108, 117, 125),
+                    BackColor = Color.White
+                };
+                blockPanel.Controls.Add(hintLabel);
+                yPos += 40;
+            }
+
+            // ????
             else if (tool.Type == ToolType.Chart)
             {
-                _numChartPoints.Visible = true;
-                _lblChartPoints.Visible = true;
-                _numChartPoints.Value = tool.MaxHistorySize;
+                _txtChartPoints.Text = tool.MaxHistorySize.ToString();
+                AddParameter(blockPanel, "Точек истории:", _txtChartPoints, ref yPos);
             }
-            // ---- Генератор синусоиды ----
+
+            // Генератор
             else if (tool.Type == ToolType.Generator)
             {
-                _numFrequency.Visible = true;
-                _numAmplitude.Visible = true;
-                _numPhase.Visible = true;
-                _lblFrequency.Visible = true;
-                _lblAmplitude.Visible = true;
-                _lblPhase.Visible = true;
-                _numFrequency.Value = (decimal)tool.Frequency;
-                _numAmplitude.Value = (decimal)tool.Amplitude;
-                _numPhase.Value = (decimal)tool.Phase;
+                _txtFrequency.Text = FormatEngineering(tool.Frequency, "Hz");
+                _txtAmplitude.Text = FormatEngineering(tool.Amplitude, "V");
+                _txtPhase.Text = FormatEngineering(tool.Phase, "°");
+                AddParameter(blockPanel, "Частота (Гц):", _txtFrequency, ref yPos);
+                AddParameter(blockPanel, "Амплитуда (В):", _txtAmplitude, ref yPos);
+                AddParameter(blockPanel, "Фаза (град):", _txtPhase, ref yPos);
             }
-            // ---- Усилитель ----
+
+            // Усилитель
             else if (tool.Type == ToolType.Amplifier)
             {
-                _numGain.Visible = true;
-                _lblGain.Visible = true;
-                _numGain.Value = (decimal)tool.Gain;
+                _txtGain.Text = FormatEngineering(tool.Gain);
+                AddParameter(blockPanel, "Коэффициент усиления:", _txtGain, ref yPos);
             }
-            // ---- Антенна ----
+
+            // Антенна
             else if (tool.Type == ToolType.Antenna)
             {
-                _numEffectiveArea.Visible = true;
-                _lblEffectiveArea.Visible = true;
-                _numEffectiveArea.Value = (decimal)tool.EffectiveArea;
+                _txtGain.Text = FormatEngineering(tool.Gain);
+                _txtEffectiveArea.Text = FormatEngineering(tool.EffectiveArea, "m²");
+                AddParameter(blockPanel, "Усиление (дБ):", _txtGain, ref yPos);
+                AddParameter(blockPanel, "Эффективная площадь (м²):", _txtEffectiveArea, ref yPos);
             }
-            // ---- Канал ----
+
+            // Канал
             else if (tool.Type == ToolType.Channel)
             {
-                _numDistance.Visible = true;
-                _numAttenuation.Visible = true;
-                _lblDistance.Visible = true;
-                _lblAttenuation.Visible = true;
-                _numDistance.Value = (decimal)tool.Distance;
-                _numAttenuation.Value = (decimal)tool.Attenuation;
+                _txtDistance.Text = FormatEngineering(tool.Distance, "m");
+                _txtAttenuation.Text = FormatEngineering(tool.Attenuation, "dB/m");
+                AddParameter(blockPanel, "Расстояние (м):", _txtDistance, ref yPos);
+                AddParameter(blockPanel, "Затухание (дБ/м):", _txtAttenuation, ref yPos);
             }
-            // ---- Объект ----
+
+            // Объект
             else if (tool.Type == ToolType.Object)
             {
-                _numRadarCrossSection.Visible = true;
-                _numTimeConstant.Visible = true;
-                _lblRadarCrossSection.Visible = true;
-                _lblTimeConstant.Visible = true;
-                _numRadarCrossSection.Value = (decimal)tool.RadarCrossSection;
-                _numTimeConstant.Value = (decimal)tool.TimeConstant;
+                _txtRadarCrossSection.Text = FormatEngineering(tool.RadarCrossSection, "m²");
+                _txtTimeConstant.Text = FormatEngineering(tool.TimeConstant, "s");
+                AddParameter(blockPanel, "ЭПР (м²):", _txtRadarCrossSection, ref yPos);
+                AddParameter(blockPanel, "Постоянная времени (с):", _txtTimeConstant, ref yPos);
             }
-            // ---- АЦП ----
+
+            // АЦП
             else if (tool.Type == ToolType.ADC)
             {
-                _numBitResolution.Visible = true;
-                _numSamplingRate.Visible = true;
-                _numReferenceVoltage.Visible = true;
-                _lblBitResolution.Visible = true;
-                _lblSamplingRate.Visible = true;
-                _lblReferenceVoltage.Visible = true;
-                _numBitResolution.Value = tool.BitResolution;
-                _numSamplingRate.Value = (decimal)tool.SamplingRate;
-                _numReferenceVoltage.Value = (decimal)tool.ReferenceVoltage;
+                _txtBitResolution.Text = tool.BitResolution.ToString();
+                _txtSamplingRate.Text = FormatEngineering(tool.SamplingRate, "Hz");
+                _txtReferenceVoltage.Text = FormatEngineering(tool.ReferenceVoltage, "V");
+                AddParameter(blockPanel, "Разрядность (бит):", _txtBitResolution, ref yPos);
+                AddParameter(blockPanel, "Частота (Гц):", _txtSamplingRate, ref yPos);
+                AddParameter(blockPanel, "Опорное напряжение (В):", _txtReferenceVoltage, ref yPos);
             }
-            // ---- Файловый ввод/вывод ----
+
+            // Подсистема
+            else if (tool.Type == ToolType.SubSystem)
+            {
+                var infoLabel = new Label { Text = $"Входов: {tool.SubSystemData?.InputPorts?.Count ?? 0} | Выходов: {tool.SubSystemData?.OutputPorts?.Count ?? 0}", Location = new Point(10, yPos), Width = 250, Height = 25, Font = new Font("Segoe UI", 9), ForeColor = Color.FromArgb(52, 58, 64), BackColor = Color.White };
+                blockPanel.Controls.Add(infoLabel);
+                yPos += 35;
+                var hintLabel = new Label { Text = "💡 Двойной клик для редактирования", Location = new Point(10, yPos), Width = 250, Height = 25, Font = new Font("Segoe UI", 8, FontStyle.Italic), ForeColor = Color.FromArgb(108, 117, 125), BackColor = Color.White };
+                blockPanel.Controls.Add(hintLabel);
+                yPos += 30;
+            }
+
+            // Математические операции
             else if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.FileIO)
             {
-                _cmbFileMode.Visible = true;
                 _cmbFileMode.SelectedIndex = tool.IsReading ? 0 : 1;
-                _lblInputFile.Text = $"Файл чтения: {System.IO.Path.GetFileName(tool.InputFilePath)}";
-                _lblOutputFile.Text = $"Файл записи: {System.IO.Path.GetFileName(tool.OutputFilePath)}";
+                _lblInputFile.Text = $"Файл: {System.IO.Path.GetFileName(tool.InputFilePath)}";
+                _lblOutputFile.Text = $"Файл: {System.IO.Path.GetFileName(tool.OutputFilePath)}";
                 _lblPointsCount.Text = $"Данных: {tool.FileData.Count}";
-                _lblPointsCount.Visible = true;
+                AddParameter(blockPanel, "Режим работы:", _cmbFileMode, ref yPos);
+                AddLabel(blockPanel, _lblInputFile, ref yPos);
+                AddLabel(blockPanel, _lblOutputFile, ref yPos);
+                AddLabel(blockPanel, _lblPointsCount, ref yPos);
+                AddButton(blockPanel, _btnSelectInputFile, ref yPos);
+                AddButton(blockPanel, _btnSelectOutputFile, ref yPos);
+                AddButton(blockPanel, _btnExportResult, ref yPos);
                 UpdateFileModeVisibility();
             }
+
+            blockPanel.Height = yPos + 15;
+            _mainPanel.Controls.Add(blockPanel);
         }
 
         private void UpdateFileModeVisibility()
@@ -472,23 +676,11 @@ namespace MathApp.UI
             if (_selectedTool == null) return;
             bool isReading = _cmbFileMode.SelectedIndex == 0;
             _selectedTool.IsReading = isReading;
-
-            if (isReading)
-            {
-                _btnSelectInputFile.Visible = true;
-                _btnSelectOutputFile.Visible = false;
-                _btnExportResult.Visible = false;
-                _lblInputFile.Visible = true;
-                _lblOutputFile.Visible = false;
-            }
-            else
-            {
-                _btnSelectInputFile.Visible = false;
-                _btnSelectOutputFile.Visible = true;
-                _btnExportResult.Visible = true;
-                _lblInputFile.Visible = false;
-                _lblOutputFile.Visible = true;
-            }
+            _btnSelectInputFile.Visible = isReading;
+            _lblInputFile.Visible = isReading;
+            _btnSelectOutputFile.Visible = !isReading;
+            _btnExportResult.Visible = !isReading;
+            _lblOutputFile.Visible = !isReading;
         }
 
         private void SelectInputFile()
@@ -499,7 +691,7 @@ namespace MathApp.UI
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     _selectedTool.InputFilePath = dialog.FileName;
-                    _lblInputFile.Text = $"Файл чтения: {System.IO.Path.GetFileName(dialog.FileName)}";
+                    _lblInputFile.Text = $"Файл: {System.IO.Path.GetFileName(dialog.FileName)}";
                     LoadFileData();
                 }
             }
@@ -514,7 +706,7 @@ namespace MathApp.UI
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     _selectedTool.OutputFilePath = dialog.FileName;
-                    _lblOutputFile.Text = $"Файл записи: {System.IO.Path.GetFileName(dialog.FileName)}";
+                    _lblOutputFile.Text = $"Файл: {System.IO.Path.GetFileName(dialog.FileName)}";
                 }
             }
         }
@@ -525,47 +717,26 @@ namespace MathApp.UI
             {
                 _selectedTool.FileData.Clear();
                 string[] lines = System.IO.File.ReadAllLines(_selectedTool.InputFilePath);
-
                 foreach (string line in lines)
                 {
                     string trimmed = line.Trim();
                     if (string.IsNullOrEmpty(trimmed)) continue;
-
                     string[] parts = trimmed.Split(new char[] { ',', ';', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     foreach (string part in parts)
-                    {
-                        if (double.TryParse(part, System.Globalization.NumberStyles.Any,
-                            System.Globalization.CultureInfo.InvariantCulture, out double value))
-                        {
+                        if (double.TryParse(part, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value))
                             _selectedTool.FileData.Add(value);
-                        }
-                    }
                 }
-
                 _selectedTool.CurrentFileIndex = 0;
                 _lblPointsCount.Text = $"Данных: {_selectedTool.FileData.Count} значений";
-
                 UpdateConnectedGraph();
-
-                MessageBox.Show($"Загружено {_selectedTool.FileData.Count} значений из файла", "Успех",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Загружено {_selectedTool.FileData.Count} значений", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка загрузки: {ex.Message}", "Ошибка",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (Exception ex) { MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private void ExportResult()
         {
-            if (_selectedTool?.FileData.Count == 0)
-            {
-                MessageBox.Show("Нет данных для экспорта.", "Информация",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
+            if (_selectedTool?.FileData.Count == 0) { MessageBox.Show("Нет данных для экспорта.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
             using (var dialog = new SaveFileDialog())
             {
                 dialog.Filter = "CSV файлы (*.csv)|*.csv";
@@ -578,8 +749,7 @@ namespace MathApp.UI
                         for (int i = 0; i < _selectedTool.FileData.Count; i++)
                             writer.WriteLine($"{i},{_selectedTool.FileData[i].ToString(System.Globalization.CultureInfo.InvariantCulture)}");
                     }
-                    MessageBox.Show($"Данные сохранены в файл:\n{dialog.FileName}", "Успех",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Сохранено {_selectedTool.FileData.Count} точек", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
@@ -587,63 +757,9 @@ namespace MathApp.UI
         private void UpdateConnectedGraph()
         {
             var form = Application.OpenForms.OfType<Form1>().FirstOrDefault();
-            if (form != null && _selectedTool != null)
-            {
-                form.LoadStaticFileData(_selectedTool.Id);
-            }
+            if (form != null && _selectedTool != null) form.LoadStaticFileData(_selectedTool.Id);
         }
 
-        public void ApplyChanges(MathTool tool)
-        {
-            if (tool == null) return;
-
-            try
-            {
-                if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.FileIO)
-                {
-                    tool.CustomValueA = double.Parse(_txtValueA.Text);
-                    tool.CustomValueB = double.Parse(_txtValueB.Text);
-                }
-                else if (tool.Type == ToolType.Chart)
-                {
-                    tool.MaxHistorySize = (int)_numChartPoints.Value;
-                }
-                else if (tool.Type == ToolType.Generator)
-                {
-                    tool.Frequency = (double)_numFrequency.Value;
-                    tool.Amplitude = (double)_numAmplitude.Value;
-                    tool.Phase = (int)_numPhase.Value;
-                }
-                else if (tool.Type == ToolType.Amplifier)
-                {
-                    tool.Gain = (double)_numGain.Value;
-                }
-                else if (tool.Type == ToolType.Antenna)
-                {
-                    tool.EffectiveArea = (double)_numEffectiveArea.Value;
-                }
-                else if (tool.Type == ToolType.Channel)
-                {
-                    tool.Distance = (double)_numDistance.Value;
-                    tool.Attenuation = (double)_numAttenuation.Value;
-                }
-                else if (tool.Type == ToolType.Object)
-                {
-                    tool.RadarCrossSection = (double)_numRadarCrossSection.Value;
-                    tool.TimeConstant = (double)_numTimeConstant.Value;
-                }
-                else if (tool.Type == ToolType.ADC)
-                {
-                    tool.BitResolution = (int)_numBitResolution.Value;
-                    tool.SamplingRate = (double)_numSamplingRate.Value;
-                    tool.ReferenceVoltage = (double)_numReferenceVoltage.Value;
-                }
-            }
-            catch
-            {
-                MessageBox.Show("Ошибка ввода данных", "Ошибка",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        }
+        public void ApplyChanges(MathTool tool) { }
     }
 }

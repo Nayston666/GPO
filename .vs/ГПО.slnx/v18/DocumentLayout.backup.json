@@ -3,52 +3,68 @@
   "WorkspaceRootPath": "C:\\Users\\User\\Documents\\GitHub\\GPO\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\allgraphswindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\allgraphswindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\models\\mathtool.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\mathtool.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\user\\documents\\github\\gpo\\\u0433\u043F\u043E\\ui\\engineeringnumericupdown.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\engineeringnumericupdown.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\helpers\\engineeringparser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\helpers\\engineeringparser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\subsystemform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\subsystemform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\propertypanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\propertypanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\rendering\\gridrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\rendering\\gridrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\rendering\\connectionrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\rendering\\connectionrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\doublebufferedpanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\doublebufferedpanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\propertypanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\propertypanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\rendering\\blockrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\rendering\\blockrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\toolboxcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\toolboxcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\graphform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\graphform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\rendering\\connectionrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\rendering\\connectionrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\toolboxcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\toolboxcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\core\\connectionmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\core\\connectionmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\models\\enums.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\enums.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\ui\\graphform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\ui\\graphform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\models\\connection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\connection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\models\\subsystemmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\models\\subsystemmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0433\u043F\u043E\\models\\subsystemdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -62,7 +78,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -70,43 +86,32 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "PropertyPanel.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
-              "ViewState": "AgIAAGMAAAAAAAAAAAAcwFwAAAAeAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T04:09:34.131Z"
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 4,
-              "Title": "BlockRenderer.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
-              "ViewState": "AgIAAJcAAAAAAAAAAAAIwKkAAABDAAAAAAAAAA==",
+              "Title": "EngineeringNumericUpDown.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\EngineeringNumericUpDown.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\EngineeringNumericUpDown.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\EngineeringNumericUpDown.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\EngineeringNumericUpDown.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T04:09:34.131Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "ConnectionManager.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
-              "ViewState": "AgIAACoAAAAAAAAAAAAswDAAAAAmAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T04:09:34.131Z"
+              "WhenOpened": "2026-05-26T14:11:41.791Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
+              "Title": "EngineeringParser.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Helpers\\EngineeringParser.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Helpers\\EngineeringParser.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Helpers\\EngineeringParser.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Helpers\\EngineeringParser.cs",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAUwEQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-26T13:58:10.758Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
               "Title": "ToolboxControl.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\ToolboxControl.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\ToolboxControl.cs",
@@ -118,49 +123,38 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 6,
               "Title": "SubSystemForm.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
               "RelativeToolTip": "\u0413\u041F\u041E\\UI\\SubSystemForm.cs",
-              "ViewState": "AgIAAIUCAAAAAAAAAADwv5sCAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T04:09:34.04Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "Form1.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Form1.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Form1.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Form1.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\Form1.cs",
-              "ViewState": "AgIAALQAAAAAAAAAAAAcwNgAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T04:09:34.023Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "Enums.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\Enums.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\Enums.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\Enums.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\Enums.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAYAAAAAAAAAA==",
+              "ViewState": "AgIAAC8AAAAAAAAAAAAQwP8CAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-29T04:09:34.04Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Form1.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Form1.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Form1.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Form1.cs",
+              "ViewState": "AgIAAOACAAAAAAAAAAAgwPQCAAAkAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:09:34.023Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "CalculationEngine.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
               "RelativeToolTip": "\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
-              "ViewState": "AgIAAG0BAAAAAAAAAADwv4cBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAHEBAAAAAAAAAAAAALQBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-29T04:09:34.089Z",
               "EditorCaption": ""
@@ -168,6 +162,104 @@
             {
               "$type": "Document",
               "DocumentIndex": 3,
+              "Title": "MathTool.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\MathTool.cs",
+              "ViewState": "AgIAAEcAAAAAAAAAAAAowEwAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-20T15:32:12.233Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "GraphForm.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\GraphForm.cs",
+              "ViewState": "AgIAAOsBAAAAAAAAAAAewP0BAAAbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-15T04:36:38.294Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "PropertyPanel.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\PropertyPanel.cs",
+              "ViewState": "AgIAACUCAAAAAAAAAAAqwEACAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:09:34.131Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AllGraphsWindow.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\AllGraphsWindow.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\AllGraphsWindow.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\AllGraphsWindow.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\AllGraphsWindow.cs",
+              "ViewState": "AgIAAHYBAAAAAAAAAAAQwK4BAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-20T15:27:48.769Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "DoubleBufferedPanel.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\DoubleBufferedPanel.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\DoubleBufferedPanel.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\DoubleBufferedPanel.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\DoubleBufferedPanel.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAswBoAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-26T05:08:06.731Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "GridRenderer.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\GridRenderer.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Rendering\\GridRenderer.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\GridRenderer.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Rendering\\GridRenderer.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAAAswDQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-26T05:09:04.435Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ConnectionManager.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Core\\ConnectionManager.cs",
+              "ViewState": "AgIAACoAAAAAAAAAAAAswDAAAAAmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:09:34.131Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "BlockRenderer.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Rendering\\BlockRenderer.cs",
+              "ViewState": "AgIAAJABAAAAAAAAAAAwwKIBAAAkAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:09:34.131Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
               "Title": "ConnectionRenderer.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Rendering\\ConnectionRenderer.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Rendering\\ConnectionRenderer.cs",
@@ -179,7 +271,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 15,
               "Title": "Connection.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\Connection.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\Connection.cs",
@@ -191,31 +283,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "SubSystemModels.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\Models\\SubSystemModels.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T04:09:34.131Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "GraphForm.cs",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\GraphForm.cs",
-              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\UI\\GraphForm.cs",
-              "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\UI\\GraphForm.cs",
-              "RelativeToolTip": "\u0413\u041F\u041E\\UI\\GraphForm.cs",
-              "ViewState": "AgIAADsBAAAAAAAAAAAYwFYBAAAfAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-15T04:36:38.294Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 16,
               "Title": "SubSystemData.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\GitHub\\GPO\\\u0413\u041F\u041E\\Models\\SubSystemData.cs",
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Models\\SubSystemData.cs",

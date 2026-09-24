@@ -14,6 +14,7 @@ namespace MathApp.Rendering
         private readonly Font _valueFont = new Font("Segoe UI", 8, FontStyle.Bold);
         private readonly Font _paramFont = new Font("Segoe UI", 7);
         private readonly Font _nameFont = new Font("Segoe UI", 8, FontStyle.Bold);
+        private readonly Font _idFont = new Font("Segoe UI", 7, FontStyle.Bold);
 
         private void DrawShadow(Graphics g, Rectangle rect)
         {
@@ -22,7 +23,12 @@ namespace MathApp.Rendering
                 GraphicsExtensions.FillRoundedRectangle(g, shadowBrush, shadowRect, 8);
         }
 
-        // ============ ЕДИНЫЕ МЕТОДЫ ДЛЯ ПОЛУЧЕНИЯ КООРДИНАТ ТОЧЕК ============
+        private void DrawBlockId(Graphics g, Rectangle rect, int blockId)
+        {
+            string idText = $"#{blockId}";
+            g.DrawString(idText, _idFont, Brushes.DarkGray, rect.X + 5, rect.Y + 5);
+        }
+
         public Point GetInputPoint(MathTool tool, InputType input, int portIndex = 0)
         {
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
@@ -49,9 +55,8 @@ namespace MathApp.Rendering
                 else
                     return new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2);
             }
-            else // все остальные блоки (усилитель, антенна, канал, объект, АЦП, генератор)
+            else
             {
-                // У генератора нет входа, но для единообразия вернём что-то
                 if (tool.Flipped)
                     return new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
                 else
@@ -71,7 +76,7 @@ namespace MathApp.Rendering
             }
             else if (tool.Type == ToolType.Chart)
             {
-                return Point.Empty; // у графика нет выхода
+                return Point.Empty;
             }
             else
             {
@@ -82,7 +87,6 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ МАТЕМАТИЧЕСКИЕ ОПЕРАЦИИ ============
         public void DrawMathTool(Graphics g, MathTool tool, MathTool selectedTool)
         {
             Rectangle rect = new Rectangle(tool.Position, tool.Size);
@@ -91,6 +95,8 @@ namespace MathApp.Rendering
                 GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 10);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 10);
+
+            DrawBlockId(g, rect, tool.BlockId);
 
             if (tool.Operation == MathOperation.FileIO)
             {
@@ -132,6 +138,8 @@ namespace MathApp.Rendering
                 GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 10);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 10);
+
+            DrawBlockId(g, rect, tool.BlockId);
             DrawSineWave(g, rect, time);
             string paramsText = $"f={tool.Frequency:F1} A={tool.Amplitude:F1}";
             g.DrawString(paramsText, _paramFont, Brushes.DarkGray, rect.X + 10, rect.Y + 10);
@@ -145,6 +153,8 @@ namespace MathApp.Rendering
                 GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 10);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 10);
+
+            DrawBlockId(g, rect, tool.BlockId);
             g.DrawString("📊", new Font("Segoe UI", 30), Brushes.Purple, rect.X + rect.Width / 2 - 25, rect.Y + 10);
             if (tool.ValueHistory != null && tool.ValueHistory.Count > 0)
                 DrawMiniChart(g, rect, tool.ValueHistory);
@@ -160,6 +170,8 @@ namespace MathApp.Rendering
                 GraphicsExtensions.FillRoundedRectangle(g, brush, rect, 10);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(150, 150, 200), selectedTool == tool ? 2 : 1))
                 GraphicsExtensions.DrawRoundedRectangle(g, pen, rect, 10);
+
+            DrawBlockId(g, rect, tool.BlockId);
             g.DrawString("🧩", new Font("Segoe UI", 24), Brushes.DarkBlue, rect.X + rect.Width / 2 - 20, rect.Y + 15);
             g.DrawString(tool.Name, _nameFont, Brushes.DarkGray, rect.X + 10, rect.Y + rect.Height - 20);
             if (tool.SubSystemData != null)
@@ -168,7 +180,6 @@ namespace MathApp.Rendering
                 int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
                 string portsInfo = $"Вх:{inputCount} Вых:{outputCount}";
                 g.DrawString(portsInfo, _nameFont, Brushes.DarkCyan, rect.X + rect.Width - 70, rect.Y + 10);
-                // мини-порты для визуализации (можно оставить или убрать – не влияет на функционал)
                 for (int i = 0; i < Math.Min(inputCount, 8); i++)
                 {
                     int y = 35 + i * 20;
@@ -186,7 +197,6 @@ namespace MathApp.Rendering
             }
         }
 
-        // ============ СПЕЦИАЛЬНЫЕ БЛОКИ ============
         public void DrawAmplifierTool(Graphics g, MathTool tool, MathTool selectedTool)
         {
             Rectangle rect = new Rectangle(tool.Position, tool.Size);
@@ -201,7 +211,8 @@ namespace MathApp.Rendering
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 g.DrawPolygon(pen, triangle);
 
-            // Буква "G" в центре
+            DrawBlockId(g, rect, tool.BlockId);
+
             using (var fontG = new Font("Segoe UI", 20, FontStyle.Bold))
             {
                 SizeF textSize = g.MeasureString("G", fontG);
@@ -225,6 +236,9 @@ namespace MathApp.Rendering
                 g.FillRectangle(brush, rect);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 g.DrawRectangle(pen, rect);
+
+            DrawBlockId(g, rect, tool.BlockId);
+
             int cx = rect.X + rect.Width / 2;
             int startY = rect.Y + rect.Height - 15;
             int topY = rect.Y + 20;
@@ -247,6 +261,8 @@ namespace MathApp.Rendering
                 g.FillRectangle(brush, rect);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 g.DrawRectangle(pen, rect);
+
+            DrawBlockId(g, rect, tool.BlockId);
             g.DrawString("КАНАЛ", _nameFont, Brushes.Black, rect.X + rect.Width / 2 - 20, rect.Y + rect.Height / 2 - 8);
         }
 
@@ -258,6 +274,8 @@ namespace MathApp.Rendering
                 g.FillRectangle(brush, rect);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 g.DrawRectangle(pen, rect);
+
+            DrawBlockId(g, rect, tool.BlockId);
             g.DrawString("ОБЪЕКТ", _nameFont, Brushes.Black, rect.X + rect.Width / 2 - 25, rect.Y + rect.Height / 2 - 8);
         }
 
@@ -269,13 +287,13 @@ namespace MathApp.Rendering
                 g.FillRectangle(brush, rect);
             using (var pen = new Pen(selectedTool == tool ? Color.FromArgb(0, 120, 215) : Color.FromArgb(180, 180, 180), selectedTool == tool ? 2 : 1))
                 g.DrawRectangle(pen, rect);
+
+            DrawBlockId(g, rect, tool.BlockId);
             g.DrawString("АЦП", _nameFont, Brushes.Black, rect.X + rect.Width / 2 - 15, rect.Y + rect.Height / 2 - 8);
         }
 
-        // ============ ТОЧКИ ПОДКЛЮЧЕНИЯ (используют единые методы GetInputPoint/GetOutputPoint) ============
         public void DrawConnectionPoints(Graphics g, MathTool tool, IEnumerable<Connection> connections)
         {
-            // Подсистема
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int inCnt = tool.SubSystemData.InputPorts?.Count ?? 0;
@@ -295,7 +313,6 @@ namespace MathApp.Rendering
                 return;
             }
 
-            // Выход (кроме графика)
             if (tool.Type != ToolType.Chart)
             {
                 Point outPt = GetOutputPoint(tool);
@@ -303,7 +320,6 @@ namespace MathApp.Rendering
                 DrawConnectionPoint(g, outPt, "out", Color.Orange, hasOut);
             }
 
-            // Входы
             if (tool.Type == ToolType.Operation)
             {
                 Point inA = GetInputPoint(tool, InputType.A);
@@ -319,7 +335,7 @@ namespace MathApp.Rendering
                 bool hasIn = connections.Any(c => c.TargetToolId == tool.Id);
                 DrawConnectionPoint(g, inPt, "in", Color.LightGreen, hasIn);
             }
-            else if (tool.Type != ToolType.Generator) // у генератора нет входа
+            else if (tool.Type != ToolType.Generator)
             {
                 Point inPt = GetInputPoint(tool, InputType.A);
                 bool hasIn = connections.Any(c => c.TargetToolId == tool.Id);

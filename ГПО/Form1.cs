@@ -24,6 +24,7 @@ namespace MathApp
         private TextBox durationInput;
         private Button runButton;
         private Button clearButton;
+        private Button allGraphsButton;
         private FlowLayoutPanel libraryPanel;
 
         // ============ ДАННЫЕ ============
@@ -42,14 +43,12 @@ namespace MathApp
         private ConnectionPoint? sourceConnectionPoint = null;
         private Point tempConnectionEnd;
 
-        private Timer simulationTimer;
-        private bool isSimulating = false;
-        private double simulationTime = 0;
-
         private Dictionary<Guid, GraphForm> graphWindows = new Dictionary<Guid, GraphForm>();
         private PropertyPanel propertyPanel;
         private Timer renderTimer;
         private bool needsRedraw = true;
+
+        private static int _nextBlockId = 1;
 
         public Form1()
         {
@@ -96,6 +95,20 @@ namespace MathApp
             leftPanel.Controls.Add(durationInput);
             y += 45;
 
+            allGraphsButton = new Button
+            {
+                Text = "ВСЕ ГРАФИКИ",
+                Location = new Point(15, y),
+                Size = new Size(250, 40),
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            allGraphsButton.Click += ShowAllGraphs;
+            leftPanel.Controls.Add(allGraphsButton);
+            y += 55;
+
             leftPanel.Controls.Add(new Label { Text = "Библиотека блоков", Location = new Point(15, y), Size = new Size(250, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(52, 58, 64) });
             y += 30;
             libraryPanel = new FlowLayoutPanel { Location = new Point(15, y), Size = new Size(250, 300), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
@@ -120,7 +133,7 @@ namespace MathApp
             propertiesPanel.Controls.Add(propertiesContent);
 
             propertyPanel = new PropertyPanel { Width = 280, Visible = false };
-            propertyPanel.ApplyClicked += (s, e) => { if (selectedTool != null) { propertyPanel.ApplyChanges(selectedTool); needsRedraw = true; } };
+            propertyPanel.ParametersChanged += (s, e) => { needsRedraw = true; };
             propertiesContent.Controls.Add(propertyPanel);
 
             propertiesPanel.Resize += (s, e) => propertiesContent.Height = propertiesPanel.ClientSize.Height - 55;
@@ -155,8 +168,6 @@ namespace MathApp
             renderTimer = new Timer { Interval = 16 };
             renderTimer.Tick += (s, e) => { if (needsRedraw) { workArea.Invalidate(); needsRedraw = false; } };
             renderTimer.Start();
-            simulationTimer = new Timer { Interval = 50 };
-            simulationTimer.Tick += SimulationTick;
         }
 
         private void WorkArea_DragDrop(object sender, DragEventArgs e)
@@ -178,7 +189,24 @@ namespace MathApp
             else if (toolType.Contains("Деление"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.Division, Size = new Size(140, 80), Name = "Деление" };
             else if (toolType.Contains("Интегратор"))
-                tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.Integrator, Size = new Size(140, 100), Name = "Интегратор", IntegralValue = 0, PreviousInput = 0, StepSize = 0.01 };
+            {
+                double samplingRate = 10000;
+                double.TryParse(samplingRateInput.Text, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out samplingRate);
+                double dt = 1.0 / samplingRate;
+
+                tool = new MathTool
+                {
+                    Position = realPos,
+                    Type = ToolType.Operation,
+                    Operation = MathOperation.Integrator,
+                    Size = new Size(140, 100),
+                    Name = "Интегратор",
+                    IntegralValue = 0,
+                    PreviousInput = 0,
+                    StepSize = dt
+                };
+            }
             else if (toolType.Contains("Дифференциатор"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.Differentiator, Size = new Size(140, 100), Name = "Дифференциатор", PreviousTime = 0, PreviousOutput = 0 };
             else if (toolType.Contains("Интерполятор"))
@@ -189,12 +217,7 @@ namespace MathApp
             else if (toolType.Contains("Файловый"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.FileIO, Size = new Size(160, 100), Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
             else if (toolType.Contains("График"))
-            {
                 tool = new MathTool { Position = realPos, Type = ToolType.Chart, Size = new Size(160, 80), Name = $"График {whiteboardTools.Count + 1}" };
-                var graph = new GraphForm(tool.Name);
-                graph.Show();
-                graphWindows[tool.Id] = graph;
-            }
             else if (toolType.Contains("Подсистема"))
                 tool = new MathTool { Position = realPos, Type = ToolType.SubSystem, Size = new Size(180, 120), Name = $"Подсистема {whiteboardTools.Count + 1}", SubSystemData = new SubSystemData { Name = $"Подсистема {whiteboardTools.Count + 1}", InternalTools = new List<MathTool>(), InternalConnections = new List<Connection>(), InputPorts = new List<SubSystemPort>(), OutputPorts = new List<SubSystemPort>() } };
             else if (toolType.Contains("Усилитель"))
@@ -210,6 +233,7 @@ namespace MathApp
 
             if (tool != null)
             {
+                tool.BlockId = _nextBlockId++;
                 whiteboardTools.Add(tool);
                 needsRedraw = true;
             }
@@ -221,11 +245,9 @@ namespace MathApp
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-            // НЕ используем TranslateTransform – GridRenderer сам учитывает прокрутку
 
             GridRenderer.Draw(g, (Panel)workArea);
 
-            // Соединения
             foreach (var conn in connections)
             {
                 var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
@@ -234,7 +256,6 @@ namespace MathApp
                     ConnectionRenderer.Draw(g, conn, source, target);
             }
 
-            // Временное соединение
             if (isConnecting && sourceConnectionPoint.HasValue)
             {
                 var sourceTool = whiteboardTools.FirstOrDefault(t => t.Id == sourceConnectionPoint.Value.ToolId);
@@ -242,13 +263,12 @@ namespace MathApp
                     ConnectionRenderer.DrawTemp(g, sourceTool, tempConnectionEnd);
             }
 
-            // Блоки
             foreach (var tool in whiteboardTools)
             {
                 if (tool.Type == ToolType.Chart)
                     blockRenderer.DrawChartTool(g, tool, selectedTool);
                 else if (tool.Type == ToolType.Generator)
-                    blockRenderer.DrawSineTool(g, tool, selectedTool, simulationTime);
+                    blockRenderer.DrawSineTool(g, tool, selectedTool, 0);
                 else if (tool.Type == ToolType.SubSystem)
                     blockRenderer.DrawSubSystemTool(g, tool, selectedTool);
                 else if (tool.Type == ToolType.Amplifier)
@@ -338,6 +358,25 @@ namespace MathApp
             }
         }
 
+        private void ShowAllGraphs(object sender, EventArgs e)
+        {
+            var charts = whiteboardTools.Where(t => t.Type == ToolType.Chart).ToList();
+            if (charts.Count == 0)
+            {
+                MessageBox.Show("Нет графиков на схеме", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var graphsWindow = new AllGraphsWindow(charts, graphWindows);
+
+            double samplingRate = 10000;
+            EngineeringParser.TryParse(samplingRateInput.Text, out samplingRate);
+            if (samplingRate <= 0) samplingRate = 10000;
+            graphsWindow.SetTimeStep(1.0 / samplingRate);
+
+            graphsWindow.Show();
+        }
+
         private void WorkArea_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             var realPos = ((DoubleBufferedPanel)workArea).GetRealMouseLocation(e.Location);
@@ -369,13 +408,11 @@ namespace MathApp
             }
         }
 
-        // ============ HIT TEST – ИСПОЛЬЗУЕТ МЕТОДЫ BlockRenderer ============
         private ConnectionPoint? HitTestConnectionPoint(Point mousePos)
         {
             var realPoint = ((DoubleBufferedPanel)workArea).GetRealMouseLocation(mousePos);
             foreach (var tool in whiteboardTools)
             {
-                // Подсистема
                 if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
                 {
                     int inCnt = tool.SubSystemData.InputPorts?.Count ?? 0;
@@ -394,7 +431,6 @@ namespace MathApp
                     }
                 }
 
-                // Выход (кроме графика)
                 if (tool.Type != ToolType.Chart)
                 {
                     Point outPt = blockRenderer.GetOutputPoint(tool);
@@ -402,7 +438,6 @@ namespace MathApp
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };
                 }
 
-                // Входы
                 if (tool.Type == ToolType.Operation)
                 {
                     Point inA = blockRenderer.GetInputPoint(tool, InputType.A);
@@ -418,7 +453,7 @@ namespace MathApp
                     if (Distance(realPoint, inPt) < 12)
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Input, InputType = InputType.A };
                 }
-                else if (tool.Type != ToolType.Generator) // у генератора нет входа
+                else if (tool.Type != ToolType.Generator)
                 {
                     Point inPt = blockRenderer.GetInputPoint(tool, InputType.A);
                     if (Distance(realPoint, inPt) < 12)
@@ -476,6 +511,12 @@ namespace MathApp
                 }
                 connectionManager.RemoveConnectionsForTool(tool.Id);
                 whiteboardTools.Remove(tool);
+
+                int newId = 1;
+                foreach (var t in whiteboardTools.OrderBy(t => t.BlockId))
+                    t.BlockId = newId++;
+                _nextBlockId = newId;
+
                 needsRedraw = true;
             }
         }
@@ -498,45 +539,196 @@ namespace MathApp
             graphWindows.Clear();
             whiteboardTools.Clear();
             connections.Clear();
+            _nextBlockId = 1;
             SelectTool(null);
             needsRedraw = true;
         }
         private void ClearAll_Click(object sender, EventArgs e) => ClearAll(null, null);
 
-        // ============ СИМУЛЯЦИЯ ============
+        // ============ СТАТИЧЕСКАЯ СИМУЛЯЦИЯ ============
         private void RunSimulation(object sender, EventArgs e)
         {
-            isSimulating = true;
-            simulationTime = 0;
-            simulationTimer.Start();
+            // ---------- 1. Парсинг параметров с ЖЁСТКОЙ проверкой ----------
+            double samplingRate, duration;
+
+            if (!EngineeringParser.TryParse(samplingRateInput.Text, out samplingRate) ||
+                samplingRate <= 0 || double.IsNaN(samplingRate) || double.IsInfinity(samplingRate))
+            {
+                samplingRate = 10000;
+                samplingRateInput.Text = "10000";
+            }
+
+            if (!EngineeringParser.TryParse(durationInput.Text, out duration) ||
+                duration <= 0 || double.IsNaN(duration) || double.IsInfinity(duration))
+            {
+                duration = 0.01;
+                durationInput.Text = "0.01";
+            }
+
+            double dt = 1.0 / samplingRate;
+            int totalSamples = (int)Math.Round(duration * samplingRate);
+            if (totalSamples < 2) totalSamples = 2;
+
+            if (totalSamples > 5_000_000)
+            {
+                var r = MessageBox.Show(
+                    $"Будет рассчитано {totalSamples:N0} точек.\n" +
+                    $"Это может занять несколько секунд. Продолжить?",
+                    "Очень много точек",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (r != DialogResult.Yes) return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"=== СТАТИЧЕСКИЙ РАСЧЁТ ===");
+            System.Diagnostics.Debug.WriteLine($"Fs={samplingRate:G6} Гц, T={duration:G6} с, dt={dt:E3} с, N={totalSamples:N0}");
+
+            runButton.Enabled = false;
+            allGraphsButton.Enabled = false;
+            var oldCursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
+            try
+            {
+                // 2. Сброс состояния
+                calculator.ResetAll(whiteboardTools);
+                foreach (var c in connections) c.CurrentValue = null;
+
+                // 3. dt для интеграторов / дифференциаторов
+                foreach (var t in whiteboardTools)
+                {
+                    if (t.Type == ToolType.Operation &&
+                        (t.Operation == MathOperation.Integrator ||
+                         t.Operation == MathOperation.Differentiator))
+                    {
+                        t.StepSize = dt;
+                    }
+                }
+                calculator.TimeStep = dt;
+
+                // 4. Привязка графиков к источникам
+                var chartBindings = new List<Tuple<MathTool, MathTool, Connection>>();
+                foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
+                {
+                    chart.ValueHistory.Clear();
+                    chart.CurrentValue = 0;
+
+                    var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
+                    if (conn == null) { chartBindings.Add(null); continue; }
+
+                    var src = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+                    chartBindings.Add(src == null ? null : Tuple.Create(chart, src, conn));
+                }
+
+                // 5. ГЛАВНЫЙ ЦИКЛ — без таймера, без DoEvents
+                for (int i = 0; i < totalSamples; i++)
+                {
+                    calculator.CurrentTime = i * dt;
+
+                    var results = calculator.CalculateAll(whiteboardTools, connections);
+
+                    for (int k = 0; k < chartBindings.Count; k++)
+                    {
+                        var b = chartBindings[k];
+                        if (b == null) continue;
+
+                        MathTool chart = b.Item1;
+                        MathTool src = b.Item2;
+                        Connection conn = b.Item3;
+
+                        double value = 0;
+                        if (src.Type == ToolType.SubSystem)
+                        {
+                            if (src.OutputPortResults.TryGetValue(conn.SourcePortIndex, out var v))
+                                value = v;
+                            else if (src.LastResult.HasValue)
+                                value = src.LastResult.Value;
+                        }
+                        else if (results.TryGetValue(src.Id, out var rv))
+                        {
+                            value = rv;
+                        }
+                        else if (src.LastResult.HasValue)
+                        {
+                            value = src.LastResult.Value;
+                        }
+
+                        chart.ValueHistory.Add(value);
+                        chart.CurrentValue = value;
+                    }
+                }
+
+                sw.Stop();
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Sim] {totalSamples:N0} точек за {sw.ElapsedMilliseconds} мс " +
+                    $"({(totalSamples > 0 ? sw.ElapsedMilliseconds / (double)totalSamples : 0):F4} мс/точку)");
+
+                // 6. Показываем графики сразу
+                DisplayAllGraphsStatic();
+                needsRedraw = true;
+                workArea.Invalidate();
+                workArea.Update();
+
+                MessageBox.Show(
+                    $"Моделирование завершено.\n" +
+                    $"Шагов: {totalSamples:N0}\n" +
+                    $"dt: {dt:E3} с\n" +
+                    $"Fs: {samplingRate:G6} Гц\n" +
+                    $"T: {duration:G6} с\n" +
+                    $"Время расчёта: {sw.ElapsedMilliseconds} мс",
+                    "Готово", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка расчёта: {ex.Message}\n{ex.StackTrace}",
+                                "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor.Current = oldCursor;
+                runButton.Enabled = true;
+                allGraphsButton.Enabled = true;
+            }
         }
 
-        private void SimulationTick(object sender, EventArgs e)
+        private void DisplayAllGraphsStatic()
         {
-            if (!isSimulating) return;
-            var results = calculator.CalculateAll(whiteboardTools, connections);
-            simulationTime += 0.05;
+            double samplingRate = 10000;
+            double duration = 0.01;
+            EngineeringParser.TryParse(samplingRateInput.Text, out samplingRate);
+            EngineeringParser.TryParse(durationInput.Text, out duration);
+            if (samplingRate <= 0) samplingRate = 10000;
+            if (duration <= 0) duration = 0.01;
+
+            double dt = 1.0 / samplingRate;
 
             foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
             {
-                var conn = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
-                if (conn != null && graphWindows.ContainsKey(chart.Id) && !graphWindows[chart.Id].IsDisposed)
+                if (chart.ValueHistory == null || chart.ValueHistory.Count == 0) continue;
+
+                var timeValues = new List<double>(chart.ValueHistory.Count);
+                for (int i = 0; i < chart.ValueHistory.Count; i++)
+                    timeValues.Add(i * dt);
+
+                GraphForm gf;
+                if (graphWindows.ContainsKey(chart.Id) && !graphWindows[chart.Id].IsDisposed)
                 {
-                    var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
-                    if (source != null && source.Type == ToolType.SubSystem && source.OutputPortResults.ContainsKey(conn.SourcePortIndex))
-                        graphWindows[chart.Id].AddValue(source.OutputPortResults[conn.SourcePortIndex]);
-                    else if (results.ContainsKey(conn.SourceToolId))
-                        graphWindows[chart.Id].AddValue(results[conn.SourceToolId]);
-                    else if (source != null && source.Type == ToolType.Generator && source.LastResult.HasValue)
-                        graphWindows[chart.Id].AddValue(source.LastResult.Value);
+                    gf = graphWindows[chart.Id];
                 }
+                else
+                {
+                    gf = new GraphForm(chart.Name);
+                    gf.Show();
+                    graphWindows[chart.Id] = gf;
+                }
+
+                gf.SetDataDirectly(timeValues, chart.ValueHistory);
             }
-            needsRedraw = true;
         }
 
         public void LoadStaticFileData(Guid fileToolId)
         {
-            if (simulationTimer.Enabled) simulationTimer.Stop();
             var fileTool = whiteboardTools.FirstOrDefault(t => t.Id == fileToolId);
             if (fileTool != null && fileTool.Operation == MathOperation.FileIO && fileTool.FileData.Count > 0)
             {
@@ -564,8 +756,6 @@ namespace MathApp
             {
                 renderTimer?.Stop();
                 renderTimer?.Dispose();
-                simulationTimer?.Stop();
-                simulationTimer?.Dispose();
                 foreach (var g in graphWindows.Values) if (!g.IsDisposed) g.Close();
             }
             base.Dispose(disposing);
