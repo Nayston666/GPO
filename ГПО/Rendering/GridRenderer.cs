@@ -1,18 +1,23 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
 
-namespace MathApp.Rendering  // Изменено с Graphics на Rendering
+namespace MathApp.Rendering
 {
     public static class GridRenderer
     {
-        private static readonly Pen _thinPen = new Pen(Color.FromArgb(30, 30, 35), 1);
-        private static readonly Pen _boldPen = new Pen(Color.FromArgb(50, 50, 55), 1.5f);
+        // Светло-серая сетка для маленьких квадратов
+        private static readonly Pen _thinPen = new Pen(Color.FromArgb(220, 220, 220), 1);
+        // Более тёмная для больших квадратов
+        private static readonly Pen _boldPen = new Pen(Color.FromArgb(180, 180, 180), 1.5f);
 
         private const int GridSize = 30;
         private const int BoldGridSize = 150;
 
         public static void Draw(Graphics g, Panel panel)
         {
+            // Очищаем фон белым
+            g.Clear(Color.White);
+
             Point scrollOffset = panel.AutoScrollPosition;
 
             DrawThinGrid(g, panel, scrollOffset);

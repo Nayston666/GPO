@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>ГПО</RootNamespace>
     <AssemblyName>ГПО</AssemblyName>
-    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -89,6 +89,9 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\EngineeringParser.cs" />
+    <Compile Include="Models\SubSystemData.cs" />
+    <Compile Include="Models\SubSystemModels.cs" />
     <Compile Include="Rendering\BlockRenderer.cs" />
     <Compile Include="Rendering\ConnectionRenderer.cs" />
     <Compile Include="Rendering\GridRenderer.cs" />
@@ -99,7 +102,14 @@
     <Compile Include="Models\MathTool.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SignalGenerator.cs" />
+    <Compile Include="UI\AllGraphsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="UI\DoubleBufferedPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\EngineeringNumericUpDown.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="UI\GraphForm.cs">
@@ -109,6 +119,9 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="UI\ResultForm.cs" />
+    <Compile Include="UI\SubSystemForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="UI\ToolboxControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

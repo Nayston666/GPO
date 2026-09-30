@@ -1,0 +1,108 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+
+namespace MathApp.Models
+{
+    public class MathTool
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; }
+        public Point Position { get; set; }
+        public Size Size { get; set; }
+
+        public double GlobalTimeStep { get; set; } = 0.0001;
+        public int BlockId { get; set; }
+
+        public ToolType Type { get; set; }
+        public MathOperation Operation { get; set; }
+
+        public double CustomValueA { get; set; }
+        public double CustomValueB { get; set; }
+
+        public List<double> ValueHistory { get; set; } = new List<double>();
+        public int MaxHistorySize { get; set; } = 200;
+
+        public double? LastResult { get; set; }
+
+        public bool Flipped { get; set; } = false;
+
+        // Генератор
+        public GeneratorWaveform Waveform { get; set; } = GeneratorWaveform.Sine;
+        public double Frequency { get; set; } = 1.0;
+        public double Amplitude { get; set; } = 1.0;
+        public double Phase { get; set; } = 0.0;
+        public double RiseTime { get; set; } = 0.1;
+        public double FallTime { get; set; } = 0.1;
+
+        // Усилитель
+        public double Gain { get; set; } = 10.0;
+
+        // Антенна
+        public double EffectiveArea { get; set; } = 0.1;
+
+        // Канал
+        public double Distance { get; set; } = 1000.0;
+        public double Attenuation { get; set; } = 0.01;
+
+        // Объект
+        public double RadarCrossSection { get; set; } = 1.0;
+        public double TimeConstant { get; set; } = 0.1;
+
+        // АЦП
+        public int BitResolution { get; set; } = 12;
+        public double SamplingRate { get; set; } = 10000.0;
+        public double QuantizationStep { get; set; } = 0.001;
+        public double DynamicRange { get; set; } = 120.0;
+        public double ReferenceVoltage { get; set; } = 5.0;
+
+        // Интегратор / Дифференциатор / Интерполятор / Файл
+        public double IntegralValue { get; set; } = 0;
+        public double PreviousInput { get; set; } = 0;
+        public double StepSize { get; set; } = 0.01;
+        public double PreviousTime { get; set; } = 0;
+        public double PreviousOutput { get; set; } = 0;
+        public List<PointF> InterpolationPoints { get; set; } = new List<PointF>();
+        public string InputFilePath { get; set; } = "";
+        public string OutputFilePath { get; set; } = "";
+        public List<double> FileData { get; set; } = new List<double>();
+        public int CurrentFileIndex { get; set; } = 0;
+        public bool IsReading { get; set; } = true;
+
+        // Подсистема
+        public SubSystemData SubSystemData { get; set; }
+        public Dictionary<int, double> OutputPortResults { get; set; } = new Dictionary<int, double>();
+
+        public double CurrentValue { get; set; } = 0;
+
+        /// <summary>
+        /// Добавляет значение в историю.
+        /// </summary>
+        public void AddToHistory(double value, bool allowTrim = true)
+        {
+            ValueHistory.Add(value);
+            if (allowTrim && ValueHistory.Count > MaxHistorySize * 2)
+                ValueHistory.RemoveRange(0, ValueHistory.Count - MaxHistorySize);
+        }
+
+        public void ClearHistory() => ValueHistory.Clear();
+
+        public List<double> GetRecentHistory(int count)
+        {
+            if (ValueHistory.Count <= count) return new List<double>(ValueHistory);
+            return ValueHistory.GetRange(ValueHistory.Count - count, count);
+        }
+
+        public void ResetState()
+        {
+            LastResult = null;
+            IntegralValue = 0;
+            PreviousInput = 0;
+            PreviousOutput = 0;
+            PreviousTime = 0;
+            CurrentFileIndex = 0;
+            OutputPortResults.Clear();
+            CurrentValue = 0;
+        }
+    }
+}
