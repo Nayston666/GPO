@@ -1,0 +1,993 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Forms;
+
+namespace MathApp.UI
+{
+    /// <summary>
+    /// Совместимость с текущим САПР.
+    /// Внешний вид и поведение реализованы в SignalGraphForm.
+    /// </summary>
+    public class GraphForm : SignalGraphForm
+    {
+        public GraphForm(string sourceName) : base(sourceName)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Окно графика:
+    /// - dt приходит извне и не изменяется;
+    /// - t = index * dt;
+    /// - колесо мыши = масштабирование;
+    /// - ЛКМ = перемещение;
+    /// - двойной щелчок = полный диапазон;
+    /// - автоматические единицы времени СИ;
+    /// - X: до двух знаков;
+    /// - Y: G10 без принудительного округления;
+    /// - большие массивы рисуются Min/Max по пикселям.
+    /// </summary>
+    public class SignalGraphForm : Form
+    {
+        private readonly SignalGraphPanel _graphPanel;
+        private readonly string _sourceName;
+
+        private List<double> _values = new List<double>();
+        private List<double> _timeValues = new List<double>();
+        private double _dt = 1.0;
+
+        private static readonly List<GraphForm> _openGraphForms = new List<GraphForm>();
+
+        public List<double> TimeValues => new List<double>(_timeValues);
+        public List<double> Values => new List<double>(_values);
+        public string SourceName => _sourceName;
+
+        public SignalGraphForm(string sourceName)
+        {
+            _sourceName = string.IsNullOrWhiteSpace(sourceName) ? "Сигнал" : sourceName;
+
+            Text = _sourceName;
+            StartPosition = FormStartPosition.CenterScreen;
+            ClientSize = new Size(1000, 600);
+            MinimumSize = new Size(600, 400);
+            BackColor = Color.White;
+
+            _graphPanel = new SignalGraphPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
+
+            Controls.Add(_graphPanel);
+
+            DoubleBuffered = true;
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+
+            if (this is GraphForm graphForm && !_openGraphForms.Contains(graphForm))
+                _openGraphForms.Add(graphForm);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (this is GraphForm graphForm)
+                _openGraphForms.Remove(graphForm);
+
+            base.OnFormClosed(e);
+        }
+
+        public static List<GraphForm> GetOpenWindows()
+        {
+            return new List<GraphForm>(_openGraphForms);
+        }
+
+        /// <summary>
+        /// Основной способ передачи данных.
+        /// dt не корректируется и не пересчитывается внутри графика.
+        /// </summary>
+        public void SetSignal(IReadOnlyList<double> signal, double dt)
+        {
+            if (signal == null)
+                return;
+
+            if (dt <= 0 || double.IsNaN(dt) || double.IsInfinity(dt))
+                throw new ArgumentOutOfRangeException(nameof(dt), "dt должен быть положительным конечным числом.");
+
+            _dt = dt;
+            _values = new List<double>(signal);
+
+            _timeValues.Clear();
+            _timeValues.Capacity = _values.Count;
+
+            for (int i = 0; i < _values.Count; i++)
+                _timeValues.Add(i * _dt);
+
+            _graphPanel.SetSignal(_values, _dt);
+        }
+
+        /// <summary>
+        /// Совместимость со старым кодом САПР.
+        /// </summary>
+        public void SetDataDirectly(List<double> timeValues, List<double> values)
+        {
+            if (values == null)
+                return;
+
+            double dt = _dt;
+
+            if (timeValues != null && timeValues.Count >= 2)
+            {
+                double candidate = timeValues[1] - timeValues[0];
+
+                if (candidate > 0 &&
+                    !double.IsNaN(candidate) &&
+                    !double.IsInfinity(candidate))
+                {
+                    dt = candidate;
+                }
+            }
+
+            SetSignal(values, dt);
+        }
+
+        public void SetRange(double start, double end)
+        {
+            _graphPanel.SetRange(start, end);
+        }
+
+        public (double start, double end) GetRange()
+        {
+            return _graphPanel.GetRange();
+        }
+
+        public double GetValueAt(double x)
+        {
+            if (_values.Count == 0)
+                throw new InvalidOperationException("Нет данных.");
+
+            if (_values.Count == 1)
+                return _values[0];
+
+            if (x <= 0)
+                return _values[0];
+
+            double endTime = (_values.Count - 1) * _dt;
+
+            if (x >= endTime)
+                return _values[_values.Count - 1];
+
+            int leftIndex = (int)Math.Floor(x / _dt);
+            leftIndex = Math.Max(0, Math.Min(_values.Count - 2, leftIndex));
+
+            double leftTime = leftIndex * _dt;
+            double k = (x - leftTime) / _dt;
+
+            return _values[leftIndex] +
+                   (_values[leftIndex + 1] - _values[leftIndex]) * k;
+        }
+
+        public void ResampleWithInterpolation(double newStep)
+        {
+            if (_values.Count < 2)
+                return;
+
+            if (newStep <= 0 ||
+                double.IsNaN(newStep) ||
+                double.IsInfinity(newStep))
+                return;
+
+            double endTime = (_values.Count - 1) * _dt;
+            var resampled = new List<double>();
+
+            for (double t = 0; t <= endTime + newStep * 0.5; t += newStep)
+                resampled.Add(GetValueAt(t));
+
+            SetSignal(resampled, newStep);
+        }
+    }
+
+    internal sealed class SignalGraphPanel : Panel
+    {
+        private IReadOnlyList<double> _signal = Array.Empty<double>();
+
+        private double _dt = 1.0;
+        private double _totalTime = 1.0;
+
+        private double _viewStart = 0.0;
+        private double _viewEnd = 1.0;
+
+        private bool _isPanning = false;
+        private int _lastMouseX;
+
+        private const int LeftMargin = 88;
+        private const int RightMargin = 26;
+        private const int TopMargin = 26;
+        private const int BottomMargin = 58;
+
+        private readonly Font _axisFont = new Font("Segoe UI", 8f);
+        private readonly Font _infoFont = new Font("Segoe UI", 8f);
+
+        public SignalGraphPanel()
+        {
+            DoubleBuffered = true;
+            ResizeRedraw = true;
+            TabStop = true;
+
+            MouseWheel += GraphPanel_MouseWheel;
+            MouseDown += GraphPanel_MouseDown;
+            MouseMove += GraphPanel_MouseMove;
+            MouseUp += GraphPanel_MouseUp;
+            MouseDoubleClick += GraphPanel_MouseDoubleClick;
+        }
+
+        public void SetSignal(IReadOnlyList<double> signal, double dt)
+        {
+            _signal = signal ?? Array.Empty<double>();
+            _dt = dt;
+
+            _totalTime = _signal.Count > 1
+                ? (_signal.Count - 1) * _dt
+                : _dt;
+
+            ResetView();
+        }
+
+        public void ResetView()
+        {
+            _viewStart = 0.0;
+            _viewEnd = Math.Max(_totalTime, _dt);
+
+            Invalidate();
+        }
+
+        public void SetRange(double start, double end)
+        {
+            if (end <= start)
+                return;
+
+            double total = Math.Max(_totalTime, _dt);
+
+            start = Math.Max(0.0, start);
+            end = Math.Min(total, end);
+
+            if (end <= start)
+                return;
+
+            _viewStart = start;
+            _viewEnd = end;
+
+            Invalidate();
+        }
+
+        public (double start, double end) GetRange()
+        {
+            return (_viewStart, _viewEnd);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            Graphics g = e.Graphics;
+            g.Clear(Color.White);
+
+            Rectangle plot = GetPlotRectangle();
+
+            if (plot.Width <= 2 || plot.Height <= 2)
+                return;
+
+            if (_signal.Count == 0)
+            {
+                DrawEmpty(g, plot);
+                return;
+            }
+
+            GetVisibleIndices(out int firstIndex, out int lastIndex);
+            GetVisibleYRange(firstIndex, lastIndex, out double yMin, out double yMax);
+
+            DrawGrid(g, plot, yMin, yMax);
+            DrawSignal(g, plot, firstIndex, lastIndex, yMin, yMax);
+            DrawVisibleMinMax(g, plot, firstIndex, lastIndex);
+        }
+
+        private Rectangle GetPlotRectangle()
+        {
+            return new Rectangle(
+                LeftMargin,
+                TopMargin,
+                Math.Max(1, ClientSize.Width - LeftMargin - RightMargin),
+                Math.Max(1, ClientSize.Height - TopMargin - BottomMargin));
+        }
+
+        private void DrawEmpty(Graphics g, Rectangle plot)
+        {
+            using (var brush = new SolidBrush(Color.Gray))
+            using (var font = new Font("Segoe UI", 11f))
+            {
+                string text = "Нет данных";
+                SizeF size = g.MeasureString(text, font);
+
+                g.DrawString(
+                    text,
+                    font,
+                    brush,
+                    plot.Left + (plot.Width - size.Width) / 2f,
+                    plot.Top + (plot.Height - size.Height) / 2f);
+            }
+        }
+
+        private void GetVisibleIndices(out int firstIndex, out int lastIndex)
+        {
+            firstIndex = Math.Max(
+                0,
+                (int)Math.Floor(_viewStart / _dt));
+
+            lastIndex = Math.Min(
+                _signal.Count - 1,
+                (int)Math.Ceiling(_viewEnd / _dt));
+
+            if (lastIndex < firstIndex)
+                lastIndex = firstIndex;
+        }
+
+        private void GetVisibleYRange(
+            int firstIndex,
+            int lastIndex,
+            out double yMin,
+            out double yMax)
+        {
+            yMin = double.PositiveInfinity;
+            yMax = double.NegativeInfinity;
+
+            for (int i = firstIndex; i <= lastIndex; i++)
+            {
+                double value = _signal[i];
+
+                if (value < yMin) yMin = value;
+                if (value > yMax) yMax = value;
+            }
+
+            if (double.IsInfinity(yMin) ||
+                double.IsInfinity(yMax))
+            {
+                yMin = -1.0;
+                yMax = 1.0;
+                return;
+            }
+
+            if (Math.Abs(yMax - yMin) < 1e-30)
+            {
+                double margin = Math.Abs(yMax) > 0.0
+                    ? Math.Abs(yMax) * 0.1
+                    : 1.0;
+
+                yMin -= margin;
+                yMax += margin;
+            }
+            else
+            {
+                double margin = (yMax - yMin) * 0.08;
+                yMin -= margin;
+                yMax += margin;
+            }
+        }
+
+        private void DrawGrid(
+            Graphics g,
+            Rectangle plot,
+            double yMin,
+            double yMax)
+        {
+            const int xDivisions = 10;
+            const int yDivisions = 8;
+
+            using (var gridPen = new Pen(Color.FromArgb(225, 225, 225), 1f))
+            using (var borderPen = new Pen(Color.FromArgb(155, 155, 155), 1f))
+            using (var textBrush = new SolidBrush(Color.FromArgb(70, 70, 70)))
+            {
+                TimeUnit unit = SelectTimeUnit(
+                    Math.Max(_viewEnd - _viewStart, _dt));
+
+                for (int i = 0; i <= xDivisions; i++)
+                {
+                    float x =
+                        plot.Left +
+                        plot.Width * i / (float)xDivisions;
+
+                    g.DrawLine(
+                        gridPen,
+                        x,
+                        plot.Top,
+                        x,
+                        plot.Bottom);
+
+                    double time =
+                        _viewStart +
+                        (_viewEnd - _viewStart) *
+                        i / xDivisions;
+
+                    string label = FormatXAxis(time, unit);
+
+                    SizeF size =
+                        g.MeasureString(label, _axisFont);
+
+                    g.DrawString(
+                        label,
+                        _axisFont,
+                        textBrush,
+                        x - size.Width / 2f,
+                        plot.Bottom + 6f);
+                }
+
+                string axisTitle = "Время, " + unit.Symbol;
+                SizeF titleSize =
+                    g.MeasureString(axisTitle, _axisFont);
+
+                g.DrawString(
+                    axisTitle,
+                    _axisFont,
+                    textBrush,
+                    plot.Left + plot.Width / 2f - titleSize.Width / 2f,
+                    plot.Bottom + 30f);
+
+                for (int i = 0; i <= yDivisions; i++)
+                {
+                    float y =
+                        plot.Top +
+                        plot.Height * i / (float)yDivisions;
+
+                    g.DrawLine(
+                        gridPen,
+                        plot.Left,
+                        y,
+                        plot.Right,
+                        y);
+
+                    double value =
+                        yMax -
+                        (yMax - yMin) *
+                        i / yDivisions;
+
+                    string label = FormatY(value);
+
+                    SizeF size =
+                        g.MeasureString(label, _axisFont);
+
+                    g.DrawString(
+                        label,
+                        _axisFont,
+                        textBrush,
+                        plot.Left - size.Width - 7f,
+                        y - size.Height / 2f);
+                }
+
+                g.DrawRectangle(borderPen, plot);
+            }
+        }
+
+        private void DrawSignal(
+            Graphics g,
+            Rectangle plot,
+            int firstIndex,
+            int lastIndex,
+            double yMin,
+            double yMax)
+        {
+            int visibleCount =
+                lastIndex - firstIndex + 1;
+
+            if (visibleCount <= 1)
+                return;
+
+            if (visibleCount <= plot.Width * 2)
+            {
+                DrawNormalSignal(
+                    g,
+                    plot,
+                    firstIndex,
+                    lastIndex,
+                    yMin,
+                    yMax);
+            }
+            else
+            {
+                DrawLargeSignal(
+                    g,
+                    plot,
+                    firstIndex,
+                    lastIndex,
+                    yMin,
+                    yMax);
+            }
+        }
+
+        private void DrawNormalSignal(
+            Graphics g,
+            Rectangle plot,
+            int firstIndex,
+            int lastIndex,
+            double yMin,
+            double yMax)
+        {
+            using (var pen = new Pen(Color.RoyalBlue, 1.5f))
+            {
+                PointF? previous = null;
+
+                for (int i = firstIndex; i <= lastIndex; i++)
+                {
+                    double time = i * _dt;
+                    double value = _signal[i];
+
+                    var current = new PointF(
+                        TimeToScreenX(time, plot),
+                        ValueToScreenY(value, plot, yMin, yMax));
+
+                    if (previous.HasValue)
+                    {
+                        g.DrawLine(
+                            pen,
+                            previous.Value,
+                            current);
+                    }
+
+                    previous = current;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Для больших массивов один экранный столбец хранит min/max
+        /// всех отсчётов, попавших в этот пиксель.
+        /// </summary>
+        private void DrawLargeSignal(
+            Graphics g,
+            Rectangle plot,
+            int firstIndex,
+            int lastIndex,
+            double yMin,
+            double yMax)
+        {
+            double samplesPerPixel =
+                (lastIndex - firstIndex + 1) /
+                (double)Math.Max(1, plot.Width);
+
+            using (var rangePen = new Pen(Color.RoyalBlue, 1f))
+            using (var linePen = new Pen(Color.RoyalBlue, 1.5f))
+            {
+                PointF? previousCenter = null;
+
+                for (int px = 0; px < plot.Width; px++)
+                {
+                    int startIndex =
+                        firstIndex +
+                        (int)Math.Floor(px * samplesPerPixel);
+
+                    int endIndex =
+                        firstIndex +
+                        (int)Math.Ceiling((px + 1) * samplesPerPixel) - 1;
+
+                    if (startIndex > lastIndex)
+                        break;
+
+                    endIndex =
+                        Math.Min(
+                            lastIndex,
+                            Math.Max(startIndex, endIndex));
+
+                    double localMin = double.PositiveInfinity;
+                    double localMax = double.NegativeInfinity;
+                    double sum = 0.0;
+                    int count = 0;
+
+                    for (int i = startIndex; i <= endIndex; i++)
+                    {
+                        double value = _signal[i];
+
+                        if (value < localMin)
+                            localMin = value;
+
+                        if (value > localMax)
+                            localMax = value;
+
+                        sum += value;
+                        count++;
+                    }
+
+                    float x = plot.Left + px;
+
+                    float yMinScreen =
+                        ValueToScreenY(
+                            localMin,
+                            plot,
+                            yMin,
+                            yMax);
+
+                    float yMaxScreen =
+                        ValueToScreenY(
+                            localMax,
+                            plot,
+                            yMin,
+                            yMax);
+
+                    // Сохраняем пики/выбросы.
+                    if (Math.Abs(yMinScreen - yMaxScreen) >= 0.5f)
+                    {
+                        g.DrawLine(
+                            rangePen,
+                            x,
+                            yMinScreen,
+                            x,
+                            yMaxScreen);
+                    }
+
+                    // И одновременно рисуем непрерывную линию.
+                    // Это необходимо для горизонтальных участков:
+                    // при localMin == localMax Min/Max-линия имеет нулевую длину.
+                    double centerValue =
+                        count > 0
+                            ? sum / count
+                            : localMin;
+
+                    var centerPoint = new PointF(
+                        x,
+                        ValueToScreenY(
+                            centerValue,
+                            plot,
+                            yMin,
+                            yMax));
+
+                    if (previousCenter.HasValue)
+                    {
+                        g.DrawLine(
+                            linePen,
+                            previousCenter.Value,
+                            centerPoint);
+                    }
+                    else
+                    {
+                        // Первый пиксель тоже должен быть видим,
+                        // даже если это идеально горизонтальный участок.
+                        g.DrawEllipse(
+                            linePen,
+                            centerPoint.X,
+                            centerPoint.Y,
+                            0.5f,
+                            0.5f);
+                    }
+
+                    previousCenter = centerPoint;
+                }
+            }
+        }
+
+        private void DrawVisibleMinMax(
+            Graphics g,
+            Rectangle plot,
+            int firstIndex,
+            int lastIndex)
+        {
+            double min = double.PositiveInfinity;
+            double max = double.NegativeInfinity;
+
+            for (int i = firstIndex; i <= lastIndex; i++)
+            {
+                double value = _signal[i];
+
+                if (value < min) min = value;
+                if (value > max) max = value;
+            }
+
+            if (double.IsInfinity(min) ||
+                double.IsInfinity(max))
+                return;
+
+            using (var brush = new SolidBrush(Color.FromArgb(55, 55, 55)))
+            {
+                string maxText = "MAX: " + FormatY(max);
+                string minText = "MIN: " + FormatY(min);
+
+                g.DrawString(
+                    maxText,
+                    _infoFont,
+                    brush,
+                    plot.Left + 8,
+                    plot.Top + 8);
+
+                g.DrawString(
+                    minText,
+                    _infoFont,
+                    brush,
+                    plot.Left + 8,
+                    plot.Top + 25);
+            }
+        }
+
+        private float TimeToScreenX(
+            double time,
+            Rectangle plot)
+        {
+            double range = _viewEnd - _viewStart;
+
+            if (range <= 0)
+                return plot.Left;
+
+            return
+                plot.Left +
+                (float)(
+                    (time - _viewStart) /
+                    range *
+                    plot.Width);
+        }
+
+        private float ValueToScreenY(
+            double value,
+            Rectangle plot,
+            double yMin,
+            double yMax)
+        {
+            double range = yMax - yMin;
+
+            if (range <= 0)
+                return plot.Top + plot.Height / 2f;
+
+            return
+                plot.Bottom -
+                (float)(
+                    (value - yMin) /
+                    range *
+                    plot.Height);
+        }
+
+        private void GraphPanel_MouseWheel(
+            object sender,
+            MouseEventArgs e)
+        {
+            Rectangle plot =
+                GetPlotRectangle();
+
+            if (!plot.Contains(e.Location))
+                return;
+
+            double currentWidth =
+                _viewEnd - _viewStart;
+
+            if (currentWidth <= 0)
+                return;
+
+            double mouseTime =
+                _viewStart +
+                (e.X - plot.Left) /
+                (double)Math.Max(1, plot.Width) *
+                currentWidth;
+
+            double factor =
+                e.Delta > 0
+                    ? 0.8
+                    : 1.25;
+
+            double total =
+                Math.Max(_totalTime, _dt);
+
+            double newWidth =
+                Math.Max(
+                    _dt * 2,
+                    Math.Min(
+                        total,
+                        currentWidth * factor));
+
+            double ratio =
+                (mouseTime - _viewStart) /
+                currentWidth;
+
+            double newStart =
+                mouseTime -
+                newWidth * ratio;
+
+            double newEnd =
+                newStart +
+                newWidth;
+
+            ClampView(
+                ref newStart,
+                ref newEnd);
+
+            _viewStart = newStart;
+            _viewEnd = newEnd;
+
+            Invalidate();
+        }
+
+        private void GraphPanel_MouseDown(
+            object sender,
+            MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+                return;
+
+            if (!GetPlotRectangle().Contains(e.Location))
+                return;
+
+            Focus();
+
+            _isPanning = true;
+            _lastMouseX = e.X;
+            Capture = true;
+        }
+
+        private void GraphPanel_MouseMove(
+            object sender,
+            MouseEventArgs e)
+        {
+            if (!_isPanning)
+                return;
+
+            Rectangle plot =
+                GetPlotRectangle();
+
+            int dx =
+                e.X - _lastMouseX;
+
+            _lastMouseX =
+                e.X;
+
+            double width =
+                _viewEnd -
+                _viewStart;
+
+            double shift =
+                -dx /
+                (double)Math.Max(1, plot.Width) *
+                width;
+
+            double newStart =
+                _viewStart +
+                shift;
+
+            double newEnd =
+                _viewEnd +
+                shift;
+
+            ClampView(
+                ref newStart,
+                ref newEnd);
+
+            _viewStart =
+                newStart;
+
+            _viewEnd =
+                newEnd;
+
+            Invalidate();
+        }
+
+        private void GraphPanel_MouseUp(
+            object sender,
+            MouseEventArgs e)
+        {
+            _isPanning = false;
+            Capture = false;
+        }
+
+        private void GraphPanel_MouseDoubleClick(
+            object sender,
+            MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+                ResetView();
+        }
+
+        private void ClampView(
+            ref double start,
+            ref double end)
+        {
+            double total =
+                Math.Max(_totalTime, _dt);
+
+            double width =
+                end - start;
+
+            if (width >= total)
+            {
+                start = 0;
+                end = total;
+                return;
+            }
+
+            if (start < 0)
+            {
+                end -= start;
+                start = 0;
+            }
+
+            if (end > total)
+            {
+                start -= end - total;
+                end = total;
+            }
+
+            if (start < 0)
+                start = 0;
+        }
+
+        internal struct TimeUnit
+        {
+            public string Symbol;
+            public double Scale;
+
+            public TimeUnit(
+                string symbol,
+                double scale)
+            {
+                Symbol = symbol;
+                Scale = scale;
+            }
+        }
+
+        internal static TimeUnit SelectTimeUnit(
+            double seconds)
+        {
+            double a =
+                Math.Abs(seconds);
+
+            if (a >= 1.0)
+                return new TimeUnit("с", 1.0);
+
+            if (a >= 1e-3)
+                return new TimeUnit("мс", 1e3);
+
+            if (a >= 1e-6)
+                return new TimeUnit("мкс", 1e6);
+
+            if (a >= 1e-9)
+                return new TimeUnit("нс", 1e9);
+
+            if (a >= 1e-12)
+                return new TimeUnit("пс", 1e12);
+
+            if (a >= 1e-15)
+                return new TimeUnit("фс", 1e15);
+
+            return new TimeUnit("ас", 1e18);
+        }
+
+        /// <summary>
+        /// X: максимум два знака после запятой.
+        /// </summary>
+        internal static string FormatXAxis(
+            double seconds,
+            TimeUnit unit)
+        {
+            double value =
+                seconds * unit.Scale;
+
+            return value.ToString(
+                "0.##",
+                CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Y: без принудительного округления до фиксированного количества знаков.
+        /// </summary>
+        internal static string FormatY(
+            double value)
+        {
+            // Округляется только текст на шкале/в MIN-MAX.
+            // Сам сигнал и расчёты не изменяются.
+            return Math.Round(
+                    value,
+                    2,
+                    MidpointRounding.AwayFromZero)
+                .ToString(
+                    "0.##",
+                    CultureInfo.InvariantCulture);
+        }
+    }
+}
+
+

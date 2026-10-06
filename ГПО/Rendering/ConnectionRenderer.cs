@@ -21,8 +21,8 @@ namespace MathApp.Rendering
         {
             if (source == null || target == null) return;
 
-            Point start = GetOutputPoint(source);
-            Point end = GetInputPoint(target, conn.TargetInput);
+            Point start = GetOutputPoint(source, conn);
+            Point end = GetInputPoint(target, conn);
 
             // Тень
             Point shadowStart = new Point(start.X + 2, start.Y + 2);
@@ -51,8 +51,7 @@ namespace MathApp.Rendering
         {
             if (source == null) return;
 
-            Point start = GetOutputPoint(source);
-
+            Point start = GetOutputPoint(source, null);
             _tempConnectionPen.DashStyle = DashStyle.Dash;
             _tempConnectionPen.StartCap = LineCap.Round;
             _tempConnectionPen.EndCap = LineCap.Round;
@@ -64,7 +63,7 @@ namespace MathApp.Rendering
         /// Рисует все соединения для списка блоков
         /// </summary>
         public static void DrawAll(Graphics g, IEnumerable<Connection> connections,
-                                   IEnumerable<MathTool> tools)
+                           IEnumerable<MathTool> tools)
         {
             foreach (var conn in connections)
             {
@@ -108,23 +107,130 @@ namespace MathApp.Rendering
                         mid.X - textSize.Width / 2, mid.Y);
         }
 
-        private static Point GetOutputPoint(MathTool tool)
+        private static Point GetInputPoint(MathTool tool, Connection conn)
         {
-            return new Point(tool.Position.X + tool.Size.Width + 5,
-                            tool.Position.Y + tool.Size.Height / 2);
-        }
-
-        private static Point GetInputPoint(MathTool tool, InputType input)
-        {
-            if (tool.Type == ToolType.Chart || tool.Type == ToolType.SineGenerator)
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
-                return new Point(tool.Position.X - 5,
-                                tool.Position.Y + tool.Size.Height / 2);
+                int portIndex = conn.TargetPortIndex;
+
+                // Для подсистемы при отзеркаливании входные порты справа
+                if (tool.Flipped)
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + 35 + (portIndex * 20)
+                    );
+                }
+                else
+                {
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + 35 + (portIndex * 20)
+                    );
+                }
             }
 
-            return new Point(tool.Position.X - 5,
-                input == InputType.A ? tool.Position.Y + 20 :
-                tool.Position.Y + tool.Size.Height - 20);
+            // Для остальных блоков
+            if (tool.Type == ToolType.Chart || tool.Type == ToolType.Generator)
+            {
+                // При отзеркаливании вход справа
+                if (tool.Flipped)
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
+                else
+                {
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
+            }
+
+            // Для Operation блоков
+            int yOffset = conn.TargetInput == InputType.A ? 20 : tool.Size.Height - 20;
+
+            if (tool.Flipped)
+            {
+                // При отзеркаливании входы справа
+                return new Point(
+                    tool.Position.X + tool.Size.Width + 5,
+                    tool.Position.Y + yOffset
+                );
+            }
+            else
+            {
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + yOffset
+                );
+            }
+        }
+
+        private static Point GetOutputPoint(MathTool tool, Connection conn = null)
+        {
+            // Для подсистемы
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                int outputCount = tool.SubSystemData.OutputPorts?.Count ?? 0;
+                if (outputCount > 0 && conn != null)
+                {
+                    int portIndex = conn.SourcePortIndex;
+                    int yOffset = 35 + portIndex * 20;
+
+                    // При отзеркаливании выходные порты слева
+                    if (tool.Flipped)
+                    {
+                        return new Point(
+                            tool.Position.X - 5,
+                            tool.Position.Y + yOffset
+                        );
+                    }
+                    else
+                    {
+                        return new Point(
+                            tool.Position.X + tool.Size.Width + 5,
+                            tool.Position.Y + yOffset
+                        );
+                    }
+                }
+
+                // fallback
+                if (tool.Flipped)
+                {
+                    return new Point(
+                        tool.Position.X - 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
+                else
+                {
+                    return new Point(
+                        tool.Position.X + tool.Size.Width + 5,
+                        tool.Position.Y + tool.Size.Height / 2
+                    );
+                }
+            }
+
+            // Для обычных блоков
+            if (tool.Flipped)
+            {
+                // При отзеркаливании выход слева
+                return new Point(
+                    tool.Position.X - 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
+            else
+            {
+                return new Point(
+                    tool.Position.X + tool.Size.Width + 5,
+                    tool.Position.Y + tool.Size.Height / 2
+                );
+            }
         }
     }
 }

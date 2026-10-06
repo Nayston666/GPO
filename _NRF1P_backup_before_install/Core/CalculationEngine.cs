@@ -1,0 +1,429 @@
+﻿using MathApp.Models;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+
+namespace MathApp.Core
+{
+    public class CalculationEngine
+    {
+        private Random _random = new Random();
+
+        /// <summary>Текущее модельное время (с). Устанавливается извне на каждом шаге.</summary>
+        public double CurrentTime { get; set; } = 0;
+
+        /// <summary>Шаг интегрирования (с). Используется интегратором и дифференциатором.</summary>
+        public double TimeStep { get; set; } = 1e-4;
+
+        // ============================================================
+        //  ПУБЛИЧНЫЙ API
+        // ============================================================
+
+        /// <summary>
+        /// Один расчёт всей схемы (для момента CurrentTime).
+        /// </summary>
+        public Dictionary<Guid, double> CalculateAll(List<MathTool> tools, List<Connection> connections)
+        {
+            var results = new Dictionary<Guid, double>();
+            bool changed;
+            int iteration = 0;
+            const int maxIterations = 200;
+
+            do
+            {
+                changed = false;
+                iteration++;
+
+                foreach (var tool in tools.OrderBy(t => t.Position.X))
+                {
+                    if (tool.Type == ToolType.Chart) continue;
+                    if (results.ContainsKey(tool.Id)) continue;
+
+                    double? val = CalculateTool(tool, tools, connections, results);
+                    if (val.HasValue && !double.IsNaN(val.Value) && !double.IsInfinity(val.Value))
+                    {
+                        results[tool.Id] = val.Value;
+                        tool.LastResult = val.Value;
+                        changed = true;
+
+                        foreach (var c in connections.Where(c => c.SourceToolId == tool.Id))
+                            c.CurrentValue = val.Value;
+                    }
+                }
+
+                if (iteration >= maxIterations)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[CalculationEngine] Достигнут предел итераций ({maxIterations})");
+                    break;
+                }
+            } while (changed);
+
+            return results;
+        }
+
+        /// <summary>Полный сброс состояния всех блоков (рекурсивно).</summary>
+        public void ResetAll(List<MathTool> tools)
+        {
+            foreach (var t in tools)
+            {
+                t.ResetState();
+                t.ValueHistory.Clear();
+
+                if (t.Type == ToolType.SubSystem && t.SubSystemData != null)
+                    ResetAll(t.SubSystemData.InternalTools);
+            }
+            _random = new Random();
+        }
+
+        // ============================================================
+        //  ОБРАБОТКА ОДНОГО БЛОКА
+        // ============================================================
+
+        private double? CalculateTool(MathTool tool, List<MathTool> tools,
+                                      List<Connection> connections,
+                                      Dictionary<Guid, double> results)
+        {
+            switch (tool.Type)
+            {
+                case ToolType.Generator:
+                    return SignalGenerator.Calculate(tool, CurrentTime);
+
+                case ToolType.Operation:
+                    {
+                        double a = GetInputValue(tool, InputType.A, tools, connections, results);
+                        double b = GetInputValue(tool, InputType.B, tools, connections, results);
+                        if (double.IsNaN(a) || double.IsNaN(b)) return null;
+                        return Calculate(tool.Operation, a, b, tool);
+                    }
+
+                case ToolType.Amplifier:
+                case ToolType.Antenna:
+                case ToolType.Channel:
+                case ToolType.Object:
+                case ToolType.ADC:
+                    {
+                        double input = GetInputValue(tool, InputType.A, tools, connections, results);
+                        if (double.IsNaN(input)) return null;
+                        return ProcessSpecialTool(tool, input);
+                    }
+
+                case ToolType.SubSystem:
+                    return CalculateSubSystem(tool, tools, connections, results);
+            }
+            return null;
+        }
+
+        // ============================================================
+        //  ВХОДЫ ВЕРХНЕГО УРОВНЯ
+        // ============================================================
+
+        private double GetInputValue(MathTool tool, InputType input,
+                                     List<MathTool> tools, List<Connection> connections,
+                                     Dictionary<Guid, double> calculated)
+        {
+            Connection conn;
+            if (tool.Type == ToolType.Operation)
+                conn = connections.FirstOrDefault(c =>
+                    c.TargetToolId == tool.Id && c.TargetInput == input);
+            else
+                conn = connections.FirstOrDefault(c => c.TargetToolId == tool.Id);
+
+            if (conn == null)
+                return input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
+
+            return ResolveSourceValue(conn.SourceToolId, conn.SourcePortIndex,
+                                      tools, calculated);
+        }
+
+        private double ResolveSourceValue(Guid sourceId, int sourcePortIndex,
+                                          List<MathTool> tools,
+                                          Dictionary<Guid, double> calculated)
+        {
+            if (calculated.TryGetValue(sourceId, out var v)) return v;
+
+            var src = tools.FirstOrDefault(t => t.Id == sourceId);
+            if (src == null) return double.NaN;
+
+            if (src.Type == ToolType.SubSystem &&
+                src.OutputPortResults.TryGetValue(sourcePortIndex, out var pv))
+                return pv;
+
+            if (src.LastResult.HasValue)
+                return src.LastResult.Value;
+
+            return double.NaN;
+        }
+
+        // ============================================================
+        //  ПОДСИСТЕМЫ (РЕКУРСИЯ)
+        // ============================================================
+
+        private double? CalculateSubSystem(MathTool sub, List<MathTool> parentTools,
+                                           List<Connection> parentConns,
+                                           Dictionary<Guid, double> parentResults)
+        {
+            var data = sub.SubSystemData;
+            if (data == null) return 0;
+
+            int inCount = data.InputPorts?.Count ?? 0;
+            int outCount = data.OutputPorts?.Count ?? 0;
+
+            // 1. Значения входных портов
+            var portValues = new Dictionary<int, double>();
+            for (int i = 0; i < inCount; i++)
+            {
+                var conn = parentConns.FirstOrDefault(c =>
+                    c.TargetToolId == sub.Id && c.TargetPortIndex == i);
+
+                if (conn == null) { portValues[i] = 0; continue; }
+
+                double v = ResolveSourceValue(conn.SourceToolId, conn.SourcePortIndex,
+                                              parentTools, parentResults);
+
+                if (double.IsNaN(v)) return null;
+                portValues[i] = v;
+            }
+
+            // 2. Внутренний расчёт
+            var internalResults = RunSubSystemInternal(data, portValues);
+
+            // 3. Выходные значения подсистемы
+            sub.OutputPortResults.Clear();
+            for (int i = 0; i < outCount; i++)
+            {
+                var port = data.OutputPorts[i];
+                double val = 0;
+
+                var internalConn = data.InternalConnections.FirstOrDefault(c =>
+                    c.TargetToolId == port.Id);
+
+                if (internalConn != null &&
+                    internalResults.TryGetValue(internalConn.SourceToolId, out var v))
+                {
+                    val = v;
+                }
+                sub.OutputPortResults[i] = val;
+            }
+
+            return sub.OutputPortResults.Count > 0 ? sub.OutputPortResults[0] : 0;
+        }
+
+        private Dictionary<Guid, double> RunSubSystemInternal(
+            SubSystemData data, Dictionary<int, double> portValues)
+        {
+            var internalTools = data.InternalTools;
+            var internalConns = data.InternalConnections;
+            var inputPorts = data.InputPorts;
+
+            var portIdValues = new Dictionary<Guid, double>();
+            for (int i = 0; i < inputPorts.Count; i++)
+            {
+                if (portValues.TryGetValue(i, out var v))
+                    portIdValues[inputPorts[i].Id] = v;
+            }
+
+            var results = new Dictionary<Guid, double>();
+            bool changed;
+            int iteration = 0;
+            const int maxIterations = 200;
+
+            do
+            {
+                changed = false;
+                iteration++;
+
+                foreach (var tool in internalTools.OrderBy(t => t.Position.X))
+                {
+                    if (results.ContainsKey(tool.Id)) continue;
+
+                    double? val = CalculateInternalTool(tool, internalTools, internalConns,
+                                                        results, portIdValues);
+                    if (val.HasValue && !double.IsNaN(val.Value))
+                    {
+                        results[tool.Id] = val.Value;
+                        tool.LastResult = val.Value;
+                        changed = true;
+                    }
+                }
+
+                if (iteration >= maxIterations) break;
+
+            } while (changed);
+
+            return results;
+        }
+
+        private double? CalculateInternalTool(MathTool tool,
+                                              List<MathTool> tools,
+                                              List<Connection> conns,
+                                              Dictionary<Guid, double> results,
+                                              Dictionary<Guid, double> portValues)
+        {
+            switch (tool.Type)
+            {
+                case ToolType.Generator:
+                    return SignalGenerator.Calculate(tool, CurrentTime);
+
+                case ToolType.Operation:
+                    {
+                        double a = GetInternalInputValue(tool, InputType.A, tools, conns, results, portValues);
+                        double b = GetInternalInputValue(tool, InputType.B, tools, conns, results, portValues);
+                        if (double.IsNaN(a) || double.IsNaN(b)) return null;
+                        return Calculate(tool.Operation, a, b, tool);
+                    }
+
+                case ToolType.Amplifier:
+                case ToolType.Antenna:
+                case ToolType.Channel:
+                case ToolType.Object:
+                case ToolType.ADC:
+                    {
+                        double input = GetInternalInputValue(tool, InputType.A, tools, conns, results, portValues);
+                        if (double.IsNaN(input)) return null;
+                        return ProcessSpecialTool(tool, input);
+                    }
+
+                case ToolType.SubSystem:
+                    return CalculateSubSystem(tool, tools, conns, results);
+            }
+            return null;
+        }
+
+        private double GetInternalInputValue(MathTool tool, InputType input,
+                                             List<MathTool> tools, List<Connection> conns,
+                                             Dictionary<Guid, double> results,
+                                             Dictionary<Guid, double> portValues)
+        {
+            Connection conn;
+            if (tool.Type == ToolType.Operation)
+                conn = conns.FirstOrDefault(c => c.TargetToolId == tool.Id && c.TargetInput == input);
+            else
+                conn = conns.FirstOrDefault(c => c.TargetToolId == tool.Id);
+
+            if (conn == null)
+                return input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
+
+            if (portValues.TryGetValue(conn.SourceToolId, out var pv)) return pv;
+            if (results.TryGetValue(conn.SourceToolId, out var rv)) return rv;
+
+            var src = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+            if (src != null)
+            {
+                if (src.Type == ToolType.SubSystem &&
+                    src.OutputPortResults.TryGetValue(conn.SourcePortIndex, out var spv))
+                    return spv;
+                if (src.LastResult.HasValue)
+                    return src.LastResult.Value;
+            }
+
+            return double.NaN;
+        }
+
+        // ============================================================
+        //  МАТЕМАТИКА
+        // ============================================================
+
+        public double Calculate(MathOperation op, double a, double b, MathTool tool)
+        {
+            switch (op)
+            {
+                case MathOperation.Addition: return a + b;
+                case MathOperation.Subtraction: return a - b;
+                case MathOperation.Multiplication: return a * b;
+                case MathOperation.Division: return Math.Abs(b) > 1e-12 ? a / b : 0;
+
+                case MathOperation.Integrator:
+                    {
+                        double dt = TimeStep;
+                        double newIntegral = tool.IntegralValue + (tool.PreviousInput + a) * 0.5 * dt;
+                        tool.IntegralValue = newIntegral;
+                        tool.PreviousInput = a;
+                        return newIntegral;
+                    }
+
+                case MathOperation.Differentiator:
+                    {
+                        double dt = TimeStep;
+                        if (dt < 1e-12) dt = 1e-6;
+                        double derivative = (a - tool.PreviousOutput) / dt;
+                        tool.PreviousOutput = a;
+                        return derivative;
+                    }
+
+                case MathOperation.Interpolator:
+                    return Interpolate(a, tool.InterpolationPoints);
+
+                case MathOperation.FileIO:
+                    {
+                        if (tool.IsReading)
+                        {
+                            if (tool.FileData.Count > 0 &&
+                                tool.CurrentFileIndex < tool.FileData.Count)
+                                return tool.FileData[tool.CurrentFileIndex++];
+                            return 0;
+                        }
+                        tool.FileData.Add(a);
+                        return a;
+                    }
+            }
+            return 0;
+        }
+
+        private double Interpolate(double x, List<PointF> points)
+        {
+            if (points == null || points.Count == 0) return x;
+            if (points.Count == 1) return points[0].Y;
+
+            var sorted = points.OrderBy(p => p.X).ToList();
+            if (x <= sorted[0].X) return sorted[0].Y;
+            if (x >= sorted.Last().X) return sorted.Last().Y;
+
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                if (x >= sorted[i].X && x <= sorted[i + 1].X)
+                {
+                    double t = (x - sorted[i].X) / (sorted[i + 1].X - sorted[i].X);
+                    return sorted[i].Y + t * (sorted[i + 1].Y - sorted[i].Y);
+                }
+            }
+            return sorted.Last().Y;
+        }
+
+        public double ProcessSpecialTool(MathTool tool, double input)
+        {
+            switch (tool.Type)
+            {
+                case ToolType.Amplifier:
+                    return input * tool.Gain;
+
+                case ToolType.Antenna:
+                    return input * tool.EffectiveArea * 10.0;
+
+                case ToolType.Channel:
+                    {
+                        double noise = (_random.NextDouble() - 0.5) * 0.05;
+                        return input * Math.Exp(-tool.Attenuation * tool.Distance / 1000.0) + noise;
+                    }
+
+                case ToolType.Object:
+                    {
+                        if (!tool.LastResult.HasValue) return input;
+                        double alpha = 0.1 / Math.Max(tool.TimeConstant, 1e-6);
+                        return tool.LastResult.Value + (input - tool.LastResult.Value) * alpha;
+                    }
+
+                case ToolType.ADC:
+                    {
+                        int levels = (int)Math.Pow(2, tool.BitResolution);
+                        double norm = input / tool.ReferenceVoltage;
+                        norm = Math.Max(-1.0, Math.Min(1.0, norm));
+                        double quantized = Math.Round(norm * (levels - 1)) / (levels - 1);
+                        return quantized * tool.ReferenceVoltage;
+                    }
+            }
+            return input;
+        }
+    }
+}

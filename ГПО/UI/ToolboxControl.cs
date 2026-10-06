@@ -19,14 +19,14 @@ namespace MathApp.UI
 
         private void InitializeComponent()
         {
-            this.Size = new Size(260, 200);
+            this.Size = new Size(260, 280); 
             this.BackColor = Color.Transparent;
 
             var titleLabel = new Label
             {
                 Text = "📦 ИНСТРУМЕНТЫ",
                 Location = new Point(0, 0),
-                Size = new Size(260, 35),
+                Size = new Size(400, 35),
                 ForeColor = Color.FromArgb(0, 200, 255),
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
@@ -35,9 +35,9 @@ namespace MathApp.UI
             _listBox = new ListBox
             {
                 Location = new Point(0, 40),
-                Size = new Size(260, 150),
+                Size = new Size(260, 230),  
                 BackColor = Color.FromArgb(45, 45, 50),
-                ForeColor = Color.White,
+                ForeColor = Color.Black,
                 Font = new Font("Segoe UI", 10),
                 BorderStyle = BorderStyle.None,
                 ItemHeight = 30,
@@ -53,16 +53,21 @@ namespace MathApp.UI
                 "➖ Вычитание",
                 "✖️ Умножение",
                 "➗ Деление",
+                "∫ Интегратор",
+                "d/dt Дифференциатор",
+                "f(x) Интерполятор",
+                "📁 Файловый ввод/вывод",
                 "📊 График",
-                "📈 Синусоида"
+                "📈 Синусоида",
+                "▰ Трапециевидный сигнал",
+                "▮ Меандр",
+                "◢ Пиловидный сигнал",
+                "🧩 Подсистема"
             });
 
             this.Controls.AddRange(new Control[] { titleLabel, _listBox });
         }
 
-        /// <summary>
-        /// Возвращает выбранный элемент
-        /// </summary>
         public string GetSelectedItem()
         {
             return _listBox.SelectedItem?.ToString();
