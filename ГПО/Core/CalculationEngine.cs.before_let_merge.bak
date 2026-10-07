@@ -109,12 +109,6 @@ namespace MathApp.Core
                         return ProcessSpecialTool(tool, input);
                     }
 
-                case ToolType.NonlinearFirstOrderFilter:
-                    {
-                        double input = GetInputValue(tool, InputType.A, tools, connections, results);
-                        if (double.IsNaN(input)) return null;
-                        return ProcessNonlinearFirstOrderFilter(tool, input);
-                    }
                 case ToolType.SubSystem:
                     return CalculateSubSystem(tool, tools, connections, results);
             }
@@ -291,13 +285,6 @@ namespace MathApp.Core
                         return ProcessSpecialTool(tool, input);
                     }
 
-                case ToolType.NonlinearFirstOrderFilter:
-                    {
-                        double input = GetInternalInputValue(
-                            tool, InputType.A, tools, conns, results, portValues);
-                        if (double.IsNaN(input)) return null;
-                        return ProcessNonlinearFirstOrderFilter(tool, input);
-                    }
                 case ToolType.SubSystem:
                     return CalculateSubSystem(tool, tools, conns, results);
             }
@@ -404,73 +391,6 @@ namespace MathApp.Core
             return sorted.Last().Y;
         }
 
-        private double ProcessNonlinearFirstOrderFilter(MathTool tool, double input)
-        {
-            double dt = TimeStep;
-            if (dt <= 0.0 || double.IsNaN(dt) || double.IsInfinity(dt))
-                throw new InvalidOperationException("Шаг моделирования dt должен быть больше нуля.");
-
-            ValidateCharacteristic(tool.FilterKVH, "КВХ");
-            ValidateCharacteristic(tool.FilterVAH, "ВАХ");
-
-            double iC = input - tool.FilterPreviousIR;
-            double q = tool.FilterCharge +
-                       dt * (iC + tool.FilterPreviousIC) / 2.0;
-
-            double uOut = InterpolateClamped(q, tool.FilterKVH);
-            double iR = InterpolateClamped(uOut, tool.FilterVAH);
-
-            tool.FilterPreviousIC = iC;
-            tool.FilterPreviousIR = iR;
-            tool.FilterCharge = q;
-            tool.FilterLastUOut = uOut;
-
-            return uOut;
-        }
-
-        private double InterpolateClamped(double x, List<FilterPoint> points)
-        {
-            var sorted = points.OrderBy(p => p.X).ToList();
-
-            if (x <= sorted[0].X) return sorted[0].Y;
-
-            int last = sorted.Count - 1;
-            if (x >= sorted[last].X) return sorted[last].Y;
-
-            int left = 0;
-            int right = last;
-
-            while (right - left > 1)
-            {
-                int middle = (left + right) / 2;
-                if (x >= sorted[middle].X) left = middle;
-                else right = middle;
-            }
-
-            double x1 = sorted[left].X;
-            double y1 = sorted[left].Y;
-            double x2 = sorted[right].X;
-            double y2 = sorted[right].Y;
-
-            double k = (x - x1) / (x2 - x1);
-            return y1 + k * (y2 - y1);
-        }
-
-        private void ValidateCharacteristic(List<FilterPoint> points, string name)
-        {
-            if (points == null || points.Count < 2)
-                throw new InvalidOperationException(
-                    $"Для нелинейного фильтра необходимо задать минимум 2 точки {name}.");
-
-            var sorted = points.OrderBy(p => p.X).ToList();
-
-            for (int i = 1; i < sorted.Count; i++)
-            {
-                if (sorted[i].X <= sorted[i - 1].X)
-                    throw new InvalidOperationException(
-                        $"{name}: значения X должны быть уникальными.");
-            }
-        }
         public double ProcessSpecialTool(MathTool tool, double input)
         {
             switch (tool.Type)

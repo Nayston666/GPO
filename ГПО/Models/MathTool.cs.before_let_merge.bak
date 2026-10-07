@@ -70,17 +70,6 @@ namespace MathApp.Models
         public int CurrentFileIndex { get; set; } = 0;
         public bool IsReading { get; set; } = true;
 
-        // Нелинейный рекурсивный фильтр 1 порядка
-        public List<FilterPoint> FilterKVH { get; set; } = new List<FilterPoint>();
-        public List<FilterPoint> FilterVAH { get; set; } = new List<FilterPoint>();
-
-        // Пути к загруженным характеристикам.
-        public string FilterKVHFilePath { get; set; } = "";
-        public string FilterVAHFilePath { get; set; } = "";
-        public double FilterPreviousIC { get; set; } = 0.0;
-        public double FilterPreviousIR { get; set; } = 0.0;
-        public double FilterCharge { get; set; } = 0.0;
-        public double FilterLastUOut { get; set; } = 0.0;
         // Подсистема
         public SubSystemData SubSystemData { get; set; }
         public Dictionary<int, double> OutputPortResults { get; set; } = new Dictionary<int, double>();
@@ -115,25 +104,6 @@ namespace MathApp.Models
             CurrentFileIndex = 0;
             OutputPortResults.Clear();
             CurrentValue = 0;
-
-            FilterPreviousIC = 0.0;
-            FilterPreviousIR = 0.0;
-            FilterCharge = 0.0;
-            FilterLastUOut = 0.0;
-        }
-    }
-
-    public class FilterPoint
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-
-        public FilterPoint() { }
-
-        public FilterPoint(double x, double y)
-        {
-            X = x;
-            Y = y;
         }
     }
 }

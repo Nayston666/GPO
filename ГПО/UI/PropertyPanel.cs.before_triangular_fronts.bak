@@ -259,124 +259,24 @@ namespace MathApp.UI
             }
         }
 
-        private double ParseTimeSeconds(string text, double defaultValue)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return defaultValue;
-
-            string s = text
-                .Trim()
-                .Replace(',', '.')
-                .Replace("μ", "u")
-                .Replace("µ", "u")
-                .Replace(" ", "");
-
-            double multiplier = 1.0;
-
-            if (s.EndsWith("ms", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-3;
-                s = s.Substring(0, s.Length - 2);
-            }
-            else if (s.EndsWith("us", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-6;
-                s = s.Substring(0, s.Length - 2);
-            }
-            else if (s.EndsWith("ns", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-9;
-                s = s.Substring(0, s.Length - 2);
-            }
-            else if (s.EndsWith("ps", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-12;
-                s = s.Substring(0, s.Length - 2);
-            }
-            else if (s.EndsWith("fs", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-15;
-                s = s.Substring(0, s.Length - 2);
-            }
-            else if (s.EndsWith("s", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1.0;
-                s = s.Substring(0, s.Length - 1);
-            }
-            else if (s.EndsWith("m", StringComparison.Ordinal))
-            {
-                multiplier = 1e-3;
-                s = s.Substring(0, s.Length - 1);
-            }
-            else if (s.EndsWith("u", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-6;
-                s = s.Substring(0, s.Length - 1);
-            }
-            else if (s.EndsWith("n", StringComparison.OrdinalIgnoreCase))
-            {
-                multiplier = 1e-9;
-                s = s.Substring(0, s.Length - 1);
-            }
-
-            double number;
-
-            if (!double.TryParse(
-                    s,
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    out number))
-            {
-                return defaultValue;
-            }
-
-            double result = number * multiplier;
-
-            if (double.IsNaN(result) || double.IsInfinity(result))
-                return defaultValue;
-
-            return result;
-        }
         private void ApplyRiseTime()
         {
-            if (_selectedTool == null)
-                return;
+            if (_selectedTool == null) return;
 
-            double value = ParseTimeSeconds(
-                _txtRiseTime.Text,
-                _selectedTool.RiseTime);
-
-            value = Math.Max(0.0, value);
-
+            double value = Math.Max(0, ParseEngineering(_txtRiseTime.Text, _selectedTool.RiseTime));
             _selectedTool.RiseTime = value;
-
-            _txtRiseTime.Text =
-                FormatEngineering(value, "s");
-
-            ParametersChanged?.Invoke(
-                this,
-                EventArgs.Empty);
+            _txtRiseTime.Text = FormatEngineering(value, "s");
+            ParametersChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void ApplyFallTime()
         {
-            if (_selectedTool == null)
-                return;
+            if (_selectedTool == null) return;
 
-            double value = ParseTimeSeconds(
-                _txtFallTime.Text,
-                _selectedTool.FallTime);
-
-            value = Math.Max(0.0, value);
-
+            double value = Math.Max(0, ParseEngineering(_txtFallTime.Text, _selectedTool.FallTime));
             _selectedTool.FallTime = value;
-
-            _txtFallTime.Text =
-                FormatEngineering(value, "s");
-
-            ParametersChanged?.Invoke(
-                this,
-                EventArgs.Empty);
+            _txtFallTime.Text = FormatEngineering(value, "s");
+            ParametersChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void ApplyGain()
@@ -596,7 +496,7 @@ namespace MathApp.UI
                     {
                         case GeneratorWaveform.Trapezoid: return "▰ Трапециевидный сигнал";
                         case GeneratorWaveform.Square: return "▮ Меандр";
-                        case GeneratorWaveform.Sawtooth: return "△ Треугольный импульс";
+                        case GeneratorWaveform.Sawtooth: return "◢ Пиловидный сигнал";
                         case GeneratorWaveform.Step: return "Единичный сигнал";
                         default: return "📈 Генератор синусоиды";
                     }
@@ -606,8 +506,7 @@ namespace MathApp.UI
                 case ToolType.Channel: return "🌐 Канал связи";
                 case ToolType.Object: return "🎯 Объект (РЛС)";
                 case ToolType.ADC: return "🔢 АЦП";
-                case ToolType.NonlinearFirstOrderFilter:
-                    return "НРФ1П Нелинейный фильтр";                case ToolType.SubSystem: return "🧩 Подсистема";
+                case ToolType.SubSystem: return "🧩 Подсистема";
                 default: return "Блок";
             }
         }
@@ -734,170 +633,6 @@ namespace MathApp.UI
             }
 
             // ????
-            else if (tool.Type == ToolType.NonlinearFirstOrderFilter)
-            {
-                var filesTitle = new Label
-                {
-                    Text = "Характеристики фильтра (.txt)",
-                    Location = new Point(10, yPos),
-                    Width = 250,
-                    Height = 24,
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(52, 58, 64),
-                    BackColor = Color.White
-                };
-
-                blockPanel.Controls.Add(filesTitle);
-                yPos += 28;
-
-                var kvhButton = new Button
-                {
-                    Text = "Выбрать КВХ .txt",
-                    Location = new Point(10, yPos),
-                    Width = 120,
-                    Height = 34,
-                    BackColor = Color.FromArgb(0, 120, 212),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-
-                kvhButton.FlatAppearance.BorderSize = 0;
-
-                var vahButton = new Button
-                {
-                    Text = "Выбрать ВАХ .txt",
-                    Location = new Point(140, yPos),
-                    Width = 120,
-                    Height = 34,
-                    BackColor = Color.FromArgb(0, 120, 212),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-
-                vahButton.FlatAppearance.BorderSize = 0;
-
-                blockPanel.Controls.Add(kvhButton);
-                blockPanel.Controls.Add(vahButton);
-
-                yPos += 38;
-
-                var kvhInfo = new Label
-                {
-                    Text = BuildCharacteristicFileInfo(
-                        "КВХ",
-                        tool.FilterKVHFilePath,
-                        tool.FilterKVH?.Count ?? 0),
-                    Location = new Point(10, yPos),
-                    Width = 120,
-                    Height = 48,
-                    Font = new Font("Segoe UI", 7),
-                    ForeColor = Color.FromArgb(80, 80, 80),
-                    BackColor = Color.White,
-                    AutoEllipsis = true
-                };
-
-                var vahInfo = new Label
-                {
-                    Text = BuildCharacteristicFileInfo(
-                        "ВАХ",
-                        tool.FilterVAHFilePath,
-                        tool.FilterVAH?.Count ?? 0),
-                    Location = new Point(140, yPos),
-                    Width = 120,
-                    Height = 48,
-                    Font = new Font("Segoe UI", 7),
-                    ForeColor = Color.FromArgb(80, 80, 80),
-                    BackColor = Color.White,
-                    AutoEllipsis = true
-                };
-
-                blockPanel.Controls.Add(kvhInfo);
-                blockPanel.Controls.Add(vahInfo);
-
-                yPos += 54;
-
-                var hintLabel = new Label
-                {
-                    Text =
-                        "КВХ: столбцы q, U\n" +
-                        "ВАХ: столбцы I, U (при загрузке преобразуется в U → I)",
-                    Location = new Point(10, yPos),
-                    Width = 250,
-                    Height = 44,
-                    Font = new Font("Segoe UI", 7, FontStyle.Italic),
-                    ForeColor = Color.FromArgb(108, 117, 125),
-                    BackColor = Color.White
-                };
-
-                blockPanel.Controls.Add(hintLabel);
-                yPos += 48;
-
-                kvhButton.Click += (s, e) =>
-                {
-                    string filePath = SelectCharacteristicFile("КВХ");
-
-                    if (string.IsNullOrEmpty(filePath))
-                        return;
-
-                    try
-                    {
-                        var points =
-                            LoadCharacteristicFromTxt(
-                                filePath,
-                                false);
-
-                        tool.FilterKVH = points;
-                        tool.FilterKVHFilePath = filePath;
-
-                        ParametersChanged?.Invoke(
-                            this,
-                            EventArgs.Empty);
-
-                        SetSelectedTool(tool);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(
-                            ex.Message,
-                            "Ошибка загрузки КВХ",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                };
-
-                vahButton.Click += (s, e) =>
-                {
-                    string filePath = SelectCharacteristicFile("ВАХ");
-
-                    if (string.IsNullOrEmpty(filePath))
-                        return;
-
-                    try
-                    {
-                        var points =
-                            LoadCharacteristicFromTxt(
-                                filePath,
-                                true);
-
-                        tool.FilterVAH = points;
-                        tool.FilterVAHFilePath = filePath;
-
-                        ParametersChanged?.Invoke(
-                            this,
-                            EventArgs.Empty);
-
-                        SetSelectedTool(tool);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(
-                            ex.Message,
-                            "Ошибка загрузки ВАХ",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                };
-            }
             else if (tool.Type == ToolType.Chart)
             {
                 _txtChartPoints.Text = tool.MaxHistorySize.ToString();
@@ -939,9 +674,7 @@ namespace MathApp.UI
                     _txtPhase.Text = FormatEngineering(tool.Phase, "°");
                     AddParameter(blockPanel, "Фаза (град):", _txtPhase, ref yPos);
                 }
-                else if (tool.Waveform == GeneratorWaveform.Trapezoid ||
-                         tool.Waveform == GeneratorWaveform.Square ||
-                         tool.Waveform == GeneratorWaveform.Sawtooth)
+                else if (tool.Waveform == GeneratorWaveform.Trapezoid)
                 {
                     _txtRiseTime.Text = FormatEngineering(tool.RiseTime, "s");
                     _txtFallTime.Text = FormatEngineering(tool.FallTime, "s");
@@ -1118,177 +851,7 @@ namespace MathApp.UI
         }
 
         public void ApplyChanges(MathTool tool) { }
-    
-        private string SelectCharacteristicFile(string characteristicName)
-        {
-            using (var dialog = new OpenFileDialog())
-            {
-                dialog.Title =
-                    "Выберите файл " + characteristicName;
-
-                dialog.Filter =
-                    "Текстовые файлы (*.txt)|*.txt|" +
-                    "Все файлы (*.*)|*.*";
-
-                dialog.Multiselect = false;
-                dialog.CheckFileExists = true;
-
-                if (dialog.ShowDialog() == DialogResult.OK)
-                    return dialog.FileName;
-            }
-
-            return null;
-        }
-
-        private string BuildCharacteristicFileInfo(
-            string name,
-            string filePath,
-            int pointCount)
-        {
-            string fileName =
-                string.IsNullOrWhiteSpace(filePath)
-                    ? "файл не выбран"
-                    : System.IO.Path.GetFileName(filePath);
-
-            return
-                name + ": " +
-                fileName +
-                Environment.NewLine +
-                "точек: " +
-                pointCount;
-        }
-
-        /// <summary>
-        /// Загружает двухколоночную характеристику из TXT.
-        ///
-        /// КВХ:
-        ///   столбец 1 = q
-        ///   столбец 2 = U
-        ///   => X=q, Y=U
-        ///
-        /// ВАХ:
-        ///   исходный файл:
-        ///   столбец 1 = I
-        ///   столбец 2 = U
-        ///
-        ///   модель использует U -> I,
-        ///   поэтому => X=U, Y=I.
-        /// </summary>
-        private List<FilterPoint> LoadCharacteristicFromTxt(
-            string filePath,
-            bool isVah)
-        {
-            if (string.IsNullOrWhiteSpace(filePath))
-                throw new ArgumentException("Путь к файлу не задан.");
-
-            if (!System.IO.File.Exists(filePath))
-                throw new System.IO.FileNotFoundException(
-                    "Файл не найден.",
-                    filePath);
-
-            var points =
-                new List<FilterPoint>();
-
-            string[] lines =
-                System.IO.File.ReadAllLines(filePath);
-
-            for (int lineIndex = 0;
-                 lineIndex < lines.Length;
-                 lineIndex++)
-            {
-                string line =
-                    lines[lineIndex]?.Trim();
-
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
-
-                if (line.StartsWith("#") ||
-                    line.StartsWith("//"))
-                {
-                    continue;
-                }
-
-                string[] parts =
-                    System.Text.RegularExpressions.Regex.Split(
-                        line,
-                        @"[\t ;]+")
-                    .Where(p => !string.IsNullOrWhiteSpace(p))
-                    .ToArray();
-
-                if (parts.Length < 2)
-                {
-                    throw new InvalidOperationException(
-                        $"Строка {lineIndex + 1}: " +
-                        "ожидалось два числовых столбца.");
-                }
-
-                if (!EngineeringParser.TryParse(
-                        parts[0],
-                        out double first) ||
-                    !EngineeringParser.TryParse(
-                        parts[1],
-                        out double second))
-                {
-                    throw new InvalidOperationException(
-                        $"Строка {lineIndex + 1}: " +
-                        "не удалось прочитать два числа.");
-                }
-
-                if (double.IsNaN(first) ||
-                    double.IsInfinity(first) ||
-                    double.IsNaN(second) ||
-                    double.IsInfinity(second))
-                {
-                    throw new InvalidOperationException(
-                        $"Строка {lineIndex + 1}: " +
-                        "недопустимое числовое значение.");
-                }
-
-                if (isVah)
-                {
-                    // В файле ВАХ: I, U.
-                    // В модели нужно U -> I.
-                    points.Add(
-                        new FilterPoint(
-                            second,
-                            first));
-                }
-                else
-                {
-                    // КВХ: q, U.
-                    points.Add(
-                        new FilterPoint(
-                            first,
-                            second));
-                }
-            }
-
-            if (points.Count < 2)
-            {
-                throw new InvalidOperationException(
-                    "Характеристика должна содержать минимум 2 точки.");
-            }
-
-            points =
-                points
-                    .OrderBy(p => p.X)
-                    .ToList();
-
-            for (int i = 1;
-                 i < points.Count;
-                 i++)
-            {
-                if (points[i].X <= points[i - 1].X)
-                {
-                    throw new InvalidOperationException(
-                        "Значения X в характеристике " +
-                        "должны быть уникальными.");
-                }
-            }
-
-            return points;
-        }
-}
+    }
 }
 
 

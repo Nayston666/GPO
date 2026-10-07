@@ -127,7 +127,6 @@ namespace MathApp
                 "Интегратор",
                 "Дифференциатор",
                 "Интерполятор",
-                "Нелинейный фильтр 1 порядка",
 
                 "Файловый ввод/вывод",
                  "График",
@@ -258,18 +257,6 @@ namespace MathApp
             {
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.Interpolator, Size = new Size(140, 100), Name = "Интерполятор", InterpolationPoints = new List<PointF>() };
                 for (int i = 0; i <= 10; i++) tool.InterpolationPoints.Add(new PointF(i / 2f, (float)Math.Sin(i / 2f)));
-            }
-            else if (toolType.Contains("Нелинейный фильтр"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.NonlinearFirstOrderFilter,
-                    Size = new Size(170, 100),
-                    Name = "Нелинейный фильтр 1 порядка",
-                    FilterKVH = new List<FilterPoint>(),
-                    FilterVAH = new List<FilterPoint>()
-                };
             }
             else if (toolType.Contains("Файловый"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.FileIO, Size = new Size(160, 100), Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };

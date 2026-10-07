@@ -117,7 +117,7 @@ namespace MathApp
                 "Генератор синусоиды",
                 "Трапециевидный сигнал",
                 "Меандр",
-                "Треугольный импульс",
+                "Пиловидный сигнал",
                 "Единичный сигнал",
 
                 "Сложение",
@@ -127,7 +127,6 @@ namespace MathApp
                 "Интегратор",
                 "Дифференциатор",
                 "Интерполятор",
-                "Нелинейный фильтр 1 порядка",
 
                 "Файловый ввод/вывод",
                  "График",
@@ -208,9 +207,9 @@ namespace MathApp
             else if (toolType.Contains("Трапециевидный"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Trapezoid, Size = new Size(160, 100), Name = "Трапеция", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.1, FallTime = 0.1 };
             else if (toolType.Contains("Меандр"))
-                tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Square, Size = new Size(160, 100), Name = "Меандр", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.01, FallTime = 0.01 };
-            else if (toolType.Contains("Треугольный"))
-                tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Sawtooth, Size = new Size(160, 100), Name = "Треугольный импульс", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.5, FallTime = 0.5 };
+                tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Square, Size = new Size(160, 100), Name = "Меандр", Frequency = 1.0, Amplitude = 1.0 };
+            else if (toolType.Contains("Пиловидный"))
+                tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Sawtooth, Size = new Size(160, 100), Name = "Пила", Frequency = 1.0, Amplitude = 1.0 };
             else if (toolType.Contains("Единичный"))
                 tool = new MathTool
                 {
@@ -221,8 +220,6 @@ namespace MathApp
                     Name = "Единичный сигнал",
                     Amplitude = 1.0,
                     StepDuration = 0.001,
-                    RiseTime = 0.0001,
-                    FallTime = 0.0001,
                     Frequency = 1.0
                 };
             else if (toolType.Contains("Сложение"))
@@ -258,18 +255,6 @@ namespace MathApp
             {
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.Interpolator, Size = new Size(140, 100), Name = "Интерполятор", InterpolationPoints = new List<PointF>() };
                 for (int i = 0; i <= 10; i++) tool.InterpolationPoints.Add(new PointF(i / 2f, (float)Math.Sin(i / 2f)));
-            }
-            else if (toolType.Contains("Нелинейный фильтр"))
-            {
-                tool = new MathTool
-                {
-                    Position = realPos,
-                    Type = ToolType.NonlinearFirstOrderFilter,
-                    Size = new Size(170, 100),
-                    Name = "Нелинейный фильтр 1 порядка",
-                    FilterKVH = new List<FilterPoint>(),
-                    FilterVAH = new List<FilterPoint>()
-                };
             }
             else if (toolType.Contains("Файловый"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.FileIO, Size = new Size(160, 100), Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
@@ -803,25 +788,28 @@ namespace MathApp
                 {
                     double pulseDuration = Math.Max(0.0, source.StepDuration);
 
-                    int sampleCount =
-                        Math.Max(
-                            2,
-                            (int)Math.Ceiling(pulseDuration / dt) + 2);
+                    // Количество отсчётов внутри импульса
+                    int highSamples =
+                        Math.Max(1, (int)Math.Ceiling(pulseDuration / dt));
 
-                    var stepSignal =
-                        new List<double>(sampleCount);
+                    // +2:
+                    // первая точка 0 перед фронтом
+                    // последняя точка 0 после спада
+                    int totalSamples = highSamples + 2;
 
-                    for (int i = 0; i < sampleCount; i++)
-                    {
-                        double t = i * dt;
+                    var stepSignal = new List<double>(totalSamples);
 
-                        stepSignal.Add(
-                            SignalGenerator.Calculate(
-                                source,
-                                t));
-                    }
+                    // Начальная точка
+                    stepSignal.Add(0.0);
 
-                    gf.SetSignal(stepSignal, dt, false);
+                    // Площадка импульса
+                    for (int i = 1; i <= highSamples; i++)
+                        stepSignal.Add(source.Amplitude);
+
+                    // Точка после окончания импульса
+                    stepSignal.Add(0.0);
+
+                    gf.SetSignal(stepSignal, dt, true);
                     continue;
                 }
                 // Для любого генератора показываем ОДИН ПОЛНЫЙ ПЕРИОД.

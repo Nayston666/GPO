@@ -98,24 +98,7 @@ namespace MathApp.Rendering
 
             DrawBlockId(g, rect, tool.BlockId);
 
-            if (tool.Type == ToolType.NonlinearFirstOrderFilter)
-            {
-                DrawCenteredText(
-                    g, "НРФ1П",
-                    new Font("Segoe UI", 12, FontStyle.Bold),
-                    Brushes.DarkBlue, rect);
-
-                g.DrawString(
-                    $"КВХ:{tool.FilterKVH?.Count ?? 0}  ВАХ:{tool.FilterVAH?.Count ?? 0}",
-                    _paramFont, Brushes.DarkGray,
-                    rect.X + 10, rect.Y + 10);
-
-                g.DrawString(
-                    "выход: Uout",
-                    _paramFont, Brushes.DarkGray,
-                    rect.X + 10, rect.Y + rect.Height - 20);
-            }
-            else if (tool.Operation == MathOperation.FileIO)
+            if (tool.Operation == MathOperation.FileIO)
             {
                 DrawCenteredText(g, tool.IsReading ? "📂 ЧТЕНИЕ" : "💾 ЗАПИСЬ", new Font("Segoe UI", 9, FontStyle.Bold), Brushes.DarkBlue, rect);
                 string fileInfo = tool.IsReading ? System.IO.Path.GetFileName(tool.InputFilePath) : System.IO.Path.GetFileName(tool.OutputFilePath);

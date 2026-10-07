@@ -33,7 +33,6 @@ namespace MathApp.Models
         Channel,        // Канал связи
         Object,         // Объект (РЛС)
         ADC,            // Аналого-цифровой преобразователь
-        NonlinearFirstOrderFilter, // Нелинейный рекурсивный фильтр 1 порядка
         SubSystem,      // Подсистема
         Port            // Порт 
     }

@@ -73,10 +73,6 @@ namespace MathApp.Models
         // Нелинейный рекурсивный фильтр 1 порядка
         public List<FilterPoint> FilterKVH { get; set; } = new List<FilterPoint>();
         public List<FilterPoint> FilterVAH { get; set; } = new List<FilterPoint>();
-
-        // Пути к загруженным характеристикам.
-        public string FilterKVHFilePath { get; set; } = "";
-        public string FilterVAHFilePath { get; set; } = "";
         public double FilterPreviousIC { get; set; } = 0.0;
         public double FilterPreviousIR { get; set; } = 0.0;
         public double FilterCharge { get; set; } = 0.0;
