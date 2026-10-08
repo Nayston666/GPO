@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\Desktop\\bot\\GPO\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\\u0434\u043C\u0438\u0442\u0440\u0438\u0439\\desktop\\bot\\gpo\\\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\AppData\\Local\\Temp\\Rar$DRa27436.11331.rartemp\\GraphForm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -21,6 +25,19 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "CalculationEngine.cs",
+              "DocumentMoniker": "C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\Desktop\\bot\\GPO\\\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
+              "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
+              "ToolTip": "C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\Desktop\\bot\\GPO\\\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
+              "RelativeToolTip": "\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAA9AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-08T10:34:12.224Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "GraphForm.cs",
               "DocumentMoniker": "C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\AppData\\Local\\Temp\\Rar$DRa27436.11331.rartemp\\GraphForm.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\AppData\\Local\\Temp\\Rar$DRa27436.11331.rartemp\\GraphForm.cs",
@@ -31,7 +48,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "GraphForm.cs",
               "DocumentMoniker": "C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\AppData\\Local\\Temp\\Rar$DIa27436.9288.rartemp\\GraphForm.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\AppData\\Local\\Temp\\Rar$DIa27436.9288.rartemp\\GraphForm.cs",

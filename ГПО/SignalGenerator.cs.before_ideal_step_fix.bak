@@ -59,12 +59,31 @@ namespace MathApp.Core
         private static double CalculateStep(MathTool tool, double time)
         {
             double duration = Math.Max(0.0, tool.StepDuration);
+            double rise = Math.Max(0.0, tool.RiseTime);
+            double fall = Math.Max(0.0, tool.FallTime);
 
-            if (duration <= 0.0)
+            if (duration <= 0.0 || time < 0.0 || time > duration)
                 return 0.0;
 
-            if (time >= 0.0 && time < duration)
+            // Если фронт + спад не помещаются в импульс,
+            // сохраняем их отношение и пропорционально уменьшаем.
+            if (rise + fall > duration && rise + fall > 0.0)
+            {
+                double scale = duration / (rise + fall);
+                rise *= scale;
+                fall *= scale;
+            }
+
+            if (rise > 0.0 && time < rise)
+                return tool.Amplitude * time / rise;
+
+            double fallStart = duration - fall;
+
+            if (time <= fallStart)
                 return tool.Amplitude;
+
+            if (fall > 0.0)
+                return tool.Amplitude * (duration - time) / fall;
 
             return 0.0;
         }

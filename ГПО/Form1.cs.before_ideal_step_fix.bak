@@ -803,22 +803,25 @@ namespace MathApp
                 {
                     double pulseDuration = Math.Max(0.0, source.StepDuration);
 
-                    int highSamples =
+                    int sampleCount =
                         Math.Max(
-                            1,
-                            (int)Math.Ceiling(pulseDuration / dt));
+                            2,
+                            (int)Math.Ceiling(pulseDuration / dt) + 2);
 
                     var stepSignal =
-                        new List<double>(highSamples + 2);
+                        new List<double>(sampleCount);
 
-                    stepSignal.Add(0.0);
+                    for (int i = 0; i < sampleCount; i++)
+                    {
+                        double t = i * dt;
 
-                    for (int i = 0; i < highSamples; i++)
-                        stepSignal.Add(source.Amplitude);
+                        stepSignal.Add(
+                            SignalGenerator.Calculate(
+                                source,
+                                t));
+                    }
 
-                    stepSignal.Add(0.0);
-
-                    gf.SetSignal(stepSignal, dt, true);
+                    gf.SetSignal(stepSignal, dt, false);
                     continue;
                 }
                 // Для любого генератора показываем ОДИН ПОЛНЫЙ ПЕРИОД.
