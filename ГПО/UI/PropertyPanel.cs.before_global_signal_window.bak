@@ -19,7 +19,6 @@ namespace MathApp.UI
         private TextBox _txtChartPoints;
         private TextBox _txtFrequency;
         private TextBox _txtAmplitude;
-        private TextBox _txtDelay;
         private TextBox _txtPhase;
         private TextBox _txtStepDuration;
         private TextBox _txtRiseTime;
@@ -74,7 +73,6 @@ namespace MathApp.UI
             _txtChartPoints = CreateNumericTextBox("200", 10, 5000);
             _txtFrequency = CreateEngineeringTextBox("1", "Hz");
             _txtAmplitude = CreateEngineeringTextBox("1", "V");
-            _txtDelay = CreateEngineeringTextBox("0", "s");
             _txtPhase = CreateNumericTextBox("0", 0, 360);
             _txtStepDuration = CreateEngineeringTextBox("0.001", "s");
             _txtRiseTime = CreateEngineeringTextBox("0.1", "s");
@@ -112,7 +110,6 @@ namespace MathApp.UI
             _txtFrequency.Leave += (s, e) => ApplyFrequency();
             _txtStepDuration.Leave += (s, e) => ApplyStepDuration();
             _txtAmplitude.Leave += (s, e) => ApplyAmplitude();
-            _txtDelay.Leave += (s, e) => ApplyDelay();
             _txtPhase.Leave += (s, e) => ApplyPhase();
             _txtRiseTime.Leave += (s, e) => ApplyRiseTime();
             _txtFallTime.Leave += (s, e) => ApplyFallTime();
@@ -223,30 +220,6 @@ namespace MathApp.UI
             }
         }
 
-        private void ApplyDelay()
-        {
-            if (_selectedTool == null)
-                return;
-
-            double value =
-                Math.Max(
-                    0.0,
-                    ParseEngineering(
-                        _txtDelay.Text,
-                        _selectedTool.Delay));
-
-            _selectedTool.Delay =
-                value;
-
-            _txtDelay.Text =
-                FormatEngineering(
-                    value,
-                    "s");
-
-            ParametersChanged?.Invoke(
-                this,
-                EventArgs.Empty);
-        }
         private void ApplyAmplitude()
         {
             if (_selectedTool != null)
@@ -934,89 +907,50 @@ namespace MathApp.UI
             // Генератор
             else if (tool.Type == ToolType.Generator)
             {
-                _txtAmplitude.Text =
-                    FormatEngineering(
-                        tool.Amplitude,
-                        "V");
+                if (tool.Waveform == GeneratorWaveform.Step)
+                {
+                    _txtAmplitude.Text =
+                        FormatEngineering(tool.Amplitude, "V");
 
-                _txtDelay.Text =
-                    FormatEngineering(
-                        tool.Delay,
-                        "s");
+                    _txtStepDuration.Text =
+                        FormatEngineering(tool.StepDuration, "s");
 
-                AddParameter(
-                    blockPanel,
-                    "Амплитуда (В):",
-                    _txtAmplitude,
-                    ref yPos);
+                    AddParameter(
+                        blockPanel,
+                        "Высота сигнала (В):",
+                        _txtAmplitude,
+                        ref yPos);
 
-                AddParameter(
-                    blockPanel,
-                    "Задержка:",
-                    _txtDelay,
-                    ref yPos);
+                    AddParameter(
+                        blockPanel,
+                        "Длительность сигнала:",
+                        _txtStepDuration,
+                        ref yPos);
+                }
+                else
+                {
+                _txtFrequency.Text = FormatEngineering(tool.Frequency, "Hz");
+                _txtAmplitude.Text = FormatEngineering(tool.Amplitude, "V");
+                AddParameter(blockPanel, "Частота (Гц):", _txtFrequency, ref yPos);
+                AddParameter(blockPanel, "Амплитуда (В):", _txtAmplitude, ref yPos);
 
-                // Только синусоида остаётся периодической.
                 if (tool.Waveform == GeneratorWaveform.Sine)
                 {
-                    _txtFrequency.Text =
-                        FormatEngineering(
-                            tool.Frequency,
-                            "Hz");
-
-                    _txtPhase.Text =
-                        FormatEngineering(
-                            tool.Phase,
-                            "°");
-
-                    AddParameter(
-                        blockPanel,
-                        "Частота (Гц):",
-                        _txtFrequency,
-                        ref yPos);
-
-                    AddParameter(
-                        blockPanel,
-                        "Фаза (град):",
-                        _txtPhase,
-                        ref yPos);
+                    _txtPhase.Text = FormatEngineering(tool.Phase, "°");
+                    AddParameter(blockPanel, "Фаза (град):", _txtPhase, ref yPos);
                 }
-                else if (
-                    tool.Waveform ==
-                        GeneratorWaveform.Trapezoid ||
-                    tool.Waveform ==
-                        GeneratorWaveform.Square ||
-                    tool.Waveform ==
-                        GeneratorWaveform.Sawtooth)
+                else if (tool.Waveform == GeneratorWaveform.Trapezoid ||
+                         tool.Waveform == GeneratorWaveform.Square ||
+                         tool.Waveform == GeneratorWaveform.Sawtooth)
                 {
-                    _txtRiseTime.Text =
-                        FormatEngineering(
-                            tool.RiseTime,
-                            "s");
-
-                    _txtFallTime.Text =
-                        FormatEngineering(
-                            tool.FallTime,
-                            "s");
-
-                    AddParameter(
-                        blockPanel,
-                        "Фронт нарастания:",
-                        _txtRiseTime,
-                        ref yPos);
-
-                    AddParameter(
-                        blockPanel,
-                        "Фронт спада:",
-                        _txtFallTime,
-                        ref yPos);
+                    _txtRiseTime.Text = FormatEngineering(tool.RiseTime, "s");
+                    _txtFallTime.Text = FormatEngineering(tool.FallTime, "s");
+                    AddParameter(blockPanel, "Фронт нарастания:", _txtRiseTime, ref yPos);
+                    AddParameter(blockPanel, "Фронт спада:", _txtFallTime, ref yPos);
                 }
-
-                // Step:
-                // только Amplitude + Delay.
-                // Его длительность равна оставшемуся
-                // глобальному окну моделирования.
+                }
             }
+
             // Усилитель
             else if (tool.Type == ToolType.Amplifier)
             {

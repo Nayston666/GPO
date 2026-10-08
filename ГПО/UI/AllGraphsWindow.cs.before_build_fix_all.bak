@@ -18,6 +18,8 @@ namespace MathApp.UI
         private Dictionary<Guid, List<double>> graphTimeData = new Dictionary<Guid, List<double>>();
 
         private double _dt = 0.0001;
+        private bool _dataLoaded = false;
+
         public AllGraphsWindow(List<MathTool> charts, Dictionary<Guid, GraphForm> existingGraphs)
         {
             this.charts = charts;
@@ -89,6 +91,7 @@ namespace MathApp.UI
                     graphTimeData[chart.Id] = timeValues;
                 }
             }
+            _dataLoaded = true;
         }
 
         public void SetStaticData(Dictionary<Guid, List<double>> timeData, Dictionary<Guid, List<double>> valueData, double dt)
@@ -114,6 +117,9 @@ namespace MathApp.UI
                     }
                 }
             }
+
+            _dataLoaded = true;
+
             if (this.IsHandleCreated)
                 CreateGraphGrid();
         }

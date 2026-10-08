@@ -16,9 +16,6 @@ namespace MathApp.Core
         /// <summary>Шаг интегрирования (с). Используется интегратором и дифференциатором.</summary>
         public double TimeStep { get; set; } = 1e-4;
 
-        /// <summary>Общая длительность окна моделирования (с).</summary>
-        public double SimulationDuration { get; set; } = 0.01;
-
         // ============================================================
         //  ПУБЛИЧНЫЙ API
         // ============================================================
@@ -91,7 +88,7 @@ namespace MathApp.Core
             switch (tool.Type)
             {
                 case ToolType.Generator:
-                    return SignalGenerator.Calculate(tool, CurrentTime, SimulationDuration);
+                    return SignalGenerator.Calculate(tool, CurrentTime);
 
                 case ToolType.Operation:
                     {
@@ -273,7 +270,7 @@ namespace MathApp.Core
             switch (tool.Type)
             {
                 case ToolType.Generator:
-                    return SignalGenerator.Calculate(tool, CurrentTime, SimulationDuration);
+                    return SignalGenerator.Calculate(tool, CurrentTime);
 
                 case ToolType.Operation:
                     {

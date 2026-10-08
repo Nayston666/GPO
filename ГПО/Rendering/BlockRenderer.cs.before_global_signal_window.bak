@@ -178,10 +178,7 @@ namespace MathApp.Rendering
                     DrawCenteredText(g, symbol, font, Brushes.DarkBlue, rect);
             }
 
-            string paramsText =
-                tool.Waveform == GeneratorWaveform.Sine
-                    ? $"f={tool.Frequency:G3} A={tool.Amplitude:G3}"
-                    : $"A={tool.Amplitude:G3}";
+            string paramsText = $"f={tool.Frequency:G3} A={tool.Amplitude:G3}";
             g.DrawString(paramsText, _paramFont, Brushes.DarkGray, rect.X + 10, rect.Y + 10);
         }
 

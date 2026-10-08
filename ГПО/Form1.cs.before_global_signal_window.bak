@@ -663,7 +663,6 @@ namespace MathApp
                     }
                 }
                 calculator.TimeStep = dt;
-                calculator.SimulationDuration = duration;
 
                 // 4. Привязка графиков к источникам
                 var chartBindings = new List<Tuple<MathTool, MathTool, Connection>>();
@@ -712,6 +711,14 @@ namespace MathApp
                             value = src.LastResult.Value;
                         }
 
+                        if (src.Type == ToolType.Generator &&
+                            src.Waveform != GeneratorWaveform.Sine &&
+                            src.Frequency > 0 &&
+                            calculator.CurrentTime > SignalGenerator.GetPeriod(src))
+                        {
+                            continue;
+                        }
+
                         chart.ValueHistory.Add(value);
                         chart.CurrentValue = value;
                     }
@@ -755,86 +762,122 @@ namespace MathApp
             double samplingRate = 10000;
             double duration = 0.01;
 
-            EngineeringParser.TryParse(
-                samplingRateInput.Text,
-                out samplingRate);
+            EngineeringParser.TryParse(samplingRateInput.Text, out samplingRate);
+            EngineeringParser.TryParse(durationInput.Text, out duration);
 
-            EngineeringParser.TryParse(
-                durationInput.Text,
-                out duration);
+            if (samplingRate <= 0) samplingRate = 10000;
+            if (duration <= 0) duration = 0.01;
 
-            if (samplingRate <= 0)
-                samplingRate = 10000;
+            // ВАЖНО: dt берём только из лицевой панели.
+            // Для построения периода генератора dt НЕ изменяется.
+            double dt = 1.0 / samplingRate;
 
-            if (duration <= 0)
-                duration = 0.01;
-
-            double dt =
-                1.0 /
-                samplingRate;
-
-            foreach (
-                var chart
-                in whiteboardTools.Where(
-                    t => t.Type == ToolType.Chart))
+            foreach (var chart in whiteboardTools.Where(t => t.Type == ToolType.Chart))
             {
                 GraphForm gf;
 
                 if (graphWindows.ContainsKey(chart.Id) &&
                     !graphWindows[chart.Id].IsDisposed)
                 {
-                    gf =
-                        graphWindows[chart.Id];
+                    gf = graphWindows[chart.Id];
                 }
                 else
                 {
-                    gf =
-                        new GraphForm(
-                            chart.Name);
-
+                    gf = new GraphForm(chart.Name);
                     gf.Show();
-
-                    graphWindows[chart.Id] =
-                        gf;
+                    graphWindows[chart.Id] = gf;
                 }
 
-                if (chart.ValueHistory == null ||
-                    chart.ValueHistory.Count == 0)
+                // Проверяем, что подключено непосредственно к этому графику.
+                var connection = connections.FirstOrDefault(c => c.TargetToolId == chart.Id);
+                MathTool source = null;
+
+                if (connection != null)
+                    source = whiteboardTools.FirstOrDefault(t => t.Id == connection.SourceToolId);
+
+                // ЕДИНИЧНАЯ СТУПЕНЬКА:
+                // непериодический сигнал, показываем на всей глобальной длительности.
+                if (source != null &&
+                source.Type == ToolType.Generator &&
+                source.Waveform == GeneratorWaveform.Step)
                 {
+                    double pulseDuration = Math.Max(0.0, source.StepDuration);
+
+                    int highSamples =
+                        Math.Max(
+                            1,
+                            (int)Math.Ceiling(pulseDuration / dt));
+
+                    var stepSignal =
+                        new List<double>(highSamples + 2);
+
+                    stepSignal.Add(0.0);
+
+                    for (int i = 0; i < highSamples; i++)
+                        stepSignal.Add(source.Amplitude);
+
+                    stepSignal.Add(0.0);
+
+                    gf.SetSignal(stepSignal, dt, true);
+                    continue;
+                }
+                // Для любого генератора показываем ОДИН ПОЛНЫЙ ПЕРИОД.
+                // Общая длительность моделирования на это не влияет.
+                if (source != null &&
+                    source.Type == ToolType.Generator &&
+                    source.Waveform != GeneratorWaveform.Step &&
+                    source.Frequency > 0 &&
+                    !double.IsNaN(source.Frequency) &&
+                    !double.IsInfinity(source.Frequency))
+                {
+                    double period = 1.0 / source.Frequency;
+
+                    // dt остаётся неизменным.
+                    // Берём все точки t = 0, dt, 2*dt, ... пока t <= T.
+                    long sampleCountLong = (long)Math.Floor(period / dt + 1e-12) + 1L;
+
+                    if (sampleCountLong < 2)
+                        sampleCountLong = 2;
+
+                    if (sampleCountLong > 10000000L)
+                    {
+                        MessageBox.Show(
+                            $"Для одного периода сигнала '{source.Name}' требуется " +
+                            $"{sampleCountLong:N0} точек при dt={dt:G17} с.\n\n" +
+                            "Увеличьте частоту сигнала или уменьшите частоту дискретизации.",
+                            "Слишком много точек",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+
+                        continue;
+                    }
+
+                    int sampleCount = (int)sampleCountLong;
+                    var onePeriod = new List<double>(sampleCount);
+
+                    for (int i = 0; i < sampleCount; i++)
+                    {
+                        double t = i * dt;
+
+                        // Из-за погрешности double последняя точка не должна
+                        // искусственно перескакивать за период.
+                        if (t > period + Math.Abs(period) * 1e-12)
+                            break;
+
+                        onePeriod.Add(SignalGenerator.Calculate(source, t));
+                    }
+
+                    gf.SetSignal(onePeriod, dt);
                     continue;
                 }
 
-                var connection =
-                    connections.FirstOrDefault(
-                        c =>
-                            c.TargetToolId ==
-                            chart.Id);
+                // Для остальных блоков показываем реальные результаты моделирования.
+                if (chart.ValueHistory == null || chart.ValueHistory.Count == 0)
+                    continue;
 
-                MathTool source =
-                    null;
-
-                if (connection != null)
-                {
-                    source =
-                        whiteboardTools.FirstOrDefault(
-                            t =>
-                                t.Id ==
-                                connection.SourceToolId);
-                }
-
-                // Только идеальный Step рисуем ступенчато.
-                bool stepStyle =
-                    source != null &&
-                    source.Type == ToolType.Generator &&
-                    source.Waveform == GeneratorWaveform.Step;
-
-                gf.SetSignal(
-                    chart.ValueHistory,
-                    dt,
-                    stepStyle);
+                gf.SetSignal(chart.ValueHistory, dt);
             }
         }
-
         public void LoadStaticFileData(Guid fileToolId)
         {
             var fileTool = whiteboardTools.FirstOrDefault(t => t.Id == fileToolId);

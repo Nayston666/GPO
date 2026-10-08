@@ -44,6 +44,8 @@ namespace MathApp.UI
         private Label lblOutputs;
         private Button btnSave;
         private Button btnCancel;
+
+        private Panel _leftPanel;
         private PropertyPanel _propertyPanel;
 
         private const int PORT_WIDTH = 100;

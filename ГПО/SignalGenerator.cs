@@ -5,76 +5,190 @@ namespace MathApp.Core
 {
     public static class SignalGenerator
     {
-        public static double Calculate(MathTool tool, double time)
+        public static double Calculate(
+            MathTool tool,
+            double time,
+            double simulationDuration)
         {
             if (tool == null)
                 return 0.0;
 
-            // Одиночный прямоугольный импульс:
-            // 0 -> фронт -> площадка -> спад -> 0.
-            if (tool.Waveform == GeneratorWaveform.Step)
-                return CalculateStep(tool, time);
+            double delay = Math.Max(0.0, tool.Delay);
 
-            if (tool.Frequency <= 0 ||
-                double.IsNaN(tool.Frequency) ||
-                double.IsInfinity(tool.Frequency))
-            {
+            if (time < delay)
                 return 0.0;
-            }
 
-            double period = 1.0 / tool.Frequency;
+            double localTime = time - delay;
 
-            if (tool.Waveform == GeneratorWaveform.Sine)
-            {
-                double radians =
-                    time * tool.Frequency * 2.0 * Math.PI +
-                    tool.Phase * Math.PI / 180.0;
+            double availableDuration =
+                Math.Max(
+                    0.0,
+                    simulationDuration - delay);
 
-                return tool.Amplitude * Math.Sin(radians);
-            }
-
-            double localTime = time % period;
-            if (localTime < 0)
-                localTime += period;
+            if (availableDuration <= 0.0)
+                return 0.0;
 
             switch (tool.Waveform)
             {
+                case GeneratorWaveform.Sine:
+                    return CalculateSine(tool, localTime);
+
+                case GeneratorWaveform.Step:
+                    return CalculateStep(
+                        tool,
+                        localTime,
+                        availableDuration);
+
                 case GeneratorWaveform.Trapezoid:
-                    return CalculateTrapezoid(tool, localTime, period);
+                    return CalculateTrapezoid(
+                        tool,
+                        localTime,
+                        availableDuration);
 
                 case GeneratorWaveform.Square:
-                    return CalculateSquare(tool, localTime, period);
+                    return CalculateSquare(
+                        tool,
+                        localTime,
+                        availableDuration);
 
-                // Внутреннее имя Sawtooth оставлено для совместимости
-                // со старыми сохранениями проекта.
-                // Фактически это треугольный импульс.
                 case GeneratorWaveform.Sawtooth:
-                    return CalculateTriangle(tool, localTime, period);
+                    return CalculateTriangle(
+                        tool,
+                        localTime,
+                        availableDuration);
 
                 default:
                     return 0.0;
             }
         }
 
-        private static double CalculateStep(MathTool tool, double time)
+        // Совместимость со старым кодом.
+        public static double Calculate(
+            MathTool tool,
+            double time)
         {
-            double duration = Math.Max(0.0, tool.StepDuration);
-
-            if (duration <= 0.0)
+            if (tool == null)
                 return 0.0;
 
-            if (time >= 0.0 && time < duration)
+            if (tool.Waveform == GeneratorWaveform.Sine)
+            {
+                double delay = Math.Max(0.0, tool.Delay);
+
+                if (time < delay)
+                    return 0.0;
+
+                return CalculateSine(
+                    tool,
+                    time - delay);
+            }
+
+            return Calculate(
+                tool,
+                time,
+                double.MaxValue);
+        }
+
+        private static double CalculateSine(
+            MathTool tool,
+            double localTime)
+        {
+            if (tool.Frequency <= 0.0 ||
+                double.IsNaN(tool.Frequency) ||
+                double.IsInfinity(tool.Frequency))
+            {
+                return 0.0;
+            }
+
+            double radians =
+                localTime *
+                tool.Frequency *
+                2.0 *
+                Math.PI +
+                tool.Phase *
+                Math.PI /
+                180.0;
+
+            return tool.Amplitude * Math.Sin(radians);
+        }
+
+        private static double CalculateStep(
+            MathTool tool,
+            double localTime,
+            double availableDuration)
+        {
+            if (localTime < 0.0 ||
+                localTime >= availableDuration)
+            {
+                return 0.0;
+            }
+
+            return tool.Amplitude;
+        }
+
+        private static double CalculateTrapezoid(
+            MathTool tool,
+            double localTime,
+            double availableDuration)
+        {
+            if (localTime < 0.0 ||
+                localTime >= availableDuration)
+            {
+                return 0.0;
+            }
+
+            double rise = Math.Max(0.0, tool.RiseTime);
+            double fall = Math.Max(0.0, tool.FallTime);
+
+            if (rise + fall > availableDuration &&
+                rise + fall > 0.0)
+            {
+                double scale =
+                    availableDuration /
+                    (rise + fall);
+
+                rise *= scale;
+                fall *= scale;
+            }
+
+            if (rise > 0.0 &&
+                localTime < rise)
+            {
+                return
+                    tool.Amplitude *
+                    localTime /
+                    rise;
+            }
+
+            double fallStart =
+                availableDuration - fall;
+
+            if (localTime < fallStart)
                 return tool.Amplitude;
 
-            return 0.0;
+            if (fall > 0.0)
+            {
+                return
+                    tool.Amplitude *
+                    (availableDuration - localTime) /
+                    fall;
+            }
+
+            return tool.Amplitude;
         }
 
         private static double CalculateSquare(
             MathTool tool,
-            double time,
-            double period)
+            double localTime,
+            double availableDuration)
         {
-            double half = period * 0.5;
+            if (localTime < 0.0 ||
+                localTime >= availableDuration)
+            {
+                return 0.0;
+            }
+
+            double half =
+                availableDuration * 0.5;
 
             double rise =
                 Math.Min(
@@ -86,20 +200,27 @@ namespace MathApp.Core
                     Math.Max(0.0, tool.FallTime),
                     half);
 
-            // Первая половина периода — высокий уровень.
-            if (rise > 0.0 && time < rise)
-                return tool.Amplitude * time / rise;
+            if (rise > 0.0 &&
+                localTime < rise)
+            {
+                return
+                    tool.Amplitude *
+                    localTime /
+                    rise;
+            }
 
-            if (time < half)
+            if (localTime < half)
                 return tool.Amplitude;
 
-            // Во второй половине начинается спад.
-            double fallingTime = time - half;
+            double fallingTime =
+                localTime - half;
 
-            if (fall > 0.0 && fallingTime < fall)
+            if (fall > 0.0 &&
+                fallingTime < fall)
             {
-                return tool.Amplitude *
-                       (1.0 - fallingTime / fall);
+                return
+                    tool.Amplitude *
+                    (1.0 - fallingTime / fall);
             }
 
             return 0.0;
@@ -107,85 +228,81 @@ namespace MathApp.Core
 
         private static double CalculateTriangle(
             MathTool tool,
-            double time,
-            double period)
+            double localTime,
+            double availableDuration)
         {
-            double rise = Math.Max(0.0, tool.RiseTime);
-            double fall = Math.Max(0.0, tool.FallTime);
-
-            // Треугольный импульс должен уместиться в один период.
-            // Если введено больше периода, сохраняем наклон
-            // (отношение rise/fall) и масштабируем оба времени.
-            if (rise + fall > period && rise + fall > 0.0)
+            if (localTime < 0.0 ||
+                localTime >= availableDuration)
             {
-                double scale = period / (rise + fall);
+                return 0.0;
+            }
+
+            double rise =
+                Math.Max(0.0, tool.RiseTime);
+
+            double fall =
+                Math.Max(0.0, tool.FallTime);
+
+            if (rise + fall > availableDuration &&
+                rise + fall > 0.0)
+            {
+                double scale =
+                    availableDuration /
+                    (rise + fall);
+
                 rise *= scale;
                 fall *= scale;
             }
 
-            if (rise <= 0.0 && fall <= 0.0)
+            if (rise <= 0.0 &&
+                fall <= 0.0)
+            {
                 return 0.0;
+            }
 
-            // Мгновенный подъём + конечный спад.
             if (rise <= 0.0)
             {
-                if (fall > 0.0 && time < fall)
-                    return tool.Amplitude * (1.0 - time / fall);
+                if (fall > 0.0 &&
+                    localTime < fall)
+                {
+                    return
+                        tool.Amplitude *
+                        (1.0 - localTime / fall);
+                }
 
                 return 0.0;
             }
 
-            // Фронт от 0 до A.
-            if (time < rise)
-                return tool.Amplitude * time / rise;
-
-            // Спад от A до 0.
-            double fallingTime = time - rise;
-
-            if (fall > 0.0 && fallingTime < fall)
+            if (localTime < rise)
             {
-                return tool.Amplitude *
-                       (1.0 - fallingTime / fall);
+                return
+                    tool.Amplitude *
+                    localTime /
+                    rise;
             }
 
-            // Если rise + fall меньше периода,
-            // остаток периода остаётся на нуле.
-            return 0.0;
-        }
+            double fallingTime =
+                localTime - rise;
 
-        private static double CalculateTrapezoid(
-            MathTool tool,
-            double time,
-            double period)
-        {
-            double rise = Math.Max(0.0, tool.RiseTime);
-            double fall = Math.Max(0.0, tool.FallTime);
-
-            if (rise + fall > period && rise + fall > 0.0)
+            if (fall > 0.0 &&
+                fallingTime < fall)
             {
-                double scale = period / (rise + fall);
-                rise *= scale;
-                fall *= scale;
+                return
+                    tool.Amplitude *
+                    (1.0 - fallingTime / fall);
             }
-
-            double plateauEnd = period - fall;
-
-            if (rise > 0.0 && time < rise)
-                return tool.Amplitude * time / rise;
-
-            if (time <= plateauEnd)
-                return tool.Amplitude;
-
-            if (fall > 0.0)
-                return tool.Amplitude * (period - time) / fall;
 
             return 0.0;
         }
 
         public static double GetPeriod(MathTool tool)
         {
-            if (tool == null || tool.Frequency <= 0.0)
+            if (tool == null ||
+                tool.Waveform != GeneratorWaveform.Sine ||
+                tool.Frequency <= 0.0)
+            {
                 return double.PositiveInfinity;
+            }
 
             return 1.0 / tool.Frequency;
         }

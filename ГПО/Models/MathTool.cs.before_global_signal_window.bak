@@ -31,7 +31,6 @@ namespace MathApp.Models
         public GeneratorWaveform Waveform { get; set; } = GeneratorWaveform.Sine;
         public double Frequency { get; set; } = 1.0;
         public double Amplitude { get; set; } = 1.0;
-        public double Delay { get; set; } = 0.0;
         public double Phase { get; set; } = 0.0;
         public double RiseTime { get; set; } = 0.1;
         public double FallTime { get; set; } = 0.1;
