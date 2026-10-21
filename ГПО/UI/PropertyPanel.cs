@@ -20,6 +20,7 @@ namespace MathApp.UI
         private TextBox _txtFrequency;
         private TextBox _txtAmplitude;
         private TextBox _txtDelay;
+        private TextBox _txtSignalDuration;
         private TextBox _txtPhase;
         private TextBox _txtStepDuration;
         private TextBox _txtRiseTime;
@@ -75,6 +76,7 @@ namespace MathApp.UI
             _txtFrequency = CreateEngineeringTextBox("1", "Hz");
             _txtAmplitude = CreateEngineeringTextBox("1", "V");
             _txtDelay = CreateEngineeringTextBox("0", "s");
+            _txtSignalDuration = CreateEngineeringTextBox("0.001", "s");
             _txtPhase = CreateNumericTextBox("0", 0, 360);
             _txtStepDuration = CreateEngineeringTextBox("0.001", "s");
             _txtRiseTime = CreateEngineeringTextBox("0.1", "s");
@@ -113,6 +115,7 @@ namespace MathApp.UI
             _txtStepDuration.Leave += (s, e) => ApplyStepDuration();
             _txtAmplitude.Leave += (s, e) => ApplyAmplitude();
             _txtDelay.Leave += (s, e) => ApplyDelay();
+            _txtSignalDuration.Leave += (s, e) => ApplySignalDuration();
             _txtPhase.Leave += (s, e) => ApplyPhase();
             _txtRiseTime.Leave += (s, e) => ApplyRiseTime();
             _txtFallTime.Leave += (s, e) => ApplyFallTime();
@@ -247,6 +250,63 @@ namespace MathApp.UI
                 this,
                 EventArgs.Empty);
         }
+        private void ApplySignalDuration()
+        {
+            if (_selectedTool == null)
+                return;
+
+            double oldValue =
+                _selectedTool.SignalDuration;
+
+            double value =
+                ParseEngineering(
+                    _txtSignalDuration.Text,
+                    oldValue);
+
+            if (value <= 0.0 ||
+                double.IsNaN(value) ||
+                double.IsInfinity(value))
+            {
+                ShowFrontValidationError(
+                    "Длительность сигнала должна быть больше нуля.");
+
+                _txtSignalDuration.Text =
+                    FormatEngineering(
+                        oldValue,
+                        "s");
+
+                return;
+            }
+
+            if (!ValidateGeneratorFronts(
+                    _selectedTool,
+                    value,
+                    _selectedTool.RiseTime,
+                    _selectedTool.FallTime,
+                    out string error))
+            {
+                ShowFrontValidationError(error);
+
+                _txtSignalDuration.Text =
+                    FormatEngineering(
+                        oldValue,
+                        "s");
+
+                return;
+            }
+
+            _selectedTool.SignalDuration = value;
+
+            _txtSignalDuration.Text =
+                FormatEngineering(
+                    value,
+                    "s");
+
+            ParametersChanged?.Invoke(
+                this,
+                EventArgs.Empty);
+        }
+
         private void ApplyAmplitude()
         {
             if (_selectedTool != null)
@@ -364,16 +424,111 @@ namespace MathApp.UI
 
             return result;
         }
+        private bool ValidateGeneratorFronts(
+            MathTool tool,
+            double signalDuration,
+            double riseTime,
+            double fallTime,
+            out string error)
+        {
+            error = null;
+
+            if (tool == null ||
+                tool.Type != ToolType.Generator)
+            {
+                return true;
+            }
+
+            const double eps = 1e-15;
+
+            if (signalDuration <= 0.0 ||
+                double.IsNaN(signalDuration) ||
+                double.IsInfinity(signalDuration))
+            {
+                error = "Длительность сигнала должна быть больше нуля.";
+                return false;
+            }
+
+            if (riseTime < 0.0 ||
+                fallTime < 0.0 ||
+                double.IsNaN(riseTime) ||
+                double.IsNaN(fallTime) ||
+                double.IsInfinity(riseTime) ||
+                double.IsInfinity(fallTime))
+            {
+                error = "Длительности фронтов должны быть неотрицательными конечными числами.";
+                return false;
+            }
+
+            if (tool.Waveform == GeneratorWaveform.Trapezoid ||
+                tool.Waveform == GeneratorWaveform.Sawtooth)
+            {
+                if (riseTime + fallTime > signalDuration + eps)
+                {
+                    error =
+                        "Сумма фронта нарастания и фронта спада не может " +
+                        "превышать длительность сигнала.";
+                    return false;
+                }
+            }
+            else if (tool.Waveform == GeneratorWaveform.Square)
+            {
+                double half = signalDuration * 0.5;
+
+                if (riseTime > half + eps)
+                {
+                    error =
+                        "Для меандра фронт нарастания не может быть больше " +
+                        "половины длительности сигнала.";
+                    return false;
+                }
+
+                if (fallTime > half + eps)
+                {
+                    error =
+                        "Для меандра фронт спада не может быть больше " +
+                        "половины длительности сигнала.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ShowFrontValidationError(string message)
+        {
+            MessageBox.Show(
+                message,
+                "Некорректные параметры сигнала",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+
         private void ApplyRiseTime()
         {
             if (_selectedTool == null)
                 return;
 
+            double oldValue = _selectedTool.RiseTime;
+
             double value = ParseTimeSeconds(
                 _txtRiseTime.Text,
-                _selectedTool.RiseTime);
+                oldValue);
 
             value = Math.Max(0.0, value);
+
+            if (!ValidateGeneratorFronts(
+                    _selectedTool,
+                    _selectedTool.SignalDuration,
+                    value,
+                    _selectedTool.FallTime,
+                    out string error))
+            {
+                ShowFrontValidationError(error);
+                _txtRiseTime.Text =
+                    FormatEngineering(oldValue, "s");
+                return;
+            }
 
             _selectedTool.RiseTime = value;
 
@@ -390,11 +545,26 @@ namespace MathApp.UI
             if (_selectedTool == null)
                 return;
 
+            double oldValue = _selectedTool.FallTime;
+
             double value = ParseTimeSeconds(
                 _txtFallTime.Text,
-                _selectedTool.FallTime);
+                oldValue);
 
             value = Math.Max(0.0, value);
+
+            if (!ValidateGeneratorFronts(
+                    _selectedTool,
+                    _selectedTool.SignalDuration,
+                    _selectedTool.RiseTime,
+                    value,
+                    out string error))
+            {
+                ShowFrontValidationError(error);
+                _txtFallTime.Text =
+                    FormatEngineering(oldValue, "s");
+                return;
+            }
 
             _selectedTool.FallTime = value;
 
@@ -944,6 +1114,11 @@ namespace MathApp.UI
                         tool.Delay,
                         "s");
 
+                _txtSignalDuration.Text =
+                    FormatEngineering(
+                        tool.SignalDuration,
+                        "s");
+
                 AddParameter(
                     blockPanel,
                     "Амплитуда (В):",
@@ -954,6 +1129,12 @@ namespace MathApp.UI
                     blockPanel,
                     "Задержка:",
                     _txtDelay,
+                    ref yPos);
+
+                AddParameter(
+                    blockPanel,
+                    "Длительность сигнала:",
+                    _txtSignalDuration,
                     ref yPos);
 
                 // Только синусоида остаётся периодической.
@@ -1012,10 +1193,7 @@ namespace MathApp.UI
                         ref yPos);
                 }
 
-                // Step:
-                // только Amplitude + Delay.
-                // Его длительность равна оставшемуся
-                // глобальному окну моделирования.
+
             }
             // Усилитель
             else if (tool.Type == ToolType.Amplifier)
@@ -1080,6 +1258,8 @@ namespace MathApp.UI
                 _lblInputFile.Text = $"Файл: {System.IO.Path.GetFileName(tool.InputFilePath)}";
                 _lblOutputFile.Text = $"Файл: {System.IO.Path.GetFileName(tool.OutputFilePath)}";
                 _lblPointsCount.Text = $"Данных: {tool.FileData.Count}";
+                _txtSignalDuration.Text = FormatEngineering(tool.SignalDuration, "s");
+                AddParameter(blockPanel, "Длительность сигнала:", _txtSignalDuration, ref yPos);
                 AddParameter(blockPanel, "Режим работы:", _cmbFileMode, ref yPos);
                 AddLabel(blockPanel, _lblInputFile, ref yPos);
                 AddLabel(blockPanel, _lblOutputFile, ref yPos);

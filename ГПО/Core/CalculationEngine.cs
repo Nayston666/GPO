@@ -375,6 +375,12 @@ namespace MathApp.Core
                     {
                         if (tool.IsReading)
                         {
+                            // File input is also a signal source.
+                            // Its duration is independent from the global window.
+                            if (tool.SignalDuration <= 0.0 ||
+                                CurrentTime >= tool.SignalDuration)
+                                return 0;
+
                             if (tool.FileData.Count > 0 &&
                                 tool.CurrentFileIndex < tool.FileData.Count)
                                 return tool.FileData[tool.CurrentFileIndex++];

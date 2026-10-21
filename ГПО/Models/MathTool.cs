@@ -32,6 +32,11 @@ namespace MathApp.Models
         public double Frequency { get; set; } = 1.0;
         public double Amplitude { get; set; } = 1.0;
         public double Delay { get; set; } = 0.0;
+
+        // Own duration of the generated signal.
+        // This is independent from the global simulation window.
+        public double SignalDuration { get; set; } = 0.001;
+
         public double Phase { get; set; } = 0.0;
         public double RiseTime { get; set; } = 0.1;
         public double FallTime { get; set; } = 0.1;

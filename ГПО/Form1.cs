@@ -36,6 +36,7 @@ namespace MathApp
 
         private MathTool selectedTool = null;
         private MathTool draggedTool = null;
+        private MathTool contextMenuTool = null;
         private bool isDragging = false;
         private Point dragStartPoint;
 
@@ -89,7 +90,7 @@ namespace MathApp
             samplingRateInput.KeyPress += (s, e) => { if (e.KeyChar == ',') e.Handled = true; };
             leftPanel.Controls.Add(samplingRateInput);
             y += 30;
-            leftPanel.Controls.Add(new Label { Text = "Длительность сигнала, с:", Location = new Point(15, y), Size = new Size(180, 23), Font = new Font("Segoe UI", 9) });
+            leftPanel.Controls.Add(new Label { Text = "Длительность окна, с:", Location = new Point(15, y), Size = new Size(180, 23), Font = new Font("Segoe UI", 9) });
             durationInput = new TextBox { Location = new Point(200, y), Size = new Size(65, 23), Text = "0.01", Font = new Font("Segoe UI", 9) };
             durationInput.KeyPress += (s, e) => { if (e.KeyChar == ',') e.Handled = true; };
             leftPanel.Controls.Add(durationInput);
@@ -183,6 +184,8 @@ namespace MathApp
             contextMenu.Items.Add("🗑️ Удалить блок", null, DeleteTool_Click);
             contextMenu.Items.Add("🔗 Удалить соединения", null, DeleteConnections_Click);
             contextMenu.Items.Add("🧹 Очистить всё", null, ClearAll_Click);
+
+
             workArea.ContextMenuStrip = contextMenu;
 
             this.Controls.Add(workArea);
@@ -384,6 +387,13 @@ namespace MathApp
             }
             else if (e.Button == MouseButtons.Right)
             {
+                var realPos =
+                    ((DoubleBufferedPanel)workArea)
+                    .GetRealMouseLocation(e.Location);
+
+                contextMenuTool =
+                    GetToolAtPosition(realPos);
+
                 isConnecting = false;
                 sourceConnectionPoint = null;
                 needsRedraw = true;
@@ -545,8 +555,8 @@ namespace MathApp
         // ============ КОНТЕКСТНОЕ МЕНЮ ============
         private void FlipTool_Click(object sender, EventArgs e)
         {
-            var realPos = ((DoubleBufferedPanel)workArea).GetRealMouseLocation(workArea.PointToClient(MousePosition));
-            var tool = GetToolAtPosition(realPos);
+            var tool = contextMenuTool;
+
             if (tool != null)
             {
                 tool.Flipped = !tool.Flipped;
@@ -556,22 +566,30 @@ namespace MathApp
 
         private void DeleteTool_Click(object sender, EventArgs e)
         {
-            var realPos = ((DoubleBufferedPanel)workArea).GetRealMouseLocation(workArea.PointToClient(MousePosition));
-            var tool = GetToolAtPosition(realPos);
+            var tool = contextMenuTool;
+
             if (tool != null)
             {
-                if (selectedTool == tool) SelectTool(null);
-                if (tool.Type == ToolType.Chart && graphWindows.ContainsKey(tool.Id))
+                if (selectedTool == tool)
+                    SelectTool(null);
+
+                if (tool.Type == ToolType.Chart &&
+                    graphWindows.ContainsKey(tool.Id))
                 {
-                    if (!graphWindows[tool.Id].IsDisposed) graphWindows[tool.Id].Close();
+                    if (!graphWindows[tool.Id].IsDisposed)
+                        graphWindows[tool.Id].Close();
+
                     graphWindows.Remove(tool.Id);
                 }
+
                 connectionManager.RemoveConnectionsForTool(tool.Id);
                 whiteboardTools.Remove(tool);
 
                 int newId = 1;
+
                 foreach (var t in whiteboardTools.OrderBy(t => t.BlockId))
                     t.BlockId = newId++;
+
                 _nextBlockId = newId;
 
                 needsRedraw = true;
@@ -580,15 +598,32 @@ namespace MathApp
 
         private void DeleteConnections_Click(object sender, EventArgs e)
         {
-            var realPos = ((DoubleBufferedPanel)workArea).GetRealMouseLocation(workArea.PointToClient(MousePosition));
-            var tool = GetToolAtPosition(realPos);
-            if (tool != null)
-            {
-                connectionManager.RemoveIncomingConnections(tool.Id);
-                needsRedraw = true;
-            }
-        }
+            var tool = contextMenuTool;
 
+            if (tool == null)
+                return;
+
+            int removed = connections.RemoveAll(
+                c =>
+                    c.SourceToolId == tool.Id ||
+                    c.TargetToolId == tool.Id);
+
+            // If a temporary wire was started from this block, cancel it too.
+            if (isConnecting &&
+                sourceConnectionPoint.HasValue &&
+                sourceConnectionPoint.Value.ToolId == tool.Id)
+            {
+                isConnecting = false;
+                sourceConnectionPoint = null;
+            }
+
+            needsRedraw = true;
+            workArea.Invalidate();
+            workArea.Update();
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[Connections] Removed {removed} connection(s) for block #{tool.BlockId}");
+        }
         private void ClearAll(object sender, EventArgs e)
         {
             foreach (var g in graphWindows.Values)
@@ -603,8 +638,216 @@ namespace MathApp
         private void ClearAll_Click(object sender, EventArgs e) => ClearAll(null, null);
 
         // ============ СТАТИЧЕСКАЯ СИМУЛЯЦИЯ ============
+        private bool ConfirmSamplingWarnings(
+            double samplingRate,
+            double dt)
+        {
+            var warnings = new List<string>();
+
+            foreach (var tool in whiteboardTools)
+            {
+                bool isGenerator =
+                    tool.Type == ToolType.Generator;
+
+                bool isFileSource =
+                    tool.Type == ToolType.Operation &&
+                    tool.Operation == MathOperation.FileIO &&
+                    tool.IsReading;
+
+                if (!isGenerator && !isFileSource)
+                    continue;
+
+                string title =
+                    !string.IsNullOrWhiteSpace(tool.Name)
+                        ? $"{tool.Name} #{tool.BlockId}"
+                        : $"Блок #{tool.BlockId}";
+
+                // A source shorter than one sample can be lost almost entirely.
+                if (tool.SignalDuration > 0.0 &&
+                    tool.SignalDuration < dt)
+                {
+                    warnings.Add(
+                        $"{title}: длительность сигнала ({tool.SignalDuration:G6} с) " +
+                        $"меньше шага дискретизации dt ({dt:G6} с). " +
+                        "Сигнал может не попасть в отсчёты или выглядеть как мгновенный.");
+                }
+
+                if (!isGenerator)
+                    continue;
+
+                bool hasFronts =
+                    tool.Waveform == GeneratorWaveform.Trapezoid ||
+                    tool.Waveform == GeneratorWaveform.Square ||
+                    tool.Waveform == GeneratorWaveform.Sawtooth;
+
+                if (hasFronts)
+                {
+                    if (tool.RiseTime > 0.0 &&
+                        tool.RiseTime < dt)
+                    {
+                        warnings.Add(
+                            $"{title}: фронт нарастания ({tool.RiseTime:G6} с) " +
+                            $"короче шага дискретизации dt ({dt:G6} с). " +
+                            "На графике он будет выглядеть практически мгновенным.");
+                    }
+
+                    if (tool.FallTime > 0.0 &&
+                        tool.FallTime < dt)
+                    {
+                        warnings.Add(
+                            $"{title}: фронт спада ({tool.FallTime:G6} с) " +
+                            $"короче шага дискретизации dt ({dt:G6} с). " +
+                            "На графике он будет выглядеть практически мгновенным.");
+                    }
+                }
+
+                // Do not change the sine generator itself; only warn about sampling quality.
+                if (tool.Waveform == GeneratorWaveform.Sine &&
+                    tool.Frequency > 0.0 &&
+                    !double.IsNaN(tool.Frequency) &&
+                    !double.IsInfinity(tool.Frequency))
+                {
+                    double samplesPerPeriod =
+                        samplingRate / tool.Frequency;
+
+                    if (samplesPerPeriod <= 2.0)
+                    {
+                        warnings.Add(
+                            $"{title}: частота сигнала {tool.Frequency:G6} Гц " +
+                            $"слишком высока для Fs={samplingRate:G6} Гц. " +
+                            "Нарушено условие Найквиста (нужно Fs > 2·f), " +
+                            "поэтому возможен алиасинг.");
+                    }
+                    else if (samplesPerPeriod < 10.0)
+                    {
+                        warnings.Add(
+                            $"{title}: на один период синусоиды приходится только " +
+                            $"{samplesPerPeriod:F2} отсчёта. Сигнал будет рассчитан, " +
+                            "но форма на графике может выглядеть грубо. " +
+                            "Для наглядного графика желательно около 10 и более отсчётов на период.");
+                    }
+                }
+            }
+
+            if (warnings.Count == 0)
+                return true;
+
+            string message =
+                "Обнаружены параметры, при которых дискретизация может заметно " +
+                "исказить отображение сигнала:`n`n" +
+                string.Join("`n`n", warnings) +
+                "`n`nПродолжить моделирование?";
+
+            return MessageBox.Show(
+                message,
+                "Предупреждение о дискретизации",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) == DialogResult.Yes;
+        }
+        private bool ValidateGeneratorSignalParameters()
+        {
+            const double eps = 1e-15;
+
+            foreach (var tool in whiteboardTools.Where(
+                t => t.Type == ToolType.Generator))
+            {
+                if (tool.SignalDuration <= 0.0 ||
+                    double.IsNaN(tool.SignalDuration) ||
+                    double.IsInfinity(tool.SignalDuration))
+                {
+                    MessageBox.Show(
+                        $"{tool.Name} #{tool.BlockId}: длительность сигнала должна быть больше нуля.",
+                        "Некорректные параметры сигнала",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    SelectTool(tool);
+                    return false;
+                }
+
+                if (tool.RiseTime < 0.0 ||
+                    tool.FallTime < 0.0 ||
+                    double.IsNaN(tool.RiseTime) ||
+                    double.IsNaN(tool.FallTime) ||
+                    double.IsInfinity(tool.RiseTime) ||
+                    double.IsInfinity(tool.FallTime))
+                {
+                    MessageBox.Show(
+                        $"{tool.Name} #{tool.BlockId}: длительности фронтов должны быть " +
+                        "неотрицательными конечными числами.",
+                        "Некорректные параметры сигнала",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    SelectTool(tool);
+                    return false;
+                }
+
+                // Trapezoid and triangular/sawtooth single-period signal:
+                // both fronts must fit into the signal duration.
+                if (tool.Waveform == GeneratorWaveform.Trapezoid ||
+                    tool.Waveform == GeneratorWaveform.Sawtooth)
+                {
+                    if (tool.RiseTime + tool.FallTime >
+                        tool.SignalDuration + eps)
+                    {
+                        MessageBox.Show(
+                            $"{tool.Name} #{tool.BlockId}: сумма фронта нарастания " +
+                            $"и фронта спада ({tool.RiseTime + tool.FallTime:G6} с) " +
+                            $"не может превышать длительность сигнала " +
+                            $"({tool.SignalDuration:G6} с).",
+                            "Некорректные параметры сигнала",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+
+                        SelectTool(tool);
+                        return false;
+                    }
+                }
+
+                // Current Square block models one high/low interval.
+                // Each transition must fit into its half of the signal.
+                if (tool.Waveform == GeneratorWaveform.Square)
+                {
+                    double half = tool.SignalDuration * 0.5;
+
+                    if (tool.RiseTime > half + eps)
+                    {
+                        MessageBox.Show(
+                            $"{tool.Name} #{tool.BlockId}: фронт нарастания " +
+                            $"({tool.RiseTime:G6} с) не может быть больше половины " +
+                            $"длительности сигнала ({half:G6} с).",
+                            "Некорректные параметры сигнала",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+
+                        SelectTool(tool);
+                        return false;
+                    }
+
+                    if (tool.FallTime > half + eps)
+                    {
+                        MessageBox.Show(
+                            $"{tool.Name} #{tool.BlockId}: фронт спада " +
+                            $"({tool.FallTime:G6} с) не может быть больше половины " +
+                            $"длительности сигнала ({half:G6} с).",
+                            "Некорректные параметры сигнала",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+
+                        SelectTool(tool);
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
         private void RunSimulation(object sender, EventArgs e)
         {
+            if (!ValidateGeneratorSignalParameters())
+                return;
+
             // ---------- 1. Парсинг параметров с ЖЁСТКОЙ проверкой ----------
             double samplingRate, duration;
 
@@ -623,6 +866,14 @@ namespace MathApp
             }
 
             double dt = 1.0 / samplingRate;
+
+            if (!ConfirmSamplingWarnings(
+                    samplingRate,
+                    dt))
+            {
+                return;
+            }
+
             int totalSamples = (int)Math.Round(duration * samplingRate);
             if (totalSamples < 2) totalSamples = 2;
 
@@ -831,6 +1082,7 @@ namespace MathApp
                 gf.SetSignal(
                     chart.ValueHistory,
                     dt,
+                    duration,
                     stepStyle);
             }
         }

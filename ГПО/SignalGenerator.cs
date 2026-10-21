@@ -21,11 +21,18 @@ namespace MathApp.Core
             double localTime = time - delay;
 
             double availableDuration =
-                Math.Max(
-                    0.0,
-                    simulationDuration - delay);
+                Math.Min(
+                    Math.Max(0.0, tool.SignalDuration),
+                    Math.Max(
+                        0.0,
+                        simulationDuration - delay));
 
             if (availableDuration <= 0.0)
+                return 0.0;
+
+            // The source becomes zero after its own duration,
+            // while the global simulation window may continue.
+            if (localTime >= availableDuration)
                 return 0.0;
 
             switch (tool.Waveform)
@@ -139,16 +146,6 @@ namespace MathApp.Core
             double rise = Math.Max(0.0, tool.RiseTime);
             double fall = Math.Max(0.0, tool.FallTime);
 
-            if (rise + fall > availableDuration &&
-                rise + fall > 0.0)
-            {
-                double scale =
-                    availableDuration /
-                    (rise + fall);
-
-                rise *= scale;
-                fall *= scale;
-            }
 
             if (rise > 0.0 &&
                 localTime < rise)
@@ -191,14 +188,14 @@ namespace MathApp.Core
                 availableDuration * 0.5;
 
             double rise =
-                Math.Min(
-                    Math.Max(0.0, tool.RiseTime),
-                    half);
+                Math.Max(
+                    0.0,
+                    tool.RiseTime);
 
             double fall =
-                Math.Min(
-                    Math.Max(0.0, tool.FallTime),
-                    half);
+                Math.Max(
+                    0.0,
+                    tool.FallTime);
 
             if (rise > 0.0 &&
                 localTime < rise)
@@ -243,16 +240,6 @@ namespace MathApp.Core
             double fall =
                 Math.Max(0.0, tool.FallTime);
 
-            if (rise + fall > availableDuration &&
-                rise + fall > 0.0)
-            {
-                double scale =
-                    availableDuration /
-                    (rise + fall);
-
-                rise *= scale;
-                fall *= scale;
-            }
 
             if (rise <= 0.0 &&
                 fall <= 0.0)

@@ -12,7 +12,7 @@ namespace MathApp.Rendering
         private static readonly Font _valueFont = new Font("Segoe UI", 9, FontStyle.Bold);
         private static readonly Pen _shadowPen = new Pen(Color.FromArgb(30, 0, 0, 0), 4);
         private static readonly Pen _connectionPen = new Pen(Color.Cyan, 3);
-        private static readonly Pen _tempConnectionPen = new Pen(Color.White, 2);
+        private static readonly Pen _tempConnectionPen = new Pen(Color.OrangeRed, 2);
 
         /// <summary>
         /// Рисует соединение между двумя блоками

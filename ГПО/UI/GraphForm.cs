@@ -97,11 +97,34 @@ namespace MathApp.UI
             double dt,
             bool stepStyle = false)
         {
+            double windowDuration =
+                signal != null && signal.Count > 1
+                    ? signal.Count * dt
+                    : dt;
+
+            SetSignal(
+                signal,
+                dt,
+                windowDuration,
+                stepStyle);
+        }
+
+        public void SetSignal(
+            IReadOnlyList<double> signal,
+            double dt,
+            double windowDuration,
+            bool stepStyle = false)
+        {
             if (signal == null)
                 return;
 
             if (dt <= 0 || double.IsNaN(dt) || double.IsInfinity(dt))
                 throw new ArgumentOutOfRangeException(nameof(dt), "dt должен быть положительным конечным числом.");
+
+            if (windowDuration <= 0 ||
+                double.IsNaN(windowDuration) ||
+                double.IsInfinity(windowDuration))
+                throw new ArgumentOutOfRangeException(nameof(windowDuration), "Длительность окна должна быть положительным конечным числом.");
 
             _dt = dt;
             _stepStyle = stepStyle;
@@ -113,7 +136,11 @@ namespace MathApp.UI
             for (int i = 0; i < _values.Count; i++)
                 _timeValues.Add(i * _dt);
 
-            _graphPanel.SetSignal(_values, _dt, _stepStyle);
+            _graphPanel.SetSignal(
+                _values,
+                _dt,
+                windowDuration,
+                _stepStyle);
         }
 
         /// <summary>
@@ -237,13 +264,32 @@ namespace MathApp.UI
             double dt,
             bool stepStyle = false)
         {
+            double windowDuration =
+                signal != null && signal.Count > 1
+                    ? signal.Count * dt
+                    : dt;
+
+            SetSignal(
+                signal,
+                dt,
+                windowDuration,
+                stepStyle);
+        }
+
+        public void SetSignal(
+            IReadOnlyList<double> signal,
+            double dt,
+            double windowDuration,
+            bool stepStyle = false)
+        {
             _signal = signal ?? Array.Empty<double>();
             _dt = dt;
             _stepStyle = stepStyle;
 
-            _totalTime = _signal.Count > 1
-                ? (_signal.Count - 1) * _dt
-                : _dt;
+            _totalTime =
+                Math.Max(
+                    windowDuration,
+                    _dt);
 
             ResetView();
         }
