@@ -874,7 +874,16 @@ namespace MathApp
                 return;
             }
 
-            int totalSamples = (int)Math.Round(duration * samplingRate);
+            // Guard against overflow before converting the sample count to Int32.
+            double requestedSamples = Math.Round(duration * samplingRate);
+            if (double.IsNaN(requestedSamples) || double.IsInfinity(requestedSamples) ||
+                requestedSamples > int.MaxValue || requestedSamples < 0)
+            {
+                MessageBox.Show("Число отсчётов превышает допустимый предел. Уменьшите длительность или частоту дискретизации.",
+                    "Слишком много отсчётов", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            int totalSamples = (int)requestedSamples;
             if (totalSamples < 2) totalSamples = 2;
 
             if (totalSamples > 5_000_000)

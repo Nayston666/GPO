@@ -16,7 +16,9 @@ namespace MathApp.Core
 
         public bool CreateConnection(ConnectionPoint source, ConnectionPoint target)
         {
-            if (source.ToolId == target.ToolId)
+            if (source.ToolId == target.ToolId ||
+                source.Type != ConnectionPointType.Output ||
+                target.Type != ConnectionPointType.Input)
                 return false;
 
             // Если цель - порт подсистемы (TargetPortIndex >= 0 и InputType == null)

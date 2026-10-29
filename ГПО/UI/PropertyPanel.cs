@@ -838,7 +838,8 @@ namespace MathApp.UI
                 _txtStepSize.Text = FormatEngineering(tool.StepSize, "s");
                 AddParameter(blockPanel, "Значение A:", _txtValueA, ref yPos);
                 AddParameter(blockPanel, "Значение B:", _txtValueB, ref yPos);
-                AddParameter(blockPanel, "Шаг (с):", _txtStepSize, ref yPos);
+                if (tool.Operation == MathOperation.Differentiator)
+                    AddParameter(blockPanel, "Шаг (с):", _txtStepSize, ref yPos);
             }
 
             // Интерполятор

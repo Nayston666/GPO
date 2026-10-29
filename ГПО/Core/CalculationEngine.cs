@@ -150,18 +150,20 @@ namespace MathApp.Core
                                           List<MathTool> tools,
                                           Dictionary<Guid, double> calculated)
         {
-            if (calculated.TryGetValue(sourceId, out var v)) return v;
-
             var src = tools.FirstOrDefault(t => t.Id == sourceId);
+            if (src != null && src.Type == ToolType.SubSystem &&
+                src.OutputPortResults.TryGetValue(sourcePortIndex, out var output))
+                return output;
+            if (calculated.TryGetValue(sourceId, out var v) &&
+                src != null && src.Type != ToolType.SubSystem) return v;
+
             if (src == null) return double.NaN;
 
             if (src.Type == ToolType.SubSystem &&
                 src.OutputPortResults.TryGetValue(sourcePortIndex, out var pv))
                 return pv;
 
-            if (src.LastResult.HasValue)
-                return src.LastResult.Value;
-
+            // An unresolved source must not silently use the preceding time sample.
             return double.NaN;
         }
 
@@ -322,9 +324,13 @@ namespace MathApp.Core
                 return input == InputType.A ? tool.CustomValueA : tool.CustomValueB;
 
             if (portValues.TryGetValue(conn.SourceToolId, out var pv)) return pv;
-            if (results.TryGetValue(conn.SourceToolId, out var rv)) return rv;
-
             var src = tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
+            if (src != null && src.Type == ToolType.SubSystem &&
+                src.OutputPortResults.TryGetValue(conn.SourcePortIndex, out var output))
+                return output;
+            if (results.TryGetValue(conn.SourceToolId, out var rv) &&
+                src != null && src.Type != ToolType.SubSystem) return rv;
+
             if (src != null)
             {
                 if (src.Type == ToolType.SubSystem &&

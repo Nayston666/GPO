@@ -7,7 +7,7 @@
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\rendering\\connectionrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|c:\\users\\\u0434\u043C\u0438\u0442\u0440\u0438\u0439\\desktop\\bot\\gpo\\\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\Desktop\\bot\\GPO\\\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D0FE9A7B-4FC9-4AA8-BC00-6365BB662FFE}|\u0413\u041F\u041E\\\u0413\u041F\u041E.csproj|solutionrelative:\u0433\u043F\u043E\\core\\calculationengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -34,7 +34,7 @@
               "RelativeDocumentMoniker": "\u0413\u041F\u041E\\Rendering\\ConnectionRenderer.cs",
               "ToolTip": "C:\\Users\\\u0414\u043C\u0438\u0442\u0440\u0438\u0439\\Desktop\\bot\\GPO\\\u0413\u041F\u041E\\Rendering\\ConnectionRenderer.cs",
               "RelativeToolTip": "\u0413\u041F\u041E\\Rendering\\ConnectionRenderer.cs",
-              "ViewState": "AgIAAAoAAAAAAAAAAAAswA4AAABVAAAAAAAAAA==",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAswCQAAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-10-21T15:59:32.437Z",
               "EditorCaption": ""
@@ -49,8 +49,7 @@
               "RelativeToolTip": "\u0413\u041F\u041E\\Core\\CalculationEngine.cs",
               "ViewState": "AgIAAB0AAAAAAAAAAAAowDwAAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-08T10:34:12.224Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-10-08T10:34:12.224Z"
             },
             {
               "$type": "Document",
