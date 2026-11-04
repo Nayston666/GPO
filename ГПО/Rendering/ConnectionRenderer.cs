@@ -109,6 +109,12 @@ namespace MathApp.Rendering
 
         private static Point GetInputPoint(MathTool tool, Connection conn)
         {
+            if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.Integrator)
+            {
+                return new Point(
+                    tool.Flipped ? tool.Position.X + tool.Size.Width + 5 : tool.Position.X - 5,
+                    tool.Position.Y + tool.Size.Height / 2);
+            }
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int portIndex = conn.TargetPortIndex;
@@ -151,7 +157,9 @@ namespace MathApp.Rendering
             }
 
             // Для Operation блоков
-            int yOffset = conn.TargetInput == InputType.A ? 20 : tool.Size.Height - 20;
+            int yOffset = tool.Type == ToolType.Operation
+                ? (conn.TargetInput == InputType.A ? 20 : tool.Size.Height - 20)
+                : tool.Size.Height / 2;
 
             if (tool.Flipped)
             {

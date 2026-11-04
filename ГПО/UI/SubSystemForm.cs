@@ -20,7 +20,7 @@ namespace MathApp.UI
         private List<PortTool> _outputPorts;
 
         private DoubleBufferedPanel workspace;
-        private FlowLayoutPanel toolboxPanel;
+        private TreeView toolboxPanel;
 
         private MathTool _selectedTool;
         private MathTool _draggedTool;
@@ -205,29 +205,10 @@ namespace MathApp.UI
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 260, BackColor = Color.FromArgb(248, 249, 250), BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
 
             var toolsTitle = new Label { Text = "📦 БИБЛИОТЕКА БЛОКОВ", Location = new Point(10, 15), Size = new Size(230, 30), ForeColor = Color.FromArgb(52, 58, 64), Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft };
-
-            toolboxPanel = new FlowLayoutPanel { Location = new Point(10, 50), Size = new Size(230, 400), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, BackColor = Color.FromArgb(248, 249, 250) };
-
-            var blockCategories = new Dictionary<string, string[]>
-            {
-                ["📐 МАТЕМАТИКА"] = new[] { "➕ Сложение", "➖ Вычитание", "✖️ Умножение", "➗ Деление", "∫ Интегратор", "d/dt Дифференциатор", "f(x) Интерполятор", "📁 Файловый ввод/вывод" },
-                ["📡 ГЕНЕРАТОРЫ"] = new[] { "📈 Генератор синусоиды" },
-                ["🔧 СПЕЦ. БЛОКИ"] = new[] { "🔊 Усилитель", "📡 Антенна", "🌐 Канал", "🎯 Объект", "🔢 АЦП" }
-            };
-
-            foreach (var category in blockCategories)
-            {
-                var catLabel = new Label { Text = category.Key, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(52, 58, 64), Width = 210, Height = 25, Margin = new Padding(0, 5, 0, 0) };
-                toolboxPanel.Controls.Add(catLabel);
-
-                foreach (var block in category.Value)
-                {
-                    var btn = new Button { Text = block, Size = new Size(210, 32), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0), Margin = new Padding(0, 2, 0, 2) };
-                    btn.FlatAppearance.BorderSize = 0;
-                    btn.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) DoDragDrop(new DataObject("ToolType", block), DragDropEffects.Copy); };
-                    toolboxPanel.Controls.Add(btn);
-                }
-            }
+            toolboxPanel = BlockLibraryTree.Create();
+            toolboxPanel.Dock = DockStyle.None;
+            toolboxPanel.Location = new Point(10, 50);
+            toolboxPanel.Size = new Size(230, 480);
 
             var portsInfo = new GroupBox { Text = "Порты подсистемы", Location = new Point(10, 560), Size = new Size(230, 80), ForeColor = Color.FromArgb(52, 58, 64), Font = new Font("Segoe UI", 9, FontStyle.Bold), BackColor = Color.FromArgb(248, 249, 250) };
 
@@ -258,6 +239,23 @@ namespace MathApp.UI
             workspace.MouseUp += Workspace_MouseUp;
             workspace.DragEnter += (s, e) => { if (e.Data.GetDataPresent("ToolType")) e.Effect = DragDropEffects.Copy; };
             workspace.DragDrop += Workspace_DragDrop;
+            workspace.MouseDoubleClick += (s, e) =>
+            {
+                var tool = GetToolAtPosition(GetRealLocation(e.Location));
+                if (tool != null && tool.Type == ToolType.SubSystem)
+                {
+                    using (var form = new SubSystemForm(tool.SubSystemData))
+                    {
+                        if (form.ShowDialog(this) == DialogResult.OK)
+                        {
+                            tool.SubSystemData = form.GetResult();
+                            tool.Name = tool.SubSystemData.Name;
+                            _isDirty = true;
+                            _needsRedraw = true;
+                        }
+                    }
+                }
+            };
 
             this.Controls.Add(workspace);
             this.Controls.Add(rightPanel);
@@ -374,6 +372,22 @@ namespace MathApp.UI
             }
             if (type.Contains("Файловый")) return new MathTool { Position = position, Type = ToolType.Operation, Size = new Size(160, 100), Operation = MathOperation.FileIO, Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
             if (type.Contains("Генератор синусоиды")) return new MathTool { Position = position, Type = ToolType.Generator, Size = new Size(160, 100), Name = "Синусоида", Frequency = 1.0, Amplitude = 1.0, Phase = 0 };
+            if (type.Contains("Трапециевидный"))
+                return new MathTool { Position = position, Type = ToolType.Generator, Waveform = GeneratorWaveform.Trapezoid, Size = new Size(160, 100), Name = "Трапеция", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.1, FallTime = 0.1 };
+            if (type.Contains("Меандр"))
+                return new MathTool { Position = position, Type = ToolType.Generator, Waveform = GeneratorWaveform.Square, Size = new Size(160, 100), Name = "Меандр", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.01, FallTime = 0.01 };
+            if (type.Contains("Треугольный"))
+                return new MathTool { Position = position, Type = ToolType.Generator, Waveform = GeneratorWaveform.Sawtooth, Size = new Size(160, 100), Name = "Треугольный импульс", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.5, FallTime = 0.5 };
+            if (type.Contains("Единичный"))
+                return new MathTool { Position = position, Type = ToolType.Generator, Waveform = GeneratorWaveform.Step, Size = new Size(160, 100), Name = "Единичный сигнал", Amplitude = 1.0, SignalDuration = 0.001, StepDuration = 0.001 };
+            if (type.Contains("Нелинейный фильтр"))
+                return new MathTool { Position = position, Type = ToolType.NonlinearFirstOrderFilter, Size = new Size(170, 100), Name = "Нелинейный фильтр 1 порядка", FilterKVH = new List<FilterPoint>(), FilterVAH = new List<FilterPoint>() };
+            if (type.Contains("Обратная связь"))
+                return new MathTool { Position = position, Type = ToolType.FeedbackDelay, Size = new Size(150, 80), Name = "Обратная связь", CustomValueA = 0.0 };
+            if (type.Contains("График"))
+                return new MathTool { Position = position, Type = ToolType.Chart, Size = new Size(160, 80), Name = "График" };
+            if (type.Contains("Подсистема"))
+                return new MathTool { Position = position, Type = ToolType.SubSystem, Size = new Size(180, 120), Name = "Подсистема", SubSystemData = new SubSystemData { Name = "Подсистема", InternalTools = new List<MathTool>(), InternalConnections = new List<Connection>(), InputPorts = new List<SubSystemPort>(), OutputPorts = new List<SubSystemPort>() } };
             if (type.Contains("Усилитель")) return new MathTool { Position = position, Type = ToolType.Amplifier, Size = new Size(80, 80), Name = "Усилитель", Gain = 10 };
             if (type.Contains("Антенна")) return new MathTool { Position = position, Type = ToolType.Antenna, Size = new Size(100, 80), Name = "Антенна", Gain = 10, EffectiveArea = 0.1 };
             if (type.Contains("Канал")) return new MathTool { Position = position, Type = ToolType.Channel, Size = new Size(100, 80), Name = "Канал", Distance = 1000, Attenuation = 0.01 };
@@ -390,6 +404,10 @@ namespace MathApp.UI
 
             GridRenderer.Draw(g, workspace);
 
+            var scrollState = g.Save();
+            Point diagramOffset = workspace.AutoScrollPosition;
+            g.TranslateTransform(diagramOffset.X, diagramOffset.Y);
+
             foreach (var conn in _connections)
             {
                 var source = _tools.FirstOrDefault(t => t.Id == conn.SourceToolId);
@@ -402,7 +420,7 @@ namespace MathApp.UI
             {
                 var sourceTool = _tools.FirstOrDefault(t => t.Id == _sourceConnectionPoint.Value.ToolId);
                 if (sourceTool != null)
-                    ConnectionRenderer.DrawTemp(g, sourceTool, _tempConnectionEnd);
+                    ConnectionRenderer.DrawTemp(g, sourceTool, GetRealLocation(_tempConnectionEnd));
             }
 
             foreach (var tool in _tools)
@@ -418,12 +436,15 @@ namespace MathApp.UI
                     DrawConnectionPoints(g, tool);
                 }
             }
+            g.Restore(scrollState);
         }
 
         private void DrawToolByType(Graphics g, MathTool tool)
         {
             switch (tool.Type)
             {
+                case ToolType.Chart: _blockRenderer.DrawChartTool(g, tool, _selectedTool); break;
+                case ToolType.SubSystem: _blockRenderer.DrawSubSystemTool(g, tool, _selectedTool); break;
                 case ToolType.Generator: _blockRenderer.DrawSineTool(g, tool, _selectedTool, 0); break;
                 case ToolType.Amplifier: _blockRenderer.DrawAmplifierTool(g, tool, _selectedTool); break;
                 case ToolType.Antenna: _blockRenderer.DrawAntennaTool(g, tool, _selectedTool); break;
@@ -489,28 +510,45 @@ namespace MathApp.UI
 
             DrawPoint(g, point, label, color, hasConnection);
         }
-
         private void DrawConnectionPoints(Graphics g, MathTool tool)
         {
-            Point output = tool.Flipped ? new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2) : new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-            bool hasOutput = _connections.Any(c => c.SourceToolId == tool.Id);
-            DrawPoint(g, output, "out", Color.Orange, hasOutput);
+            if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.Integrator)
+            {
+                Point outPt = _blockRenderer.GetOutputPoint(tool);
+                Point inPt = _blockRenderer.GetInputPoint(tool, InputType.A);
+                DrawPoint(g, outPt, "out", Color.Orange,
+                    _connections.Any(c => c.SourceToolId == tool.Id));
+                DrawPoint(g, inPt, "A", Color.LightGreen,
+                    _connections.Any(c => c.TargetToolId == tool.Id));
+                return;
+            }
+            if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+            {
+                for (int i = 0; i < tool.SubSystemData.InputPorts.Count; i++)
+                {
+                    var point = _blockRenderer.GetInputPoint(tool, InputType.A, i);
+                    DrawPoint(g, point, "IN" + (i + 1), Color.LightGreen,
+                        _connections.Any(c => c.TargetToolId == tool.Id && c.TargetPortIndex == i));
+                }
+                for (int i = 0; i < tool.SubSystemData.OutputPorts.Count; i++)
+                {
+                    var point = _blockRenderer.GetOutputPoint(tool, i);
+                    DrawPoint(g, point, "OUT" + (i + 1), Color.Orange,
+                        _connections.Any(c => c.SourceToolId == tool.Id && c.SourcePortIndex == i));
+                }
+                return;
+            }
 
-            Point inputA, inputB;
-            if (tool.Flipped)
-            {
-                inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 20);
-                inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height - 20);
-            }
-            else
-            {
-                inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
-                inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
-            }
-            bool hasA = _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A);
-            bool hasB = _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B);
-            DrawPoint(g, inputA, "A", Color.LightGreen, hasA);
-            DrawPoint(g, inputB, "B", Color.LightGreen, hasB);
+            if (tool.Type != ToolType.Chart)
+                DrawPoint(g, _blockRenderer.GetOutputPoint(tool), "out", Color.Orange,
+                    _connections.Any(c => c.SourceToolId == tool.Id));
+            if (tool.Type == ToolType.Generator) return;
+
+            DrawPoint(g, _blockRenderer.GetInputPoint(tool, InputType.A), "A", Color.LightGreen,
+                _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.A));
+            if (tool.Type == ToolType.Operation)
+                DrawPoint(g, _blockRenderer.GetInputPoint(tool, InputType.B), "B", Color.LightGreen,
+                    _connections.Any(c => c.TargetToolId == tool.Id && c.TargetInput == InputType.B));
         }
 
         private void DrawPoint(Graphics g, Point point, string label, Color color, bool hasConnection)
@@ -687,6 +725,16 @@ namespace MathApp.UI
         {
             foreach (var tool in _tools)
             {
+                if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.Integrator)
+                {
+                    Point outPt = _blockRenderer.GetOutputPoint(tool);
+                    Point inPt = _blockRenderer.GetInputPoint(tool, InputType.A);
+                    if (Distance(point, outPt) < 12)
+                        return new ConnectionPoint(tool.Id, ConnectionPointType.Output);
+                    if (Distance(point, inPt) < 12)
+                        return new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.A);
+                    continue;
+                }
                 if (tool is PortTool port)
                 {
                     Point portPoint;
@@ -707,24 +755,24 @@ namespace MathApp.UI
                 }
                 else
                 {
-                    Point output = tool.Flipped ? new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height / 2) : new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height / 2);
-                    if (Distance(point, output) < 12)
+                    if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
+                    {
+                        for (int i = 0; i < tool.SubSystemData.InputPorts.Count; i++)
+                            if (Distance(point, _blockRenderer.GetInputPoint(tool, InputType.A, i)) < 12)
+                                return new ConnectionPoint(tool.Id, ConnectionPointType.Input, null, i);
+                        for (int i = 0; i < tool.SubSystemData.OutputPorts.Count; i++)
+                            if (Distance(point, _blockRenderer.GetOutputPoint(tool, i)) < 12)
+                                return new ConnectionPoint(tool.Id, ConnectionPointType.Output, null, i);
+                        continue;
+                    }
+                    if (tool.Type != ToolType.Chart &&
+                        Distance(point, _blockRenderer.GetOutputPoint(tool)) < 12)
                         return new ConnectionPoint(tool.Id, ConnectionPointType.Output);
-
-                    Point inputA, inputB;
-                    if (tool.Flipped)
-                    {
-                        inputA = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + 20);
-                        inputB = new Point(tool.Position.X + tool.Size.Width + 5, tool.Position.Y + tool.Size.Height - 20);
-                    }
-                    else
-                    {
-                        inputA = new Point(tool.Position.X - 5, tool.Position.Y + 20);
-                        inputB = new Point(tool.Position.X - 5, tool.Position.Y + tool.Size.Height - 20);
-                    }
-                    if (Distance(point, inputA) < 12)
+                    if (tool.Type != ToolType.Generator &&
+                        Distance(point, _blockRenderer.GetInputPoint(tool, InputType.A)) < 12)
                         return new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.A);
-                    if (Distance(point, inputB) < 12)
+                    if (tool.Type == ToolType.Operation &&
+                        Distance(point, _blockRenderer.GetInputPoint(tool, InputType.B)) < 12)
                         return new ConnectionPoint(tool.Id, ConnectionPointType.Input, InputType.B);
                 }
             }

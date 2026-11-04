@@ -25,7 +25,7 @@ namespace MathApp
         private Button runButton;
         private Button clearButton;
         private Button allGraphsButton;
-        private FlowLayoutPanel libraryPanel;
+        private TreeView libraryPanel;
 
         // ============ ДАННЫЕ ============
         private List<MathTool> whiteboardTools = new List<MathTool>();
@@ -112,40 +112,10 @@ namespace MathApp
 
             leftPanel.Controls.Add(new Label { Text = "Библиотека блоков", Location = new Point(15, y), Size = new Size(250, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(52, 58, 64) });
             y += 30;
-            libraryPanel = new FlowLayoutPanel { Location = new Point(15, y), Size = new Size(250, 300), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
-            string[] blocks =
-{
-                "Генератор синусоиды",
-                "Трапециевидный сигнал",
-                "Меандр",
-                "Треугольный импульс",
-                "Единичный сигнал",
-
-                "Сложение",
-                "Вычитание",
-                "Умножение",
-                "Деление",
-                "Интегратор",
-                "Дифференциатор",
-                "Интерполятор",
-                "Нелинейный фильтр 1 порядка",
-
-                "Файловый ввод/вывод",
-                 "График",
-                 "Подсистема",
-                "Усилитель",
-                 "Антенна",
-                 "Канал",
-                 "Объект",
-                 "АЦП"
-};
-            foreach (var block in blocks)
-            {
-                var btn = new Button { Text = block, Size = new Size(235, 32), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0) };
-                btn.FlatAppearance.BorderSize = 0;
-                btn.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) DoDragDrop(new DataObject("ToolType", block), DragDropEffects.Copy); };
-                libraryPanel.Controls.Add(btn);
-            }
+            libraryPanel = BlockLibraryTree.Create();
+            libraryPanel.Dock = DockStyle.None;
+            libraryPanel.Location = new Point(15, y);
+            libraryPanel.Size = new Size(250, 300);
             leftPanel.Controls.Add(libraryPanel);
             y += 310;
             clearButton = new Button { Text = "ОЧИСТИТЬ ВСЁ", Location = new Point(15, y), Size = new Size(250, 35), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
@@ -274,6 +244,8 @@ namespace MathApp
                     FilterVAH = new List<FilterPoint>()
                 };
             }
+            else if (toolType.Contains("Обратная связь"))
+                tool = new MathTool { Position = realPos, Type = ToolType.FeedbackDelay, Size = new Size(150, 80), Name = "Обратная связь", CustomValueA = 0.0 };
             else if (toolType.Contains("Файловый"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.FileIO, Size = new Size(160, 100), Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
             else if (toolType.Contains("График"))
@@ -308,6 +280,10 @@ namespace MathApp
 
             GridRenderer.Draw(g, (Panel)workArea);
 
+            var scrollState = g.Save();
+            Point diagramOffset = workArea.AutoScrollPosition;
+            g.TranslateTransform(diagramOffset.X, diagramOffset.Y);
+
             foreach (var conn in connections)
             {
                 var source = whiteboardTools.FirstOrDefault(t => t.Id == conn.SourceToolId);
@@ -320,7 +296,7 @@ namespace MathApp
             {
                 var sourceTool = whiteboardTools.FirstOrDefault(t => t.Id == sourceConnectionPoint.Value.ToolId);
                 if (sourceTool != null)
-                    ConnectionRenderer.DrawTemp(g, sourceTool, tempConnectionEnd);
+                    ConnectionRenderer.DrawTemp(g, sourceTool, ((DoubleBufferedPanel)workArea).GetRealMouseLocation(tempConnectionEnd));
             }
 
             foreach (var tool in whiteboardTools)
@@ -346,6 +322,7 @@ namespace MathApp
 
                 blockRenderer.DrawConnectionPoints(g, tool, connections);
             }
+            g.Restore(scrollState);
         }
 
         // ============ ОБРАБОТКА МЫШИ ============
@@ -505,7 +482,7 @@ namespace MathApp
                         return new ConnectionPoint { ToolId = tool.Id, Type = ConnectionPointType.Output };
                 }
 
-                if (tool.Type == ToolType.Operation)
+                if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.Integrator)
                 {
                     Point inA = blockRenderer.GetInputPoint(tool, InputType.A);
                     Point inB = blockRenderer.GetInputPoint(tool, InputType.B);

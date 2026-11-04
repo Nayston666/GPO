@@ -31,6 +31,12 @@ namespace MathApp.Rendering
 
         public Point GetInputPoint(MathTool tool, InputType input, int portIndex = 0)
         {
+            if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.Integrator)
+            {
+                return new Point(
+                    tool.Flipped ? tool.Position.X + tool.Size.Width + 5 : tool.Position.X - 5,
+                    tool.Position.Y + tool.Size.Height / 2);
+            }
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int yOffset = 35 + portIndex * 20;
@@ -98,7 +104,13 @@ namespace MathApp.Rendering
 
             DrawBlockId(g, rect, tool.BlockId);
 
-            if (tool.Type == ToolType.NonlinearFirstOrderFilter)
+            if (tool.Type == ToolType.FeedbackDelay)
+            {
+                DrawCenteredText(g, "z⁻¹", _iconFont, Brushes.DarkBlue, rect);
+                g.DrawString("ОБРАТНАЯ СВЯЗЬ", _paramFont, Brushes.DarkGray,
+                    rect.X + 10, rect.Y + 10);
+            }
+            else if (tool.Type == ToolType.NonlinearFirstOrderFilter)
             {
                 DrawCenteredText(
                     g, "НРФ1П",
@@ -358,6 +370,13 @@ namespace MathApp.Rendering
                 Point outPt = GetOutputPoint(tool);
                 bool hasOut = connections.Any(c => c.SourceToolId == tool.Id);
                 DrawConnectionPoint(g, outPt, "out", Color.Orange, hasOut);
+            }
+            if (tool.Type == ToolType.Operation && tool.Operation == MathOperation.Integrator)
+            {
+                Point pt = GetInputPoint(tool, InputType.A);
+                bool used = connections.Any(c => c.TargetToolId == tool.Id);
+                DrawConnectionPoint(g, pt, "A", Color.LightGreen, used);
+                return;
             }
 
             if (tool.Type == ToolType.Operation)

@@ -23,6 +23,12 @@ namespace MathApp.UI
             this.BackColor = Color.White;
         }
 
+        protected override void OnScroll(ScrollEventArgs e)
+        {
+            base.OnScroll(e);
+            Invalidate();
+        }
+
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             // Рисуем фон явно белым

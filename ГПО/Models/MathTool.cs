@@ -42,6 +42,9 @@ namespace MathApp.Models
         public double FallTime { get; set; } = 0.1;
         public double StepDuration { get; set; } = 0.001;
 
+        // Обратная связь (один временной шаг)
+        public double FeedbackStoredValue { get; set; } = 0.0;
+
         // Усилитель
         public double Gain { get; set; } = 10.0;
 
@@ -114,6 +117,7 @@ namespace MathApp.Models
         public void ResetState()
         {
             LastResult = null;
+            FeedbackStoredValue = CustomValueA;
             IntegralValue = 0;
             PreviousInput = 0;
             PreviousOutput = 0;

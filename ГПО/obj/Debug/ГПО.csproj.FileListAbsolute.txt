@@ -55,3 +55,4 @@ C:\Users\Дмитрий\Desktop\bot\GPO\ГПО\obj\Debug\ГПО.exe.manifest
 C:\Users\Дмитрий\Desktop\bot\GPO\ГПО\obj\Debug\ГПО.application
 C:\Users\Дмитрий\Desktop\bot\GPO\ГПО\obj\Debug\ГПО.exe
 C:\Users\Дмитрий\Desktop\bot\GPO\ГПО\obj\Debug\ГПО.pdb
+C:\Users\Дмитрий\Desktop\bot\GPO\ГПО\obj\Debug\ГПО.exe.config

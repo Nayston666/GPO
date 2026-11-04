@@ -771,6 +771,7 @@ namespace MathApp.UI
 
         private string GetBlockTitle(MathTool tool)
         {
+            if (tool.Type == ToolType.FeedbackDelay) return "↩ Обратная связь (z⁻¹)";
             if (tool.Type == ToolType.Operation)
             {
                 switch (tool.Operation)
@@ -820,7 +821,12 @@ namespace MathApp.UI
             var blockPanel = CreateBlockPanel(title, tool.BlockId);
             int yPos = 50;
 
-            if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.FileIO &&
+            if (tool.Type == ToolType.FeedbackDelay)
+            {
+                _txtValueA.Text = FormatEngineering(tool.CustomValueA);
+                AddParameter(blockPanel, "Начальное значение:", _txtValueA, ref yPos);
+            }
+            else if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.FileIO &&
                 tool.Operation != MathOperation.Integrator && tool.Operation != MathOperation.Differentiator &&
                 tool.Operation != MathOperation.Interpolator)
             {

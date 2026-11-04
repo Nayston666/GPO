@@ -56,6 +56,7 @@ namespace MathApp.UI
                 "∫ Интегратор",
                 "d/dt Дифференциатор",
                 "f(x) Интерполятор",
+                "↩ Обратная связь",
                 "📁 Файловый ввод/вывод",
                 "📊 График",
                 "📈 Синусоида",
@@ -112,5 +113,71 @@ namespace MathApp.UI
 
             e.DrawFocusRectangle();
         }
+    }
+
+    // Единая библиотека блоков в виде папок, как в Проводнике.
+    public static class BlockLibraryTree
+    {
+        public static TreeView Create()
+        {
+            var tree = new TreeView
+            {
+                Dock = DockStyle.Fill,
+                HideSelection = false,
+                ShowLines = false,
+                ShowRootLines = false,
+                ShowPlusMinus = true,
+                BorderStyle = BorderStyle.None,
+                FullRowSelect = true,
+                ItemHeight = 28,
+                Indent = 18,
+                Font = new Font("Segoe UI", 9),
+                BackColor = Color.FromArgb(248, 249, 250),
+                ForeColor = Color.FromArgb(40, 48, 58)
+            };
+
+            Add(tree, "Математика", new [] {
+                "Сложение", "Вычитание", "Умножение", "Деление",
+                "Интегратор", "Дифференциатор", "Интерполятор",
+                "Файловый ввод/вывод"
+            });
+            Add(tree, "Генераторы", new [] {
+                "Генератор синусоиды", "Трапециевидный сигнал", "Меандр",
+                "Треугольный импульс", "Единичный сигнал"
+            });
+            Add(tree, "Фильтры и обратная связь", new [] {
+                "Нелинейный фильтр 1 порядка", "Обратная связь"
+            });
+            Add(tree, "Визуализация", new [] { "График" });
+            Add(tree, "Специальные блоки", new [] {
+                "Усилитель", "Антенна", "Канал", "Объект", "АЦП"
+            });
+            Add(tree, "Структура", new [] { "Подсистема" });
+
+            tree.NodeMouseClick += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left && e.Node.Parent == null)
+                {
+                    // Узлы раскрываются по одиночному нажатию по всей строке.
+                    if (e.Node.IsExpanded) e.Node.Collapse();
+                    else e.Node.Expand();
+                }
+            };
+            tree.ItemDrag += (sender, e) =>
+            {
+                var node = e.Item as TreeNode;
+                if (node != null && node.Parent != null)
+                    tree.DoDragDrop(new DataObject("ToolType", node.Tag as string), DragDropEffects.Copy);
+            };
+            return tree;
+        }
+
+        private static void Add(TreeView tree, string category, string[] names)
+        {
+            var folder = new TreeNode("📁 " + category) { NodeFont = new Font("Segoe UI", 9, FontStyle.Bold) };
+            foreach (string name in names)
+                folder.Nodes.Add(new TreeNode("  " + name) { Tag = name });
+            tree.Nodes.Add(folder);
+        }
     }
 }

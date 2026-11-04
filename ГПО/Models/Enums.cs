@@ -7,7 +7,8 @@ namespace MathApp.Models
         Sine,
         Trapezoid,
         Square,
-        Sawtooth,
+        Sawtooth
+,
         Step
     }
 
@@ -35,7 +36,8 @@ namespace MathApp.Models
         ADC,            // Аналого-цифровой преобразователь
         NonlinearFirstOrderFilter, // Нелинейный рекурсивный фильтр 1 порядка
         SubSystem,      // Подсистема
-        Port            // Порт 
+        Port,           // Порт
+        FeedbackDelay   // Обратная связь: задержка в один отсчёт
     }
 
     public enum InputType

@@ -29,6 +29,14 @@ namespace MathApp.Core
         public Dictionary<Guid, double> CalculateAll(List<MathTool> tools, List<Connection> connections)
         {
             var results = new Dictionary<Guid, double>();
+            // Сначала выдаём результат прошлого отсчёта.
+            foreach (var delay in tools.Where(t => t.Type == ToolType.FeedbackDelay))
+            {
+                results[delay.Id] = delay.FeedbackStoredValue;
+                delay.LastResult = delay.FeedbackStoredValue;
+                foreach (var c in connections.Where(c => c.SourceToolId == delay.Id))
+                    c.CurrentValue = delay.FeedbackStoredValue;
+            }
             bool changed;
             int iteration = 0;
             const int maxIterations = 200;
@@ -63,6 +71,16 @@ namespace MathApp.Core
                 }
             } while (changed);
 
+            // Сохраняем новый отсчёт только после вычисления цепочки.
+            foreach (var delay in tools.Where(t => t.Type == ToolType.FeedbackDelay))
+            {
+                if (!connections.Any(c => c.TargetToolId == delay.Id)) continue;
+                double next = GetInputValue(delay, InputType.A, tools, connections, results);
+                if (double.IsNaN(next) || double.IsInfinity(next))
+                    throw new InvalidOperationException("Не удалось вычислить вход обратной связи #" + delay.BlockId + ". Проверьте соединения.");
+                delay.FeedbackStoredValue = next;
+            }
+
             return results;
         }
 
@@ -92,6 +110,9 @@ namespace MathApp.Core
             {
                 case ToolType.Generator:
                     return SignalGenerator.Calculate(tool, CurrentTime, SimulationDuration);
+
+                case ToolType.FeedbackDelay:
+                    return tool.FeedbackStoredValue;
 
                 case ToolType.Operation:
                     {
@@ -236,6 +257,11 @@ namespace MathApp.Core
             }
 
             var results = new Dictionary<Guid, double>();
+            foreach (var delay in internalTools.Where(t => t.Type == ToolType.FeedbackDelay))
+            {
+                results[delay.Id] = delay.FeedbackStoredValue;
+                delay.LastResult = delay.FeedbackStoredValue;
+            }
             bool changed;
             int iteration = 0;
             const int maxIterations = 200;
@@ -263,6 +289,16 @@ namespace MathApp.Core
 
             } while (changed);
 
+            foreach (var delay in internalTools.Where(t => t.Type == ToolType.FeedbackDelay))
+            {
+                if (!internalConns.Any(c => c.TargetToolId == delay.Id)) continue;
+                double next = GetInternalInputValue(delay, InputType.A, internalTools,
+                    internalConns, results, portIdValues);
+                if (double.IsNaN(next) || double.IsInfinity(next))
+                    throw new InvalidOperationException("Не удалось вычислить вход обратной связи #" + delay.BlockId + " внутри подсистемы.");
+                delay.FeedbackStoredValue = next;
+            }
+
             return results;
         }
 
@@ -276,6 +312,9 @@ namespace MathApp.Core
             {
                 case ToolType.Generator:
                     return SignalGenerator.Calculate(tool, CurrentTime, SimulationDuration);
+
+                case ToolType.FeedbackDelay:
+                    return tool.FeedbackStoredValue;
 
                 case ToolType.Operation:
                     {
