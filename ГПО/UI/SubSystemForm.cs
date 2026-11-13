@@ -205,7 +205,7 @@ namespace MathApp.UI
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 260, BackColor = Color.FromArgb(248, 249, 250), BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
 
             var toolsTitle = new Label { Text = "📦 БИБЛИОТЕКА БЛОКОВ", Location = new Point(10, 15), Size = new Size(230, 30), ForeColor = Color.FromArgb(52, 58, 64), Font = new Font("Segoe UI", 11, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft };
-            toolboxPanel = BlockLibraryTree.Create();
+            toolboxPanel = BlockLibraryTree.Create(false);
             toolboxPanel.Dock = DockStyle.None;
             toolboxPanel.Location = new Point(10, 50);
             toolboxPanel.Size = new Size(230, 480);
@@ -371,6 +371,8 @@ namespace MathApp.UI
                 return tool;
             }
             if (type.Contains("Файловый")) return new MathTool { Position = position, Type = ToolType.Operation, Size = new Size(160, 100), Operation = MathOperation.FileIO, Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
+            if (type.Contains("Постоянный сигнал"))
+                return new MathTool { Position = position, Type = ToolType.Generator, Waveform = GeneratorWaveform.Constant, Size = new Size(160, 100), Name = "Постоянный сигнал", Amplitude = 0.0 };
             if (type.Contains("Генератор синусоиды")) return new MathTool { Position = position, Type = ToolType.Generator, Size = new Size(160, 100), Name = "Синусоида", Frequency = 1.0, Amplitude = 1.0, Phase = 0 };
             if (type.Contains("Трапециевидный"))
                 return new MathTool { Position = position, Type = ToolType.Generator, Waveform = GeneratorWaveform.Trapezoid, Size = new Size(160, 100), Name = "Трапеция", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.1, FallTime = 0.1 };
@@ -383,7 +385,7 @@ namespace MathApp.UI
             if (type.Contains("Нелинейный фильтр"))
                 return new MathTool { Position = position, Type = ToolType.NonlinearFirstOrderFilter, Size = new Size(170, 100), Name = "Нелинейный фильтр 1 порядка", FilterKVH = new List<FilterPoint>(), FilterVAH = new List<FilterPoint>() };
             if (type.Contains("Обратная связь"))
-                return new MathTool { Position = position, Type = ToolType.FeedbackDelay, Size = new Size(150, 80), Name = "Обратная связь", CustomValueA = 0.0 };
+                return new MathTool { Position = position, Type = ToolType.FeedbackDelay, Size = new Size(150, 80), Name = "Обратная связь" };
             if (type.Contains("График"))
                 return new MathTool { Position = position, Type = ToolType.Chart, Size = new Size(160, 80), Name = "График" };
             if (type.Contains("Подсистема"))

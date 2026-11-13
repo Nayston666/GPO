@@ -11,6 +11,7 @@ namespace MathApp.UI
     public class PropertyPanel : UserControl
     {
         private MathTool _selectedTool;
+        private bool _switchingBlock;
         private FlowLayoutPanel _mainPanel;
 
         // ВСЕ ПОЛЯ - ТЕПЕРЬ TextBox (вместо NumericUpDown)
@@ -102,33 +103,33 @@ namespace MathApp.UI
             _lblOutputFile = new Label { Text = "Файл: не выбран", ForeColor = Color.Black, Font = new Font("Segoe UI", 8) };
             _lblPointsCount = new Label { Text = "Данных: 0", ForeColor = Color.Black, Font = new Font("Segoe UI", 8) };
 
-            _cmbFileMode.SelectedIndexChanged += (s, e) => UpdateFileModeVisibility();
+            _cmbFileMode.SelectedIndexChanged += (s, e) => { if (!_switchingBlock) UpdateFileModeVisibility(); };
             _btnSelectInputFile.Click += (s, e) => SelectInputFile();
             _btnSelectOutputFile.Click += (s, e) => SelectOutputFile();
             _btnExportResult.Click += (s, e) => ExportResult();
 
             // Подписка на события
-            _txtValueA.Leave += (s, e) => ApplyValueA();
-            _txtValueB.Leave += (s, e) => ApplyValueB();
-            _txtChartPoints.Leave += (s, e) => ApplyChartPoints();
-            _txtFrequency.Leave += (s, e) => ApplyFrequency();
-            _txtStepDuration.Leave += (s, e) => ApplyStepDuration();
-            _txtAmplitude.Leave += (s, e) => ApplyAmplitude();
-            _txtDelay.Leave += (s, e) => ApplyDelay();
-            _txtSignalDuration.Leave += (s, e) => ApplySignalDuration();
-            _txtPhase.Leave += (s, e) => ApplyPhase();
-            _txtRiseTime.Leave += (s, e) => ApplyRiseTime();
-            _txtFallTime.Leave += (s, e) => ApplyFallTime();
-            _txtGain.Leave += (s, e) => ApplyGain();
-            _txtEffectiveArea.Leave += (s, e) => ApplyEffectiveArea();
-            _txtDistance.Leave += (s, e) => ApplyDistance();
-            _txtAttenuation.Leave += (s, e) => ApplyAttenuation();
-            _txtRadarCrossSection.Leave += (s, e) => ApplyRadarCrossSection();
-            _txtTimeConstant.Leave += (s, e) => ApplyTimeConstant();
-            _txtBitResolution.Leave += (s, e) => ApplyBitResolution();
-            _txtSamplingRate.Leave += (s, e) => ApplySamplingRate();
-            _txtReferenceVoltage.Leave += (s, e) => ApplyReferenceVoltage();
-            _txtStepSize.Leave += (s, e) => ApplyStepSize();
+            _txtValueA.Leave += (s, e) => { if (!_switchingBlock) ApplyValueA(); };
+            _txtValueB.Leave += (s, e) => { if (!_switchingBlock) ApplyValueB(); };
+            _txtChartPoints.Leave += (s, e) => { if (!_switchingBlock) ApplyChartPoints(); };
+            _txtFrequency.Leave += (s, e) => { if (!_switchingBlock) ApplyFrequency(); };
+            _txtStepDuration.Leave += (s, e) => { if (!_switchingBlock) ApplyStepDuration(); };
+            _txtAmplitude.Leave += (s, e) => { if (!_switchingBlock) ApplyAmplitude(); };
+            _txtDelay.Leave += (s, e) => { if (!_switchingBlock) ApplyDelay(); };
+            _txtSignalDuration.Leave += (s, e) => { if (!_switchingBlock) ApplySignalDuration(); };
+            _txtPhase.Leave += (s, e) => { if (!_switchingBlock) ApplyPhase(); };
+            _txtRiseTime.Leave += (s, e) => { if (!_switchingBlock) ApplyRiseTime(); };
+            _txtFallTime.Leave += (s, e) => { if (!_switchingBlock) ApplyFallTime(); };
+            _txtGain.Leave += (s, e) => { if (!_switchingBlock) ApplyGain(); };
+            _txtEffectiveArea.Leave += (s, e) => { if (!_switchingBlock) ApplyEffectiveArea(); };
+            _txtDistance.Leave += (s, e) => { if (!_switchingBlock) ApplyDistance(); };
+            _txtAttenuation.Leave += (s, e) => { if (!_switchingBlock) ApplyAttenuation(); };
+            _txtRadarCrossSection.Leave += (s, e) => { if (!_switchingBlock) ApplyRadarCrossSection(); };
+            _txtTimeConstant.Leave += (s, e) => { if (!_switchingBlock) ApplyTimeConstant(); };
+            _txtBitResolution.Leave += (s, e) => { if (!_switchingBlock) ApplyBitResolution(); };
+            _txtSamplingRate.Leave += (s, e) => { if (!_switchingBlock) ApplySamplingRate(); };
+            _txtReferenceVoltage.Leave += (s, e) => { if (!_switchingBlock) ApplyReferenceVoltage(); };
+            _txtStepSize.Leave += (s, e) => { if (!_switchingBlock) ApplyStepSize(); };
         }
 
         // ============ СОЗДАНИЕ КОНТРОЛОВ ============
@@ -769,9 +770,40 @@ namespace MathApp.UI
             _mainPanel.Controls.Clear();
         }
 
+        private bool IsCurrentField(Control field)
+        {
+            for (Control parent = field; parent != null; parent = parent.Parent)
+                if (object.ReferenceEquals(parent, _mainPanel)) return true;
+            return false;
+        }
+
+        private void CommitCurrentInputs()
+        {
+            if (IsCurrentField(_txtValueA)) ApplyValueA();
+            if (IsCurrentField(_txtValueB)) ApplyValueB();
+            if (IsCurrentField(_txtChartPoints)) ApplyChartPoints();
+            if (IsCurrentField(_txtFrequency)) ApplyFrequency();
+            if (IsCurrentField(_txtAmplitude)) ApplyAmplitude();
+            if (IsCurrentField(_txtDelay)) ApplyDelay();
+            if (IsCurrentField(_txtSignalDuration)) ApplySignalDuration();
+            if (IsCurrentField(_txtPhase)) ApplyPhase();
+            if (IsCurrentField(_txtStepDuration)) ApplyStepDuration();
+            if (IsCurrentField(_txtRiseTime)) ApplyRiseTime();
+            if (IsCurrentField(_txtFallTime)) ApplyFallTime();
+            if (IsCurrentField(_txtGain)) ApplyGain();
+            if (IsCurrentField(_txtEffectiveArea)) ApplyEffectiveArea();
+            if (IsCurrentField(_txtDistance)) ApplyDistance();
+            if (IsCurrentField(_txtAttenuation)) ApplyAttenuation();
+            if (IsCurrentField(_txtRadarCrossSection)) ApplyRadarCrossSection();
+            if (IsCurrentField(_txtTimeConstant)) ApplyTimeConstant();
+            if (IsCurrentField(_txtBitResolution)) ApplyBitResolution();
+            if (IsCurrentField(_txtSamplingRate)) ApplySamplingRate();
+            if (IsCurrentField(_txtReferenceVoltage)) ApplyReferenceVoltage();
+            if (IsCurrentField(_txtStepSize)) ApplyStepSize();
+        }
         private string GetBlockTitle(MathTool tool)
         {
-            if (tool.Type == ToolType.FeedbackDelay) return "↩ Обратная связь (z⁻¹)";
+            if (tool.Type == ToolType.FeedbackDelay) return "Обратная связь (n-1)";
             if (tool.Type == ToolType.Operation)
             {
                 switch (tool.Operation)
@@ -796,9 +828,11 @@ namespace MathApp.UI
                         case GeneratorWaveform.Square: return "▮ Меандр";
                         case GeneratorWaveform.Sawtooth: return "△ Треугольный импульс";
                         case GeneratorWaveform.Step: return "Единичный сигнал";
+                        case GeneratorWaveform.Constant: return "Постоянный сигнал";
                         default: return "📈 Генератор синусоиды";
                     }
                 case ToolType.Chart: return "📊 График";
+                case ToolType.CombinedChart: return "Объединение графиков";
                 case ToolType.Amplifier: return "🔊 Усилитель";
                 case ToolType.Antenna: return "📡 Антенна";
                 case ToolType.Channel: return "🌐 Канал связи";
@@ -812,6 +846,15 @@ namespace MathApp.UI
 
         public void SetSelectedTool(MathTool tool)
         {
+            if (!object.ReferenceEquals(_selectedTool, tool) && _selectedTool != null)
+            {
+                // Commit visible fields to the previously selected block.
+                CommitCurrentInputs();
+            }
+
+            _switchingBlock = true;
+            try
+            {
             _selectedTool = tool;
             ClearAllBlocks();
             if (tool == null) { this.Visible = false; return; }
@@ -821,10 +864,10 @@ namespace MathApp.UI
             var blockPanel = CreateBlockPanel(title, tool.BlockId);
             int yPos = 50;
 
-            if (tool.Type == ToolType.FeedbackDelay)
+            if (tool.Type == ToolType.Generator && tool.Waveform == GeneratorWaveform.Constant)
             {
-                _txtValueA.Text = FormatEngineering(tool.CustomValueA);
-                AddParameter(blockPanel, "Начальное значение:", _txtValueA, ref yPos);
+                _txtAmplitude.Text = FormatEngineering(tool.Amplitude);
+                AddParameter(blockPanel, "Постоянное значение:", _txtAmplitude, ref yPos);
             }
             else if (tool.Type == ToolType.Operation && tool.Operation != MathOperation.FileIO &&
                 tool.Operation != MathOperation.Integrator && tool.Operation != MathOperation.Differentiator &&
@@ -1102,6 +1145,16 @@ namespace MathApp.UI
                     }
                 };
             }
+            else if (tool.Type == ToolType.CombinedChart)
+            {
+                var info = new Label {
+                    Text = "Двойной щелчок по блоку — выбрать графики и открыть общий график.",
+                    Location = new Point(10, yPos), Size = new Size(245, 70),
+                    ForeColor = Color.FromArgb(52, 58, 64), BackColor = Color.White
+                };
+                blockPanel.Controls.Add(info);
+                yPos += 75;
+            }
             else if (tool.Type == ToolType.Chart)
             {
                 _txtChartPoints.Text = tool.MaxHistorySize.ToString();
@@ -1279,6 +1332,11 @@ namespace MathApp.UI
 
             blockPanel.Height = yPos + 15;
             _mainPanel.Controls.Add(blockPanel);
+            }
+            finally
+            {
+                _switchingBlock = false;
+            }
         }
 
         private void UpdateFileModeVisibility()

@@ -13,6 +13,9 @@ namespace MathApp.Core
             if (tool == null)
                 return 0.0;
 
+            if (tool.Waveform == GeneratorWaveform.Constant)
+                return tool.Amplitude;
+
             double delay = Math.Max(0.0, tool.Delay);
 
             if (time < delay)

@@ -9,7 +9,8 @@ namespace MathApp.Models
         Square,
         Sawtooth
 ,
-        Step
+        Step,
+        Constant
     }
 
     public enum MathOperation
@@ -37,7 +38,8 @@ namespace MathApp.Models
         NonlinearFirstOrderFilter, // Нелинейный рекурсивный фильтр 1 порядка
         SubSystem,      // Подсистема
         Port,           // Порт
-        FeedbackDelay   // Обратная связь: задержка в один отсчёт
+        FeedbackDelay,  // Обратная связь: задержка в один отсчёт
+        CombinedChart   // Наложение ранее рассчитанных графиков
     }
 
     public enum InputType

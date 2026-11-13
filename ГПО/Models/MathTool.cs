@@ -23,6 +23,9 @@ namespace MathApp.Models
         public List<double> ValueHistory { get; set; } = new List<double>();
         public int MaxHistorySize { get; set; } = 200;
 
+        // References to individual chart blocks; no signal copies are stored.
+        public List<Guid> CombinedChartIds { get; set; } = new List<Guid>();
+
         public double? LastResult { get; set; }
 
         public bool Flipped { get; set; } = false;
@@ -117,7 +120,7 @@ namespace MathApp.Models
         public void ResetState()
         {
             LastResult = null;
-            FeedbackStoredValue = CustomValueA;
+            FeedbackStoredValue = 0.0;
             IntegralValue = 0;
             PreviousInput = 0;
             PreviousOutput = 0;

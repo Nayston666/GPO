@@ -143,6 +143,14 @@ namespace MathApp.UI
                 _stepStyle);
         }
 
+        public void SetMultipleSignals(IReadOnlyList<IReadOnlyList<double>> signals,
+            IReadOnlyList<string> labels, double dt, double duration)
+        {
+            if (signals == null || signals.Count == 0) return;
+            SetSignal(signals[0], dt, duration);
+            _graphPanel.SetMultipleSignals(signals, labels);
+        }
+
         /// <summary>
         /// Совместимость со старым кодом САПР.
         /// </summary>
@@ -227,6 +235,14 @@ namespace MathApp.UI
     internal sealed class SignalGraphPanel : Panel
     {
         private IReadOnlyList<double> _signal = Array.Empty<double>();
+        private readonly List<IReadOnlyList<double>> _series = new List<IReadOnlyList<double>>();
+        private readonly List<string> _seriesNames = new List<string>();
+        private static readonly Color[] TraceColors = {
+            Color.RoyalBlue, Color.DeepPink, Color.DarkOrange, Color.ForestGreen,
+            Color.DarkViolet, Color.DarkCyan, Color.Firebrick, Color.Goldenrod,
+            Color.SlateBlue, Color.DarkTurquoise
+        };
+        private Color _traceColor = Color.RoyalBlue;
 
         private double _dt = 1.0;
         private double _totalTime = 1.0;
@@ -283,6 +299,9 @@ namespace MathApp.UI
             bool stepStyle = false)
         {
             _signal = signal ?? Array.Empty<double>();
+            _series.Clear();
+            _seriesNames.Clear();
+            _traceColor = Color.RoyalBlue;
             _dt = dt;
             _stepStyle = stepStyle;
 
@@ -292,6 +311,22 @@ namespace MathApp.UI
                     _dt);
 
             ResetView();
+        }
+
+        public void SetMultipleSignals(IReadOnlyList<IReadOnlyList<double>> signals,
+            IReadOnlyList<string> names)
+        {
+            _series.Clear();
+            _seriesNames.Clear();
+            if (signals != null)
+            {
+                for (int i = 0; i < signals.Count; i++)
+                {
+                    _series.Add(signals[i] ?? Array.Empty<double>());
+                    _seriesNames.Add(names != null && i < names.Count ? names[i] : "Сигнал " + (i + 1));
+                }
+            }
+            Invalidate();
         }
 
         public void ResetView()
@@ -346,10 +381,86 @@ namespace MathApp.UI
 
             GetVisibleIndices(out int firstIndex, out int lastIndex);
             GetVisibleYRange(firstIndex, lastIndex, out double yMin, out double yMax);
+            if (_series.Count > 1)
+            {
+                double low = double.PositiveInfinity;
+                double high = double.NegativeInfinity;
+                foreach (var trace in _series)
+                {
+                    if (trace == null || trace.Count == 0) continue;
+                    for (int i = firstIndex; i <= lastIndex && i < trace.Count; i++)
+                    {
+                        if (i < 0) continue;
+                        double v = trace[i];
+                        if (double.IsNaN(v) || double.IsInfinity(v)) continue;
+                        low = Math.Min(low, v);
+                        high = Math.Max(high, v);
+                    }
+                }
+                if (!double.IsInfinity(low))
+                {
+                    double margin = Math.Max(1e-10, (high - low) * 0.08);
+                    yMin = low - margin;
+                    yMax = high + margin;
+                }
+            }
 
             DrawGrid(g, plot, yMin, yMax);
-            DrawSignal(g, plot, firstIndex, lastIndex, yMin, yMax);
+            if (_series.Count > 1)
+            {
+                var previousSignal = _signal;
+                bool previousStep = _stepStyle;
+                try
+                {
+                    for (int j = 0; j < _series.Count; j++)
+                    {
+                        if (_series[j] == null || _series[j].Count < 2) continue;
+                        _signal = _series[j];
+                        _stepStyle = false;
+                        _traceColor = TraceColors[j % TraceColors.Length];
+                        int end = Math.Min(lastIndex, _signal.Count - 1);
+                        int start = Math.Min(firstIndex, end);
+                        DrawSignal(g, plot, start, end, yMin, yMax);
+                    }
+                }
+                finally
+                {
+                    _signal = previousSignal;
+                    _stepStyle = previousStep;
+                    _traceColor = Color.RoyalBlue;
+                }
+                DrawSeriesLegend(g, plot);
+            }
+            else
+            {
+                _traceColor = Color.RoyalBlue;
+                DrawSignal(g, plot, firstIndex, lastIndex, yMin, yMax);
+            }
             DrawVisibleMinMax(g, plot, firstIndex, lastIndex);
+        }
+
+        private void DrawSeriesLegend(Graphics g, Rectangle plot)
+        {
+            using (var font = new Font("Segoe UI", 8f))
+            {
+                int x = plot.Right - 225;
+                int y = plot.Top + 6;
+                int visible = Math.Min(_seriesNames.Count, Math.Max(1, (plot.Height - 20) / 19));
+                for (int i = 0; i < visible; i++)
+                {
+                    string name = _seriesNames[i] ?? ("Сигнал " + (i + 1));
+                    if (name.Length > 31) name = name.Substring(0, 28) + "...";
+                    using (var pen = new Pen(TraceColors[i % TraceColors.Length], 2.5f))
+                    using (var brush = new SolidBrush(Color.FromArgb(45, 45, 45)))
+                    {
+                        g.DrawLine(pen, x, y + 7, x + 20, y + 7);
+                        g.DrawString(name, font, brush, x + 25, y);
+                    }
+                    y += 19;
+                }
+                if (_seriesNames.Count > visible)
+                    g.DrawString("Ещё: " + (_seriesNames.Count - visible), font, Brushes.Gray, x + 25, y);
+            }
         }
 
         private Rectangle GetPlotRectangle()
@@ -591,7 +702,7 @@ namespace MathApp.UI
             if (lastIndex <= firstIndex)
                 return;
 
-            using (var pen = new Pen(Color.RoyalBlue, 1.5f))
+            using (var pen = new Pen(_traceColor, 1.5f))
             {
                 for (int i = firstIndex; i < lastIndex; i++)
                 {
@@ -628,7 +739,7 @@ namespace MathApp.UI
             double yMin,
             double yMax)
         {
-            using (var pen = new Pen(Color.RoyalBlue, 1.5f))
+            using (var pen = new Pen(_traceColor, 1.5f))
             {
                 PointF? previous = null;
 
@@ -670,8 +781,8 @@ namespace MathApp.UI
                 (lastIndex - firstIndex + 1) /
                 (double)Math.Max(1, plot.Width);
 
-            using (var rangePen = new Pen(Color.RoyalBlue, 1f))
-            using (var linePen = new Pen(Color.RoyalBlue, 1.5f))
+            using (var rangePen = new Pen(_traceColor, 1f))
+            using (var linePen = new Pen(_traceColor, 1.5f))
             {
                 PointF? previousCenter = null;
 

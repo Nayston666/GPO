@@ -112,10 +112,14 @@ namespace MathApp
 
             leftPanel.Controls.Add(new Label { Text = "Библиотека блоков", Location = new Point(15, y), Size = new Size(250, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(52, 58, 64) });
             y += 30;
-            libraryPanel = BlockLibraryTree.Create();
-            libraryPanel.Dock = DockStyle.None;
-            libraryPanel.Location = new Point(15, y);
-            libraryPanel.Size = new Size(250, 300);
+            libraryPanel = BlockLibraryTree.Create();
+
+            libraryPanel.Dock = DockStyle.None;
+
+            libraryPanel.Location = new Point(15, y);
+
+            libraryPanel.Size = new Size(250, 300);
+
             leftPanel.Controls.Add(libraryPanel);
             y += 310;
             clearButton = new Button { Text = "ОЧИСТИТЬ ВСЁ", Location = new Point(15, y), Size = new Size(250, 35), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
@@ -176,7 +180,9 @@ namespace MathApp
             if (string.IsNullOrEmpty(toolType)) return;
 
             MathTool tool = null;
-            if (toolType.Contains("Генератор синусоиды"))
+            if (toolType.Contains("Постоянный сигнал"))
+                tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Constant, Size = new Size(160, 100), Name = "Постоянный сигнал", Amplitude = 0.0 };
+            else if (toolType.Contains("Генератор синусоиды"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Sine, Size = new Size(160, 100), Name = "Синусоида", Frequency = 1.0, Amplitude = 1.0, Phase = 0 };
             else if (toolType.Contains("Трапециевидный"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Generator, Waveform = GeneratorWaveform.Trapezoid, Size = new Size(160, 100), Name = "Трапеция", Frequency = 1.0, Amplitude = 1.0, RiseTime = 0.1, FallTime = 0.1 };
@@ -245,9 +251,11 @@ namespace MathApp
                 };
             }
             else if (toolType.Contains("Обратная связь"))
-                tool = new MathTool { Position = realPos, Type = ToolType.FeedbackDelay, Size = new Size(150, 80), Name = "Обратная связь", CustomValueA = 0.0 };
+                tool = new MathTool { Position = realPos, Type = ToolType.FeedbackDelay, Size = new Size(150, 80), Name = "Обратная связь" };
             else if (toolType.Contains("Файловый"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Operation, Operation = MathOperation.FileIO, Size = new Size(160, 100), Name = "Файловый ввод/вывод", IsReading = true, FileData = new List<double>() };
+            else if (toolType.Contains("Объединение графиков"))
+                tool = new MathTool { Position = realPos, Type = ToolType.CombinedChart, Size = new Size(175, 90), Name = "Объединение графиков" };
             else if (toolType.Contains("График"))
                 tool = new MathTool { Position = realPos, Type = ToolType.Chart, Size = new Size(160, 80), Name = $"График {whiteboardTools.Count + 1}" };
             else if (toolType.Contains("Подсистема"))
@@ -402,6 +410,98 @@ namespace MathApp
             }
         }
 
+        private void ConfigureCombinedChart(MathTool combined)
+        {
+            var available = whiteboardTools.Where(t => t.Type == ToolType.Chart)
+                .OrderBy(t => t.BlockId).ToList();
+            if (available.Count == 0)
+            {
+                MessageBox.Show("На схеме нет блоков «График». Сначала создайте обычные графики.",
+                    "Объединение графиков", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dialog = new Form())
+            {
+                dialog.Text = "Выбор графиков";
+                dialog.Size = new Size(460, 460);
+                dialog.MinimumSize = new Size(340, 300);
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                var info = new Label { Text = "Отметьте графики, которые нужно показать вместе:",
+                    Dock = DockStyle.Top, Height = 42, Padding = new Padding(12, 12, 0, 0) };
+                var list = new CheckedListBox { Dock = DockStyle.Fill,
+                    CheckOnClick = true, IntegralHeight = false,
+                    Font = new Font("Segoe UI", 10) };
+                for (int i = 0; i < available.Count; i++)
+                {
+                    var chart = available[i];
+                    list.Items.Add(chart.Name + "  (ID: " + chart.BlockId + ")",
+                        combined.CombinedChartIds != null && combined.CombinedChartIds.Contains(chart.Id));
+                }
+                var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom,
+                    FlowDirection = FlowDirection.RightToLeft, Height = 48 };
+                var ok = new Button { Text = "Применить", Width = 105, DialogResult = DialogResult.OK };
+                var cancel = new Button { Text = "Отмена", Width = 90, DialogResult = DialogResult.Cancel };
+                buttons.Controls.Add(ok);
+                buttons.Controls.Add(cancel);
+                dialog.Controls.Add(list);
+                dialog.Controls.Add(info);
+                dialog.Controls.Add(buttons);
+                dialog.AcceptButton = ok;
+                dialog.CancelButton = cancel;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                combined.CombinedChartIds = Enumerable.Range(0, available.Count)
+                    .Where(list.GetItemChecked).Select(i => available[i].Id).ToList();
+            }
+            needsRedraw = true;
+            workArea.Invalidate();
+            ShowCombinedChart(combined, true);
+        }
+
+        private void ShowCombinedChart(MathTool combined, bool showMessage)
+        {
+            var ids = combined.CombinedChartIds ?? new List<Guid>();
+            var selected = ids.Select(id => whiteboardTools.FirstOrDefault(t =>
+                t.Id == id && t.Type == ToolType.Chart)).Where(t => t != null).ToList();
+            var ready = selected.Where(t => t.ValueHistory != null && t.ValueHistory.Count > 0).ToList();
+            if (ready.Count == 0)
+            {
+                if (showMessage) MessageBox.Show("Выберите графики и запустите моделирование. Пока нет рассчитанных данных.",
+                    "Объединение графиков", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            double samplingRate = 10000;
+            double duration = 0.01;
+            EngineeringParser.TryParse(samplingRateInput.Text, out samplingRate);
+            EngineeringParser.TryParse(durationInput.Text, out duration);
+            if (samplingRate <= 0) samplingRate = 10000;
+            if (duration <= 0) duration = 0.01;
+
+            GraphForm graph;
+            if (graphWindows.TryGetValue(combined.Id, out graph) && !graph.IsDisposed)
+            {
+                graph.Activate();
+            }
+            else
+            {
+                graph = new GraphForm(combined.Name);
+                graph.Show();
+                graphWindows[combined.Id] = graph;
+            }
+            var traces = ready.Select(t => (IReadOnlyList<double>)t.ValueHistory).ToList();
+            var names = ready.Select(t => t.Name + " (#" + t.BlockId + ")").ToList();
+            graph.SetMultipleSignals(traces, names, 1.0 / samplingRate, duration);
+        }
+
+        private void RefreshCombinedCharts()
+        {
+            foreach (var combined in whiteboardTools.Where(t => t.Type == ToolType.CombinedChart))
+            {
+                if (combined.CombinedChartIds != null && combined.CombinedChartIds.Count > 0)
+                    ShowCombinedChart(combined, false);
+            }
+        }
+
         private void ShowAllGraphs(object sender, EventArgs e)
         {
             var charts = whiteboardTools.Where(t => t.Type == ToolType.Chart).ToList();
@@ -427,7 +527,11 @@ namespace MathApp
             var tool = GetToolAtPosition(realPos);
             if (tool != null)
             {
-                if (tool.Type == ToolType.SubSystem)
+                if (tool.Type == ToolType.CombinedChart)
+                {
+                    ConfigureCombinedChart(tool);
+                }
+                else if (tool.Type == ToolType.SubSystem)
                 {
                     if (tool.SubSystemData == null) tool.SubSystemData = new SubSystemData();
                     var form = new SubSystemForm(tool.SubSystemData);
@@ -457,6 +561,7 @@ namespace MathApp
             var realPoint = ((DoubleBufferedPanel)workArea).GetRealMouseLocation(mousePos);
             foreach (var tool in whiteboardTools)
             {
+                if (tool.Type == ToolType.CombinedChart) continue;
                 if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
                 {
                     int inCnt = tool.SubSystemData.InputPorts?.Count ?? 0;
@@ -633,6 +738,8 @@ namespace MathApp
 
                 if (!isGenerator && !isFileSource)
                     continue;
+                if (isGenerator && tool.Waveform == GeneratorWaveform.Constant)
+                    continue;
 
                 string title =
                     !string.IsNullOrWhiteSpace(tool.Name)
@@ -728,6 +835,8 @@ namespace MathApp
             foreach (var tool in whiteboardTools.Where(
                 t => t.Type == ToolType.Generator))
             {
+                if (tool.Waveform == GeneratorWaveform.Constant)
+                    continue;
                 if (tool.SignalDuration <= 0.0 ||
                     double.IsNaN(tool.SignalDuration) ||
                     double.IsInfinity(tool.SignalDuration))
@@ -961,6 +1070,7 @@ namespace MathApp
 
                 // 6. Показываем графики сразу
                 DisplayAllGraphsStatic();
+                RefreshCombinedCharts();
                 needsRedraw = true;
                 workArea.Invalidate();
                 workArea.Update();

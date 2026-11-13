@@ -104,9 +104,16 @@ namespace MathApp.Rendering
 
             DrawBlockId(g, rect, tool.BlockId);
 
-            if (tool.Type == ToolType.FeedbackDelay)
+            if (tool.Type == ToolType.CombinedChart)
             {
-                DrawCenteredText(g, "z⁻¹", _iconFont, Brushes.DarkBlue, rect);
+                using (var titleFont = new Font("Segoe UI", 13, FontStyle.Bold))
+                    DrawCenteredText(g, "Графики", titleFont, Brushes.DarkBlue, rect);
+                g.DrawString("Выбрано: " + (tool.CombinedChartIds == null ? 0 : tool.CombinedChartIds.Count),
+                    _paramFont, Brushes.DarkGray, rect.X + 10, rect.Y + rect.Height - 20);
+            }
+            else if (tool.Type == ToolType.FeedbackDelay)
+            {
+                DrawCenteredText(g, "n-1", _iconFont, Brushes.DarkBlue, rect);
                 g.DrawString("ОБРАТНАЯ СВЯЗЬ", _paramFont, Brushes.DarkGray,
                     rect.X + 10, rect.Y + 10);
             }
@@ -183,6 +190,7 @@ namespace MathApp.Rendering
                     case GeneratorWaveform.Square: symbol = "▰"; break;
                     case GeneratorWaveform.Sawtooth: symbol = "△"; break;
                     case GeneratorWaveform.Step: symbol = "⌜"; break;
+                    case GeneratorWaveform.Constant: symbol = "—"; break;
                     default: symbol = "?"; break;
                 }
 
@@ -346,6 +354,7 @@ namespace MathApp.Rendering
 
         public void DrawConnectionPoints(Graphics g, MathTool tool, IEnumerable<Connection> connections)
         {
+            if (tool.Type == ToolType.CombinedChart) return;
             if (tool.Type == ToolType.SubSystem && tool.SubSystemData != null)
             {
                 int inCnt = tool.SubSystemData.InputPorts?.Count ?? 0;
